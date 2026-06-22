@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מונדיאל 2026 — לוח שידורים</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* DARK theme (default) */
+  --bg:#15401d; --bg2:#1d5429;
+  --stripe-a:#163f1e; --stripe-b:#1f5829;
+  --line:rgba(255,255,255,.05);
+  --usa-red:#e11d48; --gold:#ffd700;
+  --t1:#ffffff; --t2:#d8efdc; --t3:#a6cfac;
+  --card:rgba(0,0,0,.55); --card-future:rgba(0,30,12,.82);
+  --card-border:rgba(255,255,255,.14);
+  --hi:rgba(0,25,70,.85); --hi-border:rgba(255,215,0,.5);
+  --sidebar:rgba(0,15,6,.92); --drawer:rgba(10,28,15,.98);
+  --safe:#4ade80; --warn:#fbbf24; --danger:#fb7185;
+  --shadow:rgba(0,0,0,.4);
+  --radius:18px; --radius-sm:12px;
+}
+[data-theme="light"] {
+  --bg:#e8f3ea; --bg2:#d6ebd9;
+  --stripe-a:#e3f1e6; --stripe-b:#d4ead7;
+  --line:rgba(0,0,0,.04);
+  --usa-red:#be123c; --gold:#b8860b;
+  --t1:#0f2417; --t2:#1f3d28; --t3:#4a6b51;
+  --card:rgba(255,255,255,.82); --card-future:rgba(255,255,255,.96);
+  --card-border:rgba(0,40,15,.14);
+  --hi:rgba(255,247,214,.95); --hi-border:rgba(184,134,11,.5);
+  --sidebar:rgba(255,255,255,.95); --drawer:rgba(248,252,249,.99);
+  --safe:#16a34a; --warn:#d97706; --danger:#e11d48;
+  --shadow:rgba(0,40,15,.14);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background:var(--bg); color:var(--t1);
+  font-family:'Inter',sans-serif; min-height:100vh;
+  overflow-x:hidden;
+  transition:background .5s ease, color .5s ease;
+}
+body::before {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:repeating-linear-gradient(180deg,var(--stripe-a) 0,var(--stripe-a) 80px,var(--stripe-b) 80px,var(--stripe-b) 160px);
+  transition:background .5s ease;
+}
+body::after {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:repeating-linear-gradient(90deg,var(--line) 0,var(--line) 1px,transparent 1px,transparent 110px);
+}
+
+/* ── SIDEBAR (fixed right, RTL) ── */
+.sidebar {
+  position:fixed; top:0; bottom:0; right:0; width:64px; z-index:40;
+  background:var(--sidebar); backdrop-filter:blur(10px);
+  border-left:1px solid var(--card-border);
+  display:flex; flex-direction:column; align-items:center;
+  padding-top:18px; gap:10px;
+  transition:background .5s ease;
+}
+[dir="ltr"] .sidebar { right:auto; left:0; border-left:none; border-right:1px solid var(--card-border); }
+.side-btn {
+  width:46px; height:46px; border-radius:14px;
+  border:1px solid var(--card-border); background:var(--card);
+  color:var(--t2); font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  position:relative; overflow:hidden;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s, border-color .3s, color .3s;
+}
+.side-btn:hover { background:var(--hi); color:var(--t1); border-color:var(--hi-border); }
+.side-btn:active { transform:scale(.88); }
+.side-btn.active { background:var(--usa-red); color:#fff; border-color:var(--usa-red); }
+.side-label {
+  font-size:8px; font-weight:700; color:var(--t3);
+  writing-mode:vertical-rl; margin-top:2px; letter-spacing:1px;
+}
+[dir="ltr"] .side-label { writing-mode:vertical-lr; }
+
+/* main content offset for sidebar */
+main { position:relative; z-index:1; margin-right:64px; }
+[dir="ltr"] main { margin-right:0; margin-left:64px; }
+
+/* ── DRAWER (slides in from right) ── */
+.overlay {
+  position:fixed; inset:0; z-index:45; background:rgba(0,0,0,.5);
+  opacity:0; pointer-events:none; transition:opacity .35s ease;
+}
+.overlay.open { opacity:1; pointer-events:auto; }
+.drawer {
+  position:fixed; top:0; bottom:0; right:64px; width:300px; max-width:80vw; z-index:50;
+  background:var(--drawer); backdrop-filter:blur(16px);
+  border-left:1px solid var(--card-border);
+  border-radius:var(--radius) 0 0 var(--radius);
+  padding:22px 18px; overflow-y:auto;
+  transform:translateX(110%);
+  transition:transform .42s cubic-bezier(.22,1,.36,1), background .5s ease;
+  box-shadow:-8px 0 40px var(--shadow);
+}
+[dir="ltr"] .drawer {
+  right:auto; left:64px; border-left:none; border-right:1px solid var(--card-border);
+  border-radius:0 var(--radius) var(--radius) 0;
+  transform:translateX(-110%);
+  box-shadow:8px 0 40px var(--shadow);
+}
+.drawer.open { transform:translateX(0); }
+.drawer-title {
+  font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px;
+  color:var(--gold); margin-bottom:16px;
+}
+.drawer-item {
+  display:flex; align-items:center; gap:10px;
+  padding:13px 16px; margin-bottom:7px; border-radius:14px;
+  background:var(--card); border:1px solid var(--card-border);
+  color:var(--t1); font-size:14px; font-weight:600; cursor:pointer;
+  position:relative; overflow:hidden;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .25s, border-color .25s;
+}
+.drawer-item:hover { background:var(--hi); border-color:var(--hi-border); }
+.drawer-item:active { transform:scale(.96); }
+.drawer-item.active { background:var(--usa-red); color:#fff; border-color:var(--usa-red); }
+
+/* ── SETTINGS PANEL (same drawer container, different content) ── */
+.set-group { margin-bottom:22px; }
+.set-label { font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px; letter-spacing:.5px; }
+.set-row { display:flex; gap:8px; }
+.set-opt {
+  flex:1; padding:11px; border-radius:13px; text-align:center;
+  background:var(--card); border:1px solid var(--card-border);
+  color:var(--t2); font-size:13px; font-weight:700; cursor:pointer;
+  position:relative; overflow:hidden;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .25s, color .25s, border-color .25s;
+}
+.set-opt:active { transform:scale(.93); }
+.set-opt.active { background:var(--gold); color:#1a1a1a; border-color:var(--gold); }
+
+/* ── RIPPLE ── */
+.ripple-ink {
+  position:absolute; border-radius:50%; transform:scale(0);
+  background:rgba(255,255,255,.35); pointer-events:none;
+  animation:ripple .6s ease-out;
+}
+[data-theme="light"] .ripple-ink { background:rgba(0,0,0,.12); }
+@keyframes ripple { to { transform:scale(2.6); opacity:0; } }
+
+/* ── HERO ── */
+.hero { text-align:center; padding:46px 20px 26px; }
+.hero-title { font-family:'Bebas Neue',sans-serif; font-size:clamp(48px,11vw,96px);
+  line-height:.88; letter-spacing:2px; text-shadow:0 2px 18px var(--shadow); }
+.hero-title span { color:var(--gold); display:block; }
+.hero-sub { margin-top:12px; font-size:14px; color:var(--t2); font-weight:500; }
+.hero-badge { display:inline-flex; align-items:center; gap:7px; margin-top:18px;
+  background:var(--hi); border:1px solid var(--hi-border); border-radius:999px;
+  padding:7px 18px; font-size:12px; color:var(--gold); font-weight:700; }
+
+/* ── LEGEND ── */
+.legend { display:flex; justify-content:center; gap:14px; flex-wrap:wrap; padding:0 20px 26px; }
+.leg-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--t2); font-weight:600; }
+.leg-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+/* ── SECTION ── */
+.stage { display:none; animation:fadein .5s ease; }
+.stage.active { display:block; }
+@keyframes fadein { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+.sec-head { max-width:1080px; margin:24px auto 0; padding:0 20px;
+  display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.sec-label { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; color:var(--t1); }
+.sec-sub { font-size:12px; color:var(--t2); font-weight:600; }
+
+/* ── DAY ── */
+.day-block { max-width:1080px; margin:0 auto; padding:0 20px; }
+.day-hd { display:flex; align-items:center; gap:10px; padding:18px 0 10px; }
+.day-lbl { font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:1px;
+  color:var(--gold); white-space:nowrap; }
+.day-line { flex:1; height:1px; background:var(--card-border); }
+
+/* ── GRID + CARD ── */
+.mgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; padding-bottom:6px; }
+.mc {
+  border-radius:var(--radius); padding:13px 15px; position:relative; overflow:hidden;
+  border:1px solid var(--card-border);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s, border-color .3s, box-shadow .3s;
+}
+/* PAST = faded, recedes */
+.mc.past { background:var(--card); opacity:.62; }
+.mc.past:hover { opacity:.9; }
+/* FUTURE = bold bg, prominent */
+.mc.future { background:var(--card-future); box-shadow:0 3px 16px var(--shadow); }
+/* LIVE/today */
+.mc.live { background:var(--card-future); border-color:var(--danger); box-shadow:0 0 0 1px var(--danger); }
+/* recommended */
+.mc.star { border-color:var(--hi-border); }
+.mc.star.future, .mc.star.live { background:var(--hi); }
+.mc:hover { transform:translateY(-3px); }
+.mc:active { transform:scale(.98); }
+
+.strip { position:absolute; inset-inline-end:0; top:0; bottom:0; width:5px; }
+.strip.safe { background:var(--safe); }
+.strip.warn { background:var(--warn); }
+.strip.danger { background:var(--danger); }
+
+.star-tag { position:absolute; top:9px; inset-inline-start:13px; font-size:9px; font-weight:700;
+  color:var(--gold); letter-spacing:.5px; line-height:1; pointer-events:none; }
+.live-tag { position:absolute; top:9px; inset-inline-start:13px; font-size:9px; font-weight:700;
+  color:var(--danger); letter-spacing:.5px; line-height:1; pointer-events:none; }
+.mc.star .mc-top, .mc.live .mc-top { margin-top:14px; }
+
+.mc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:9px; min-height:30px; }
+.mc-grp { font-size:10px; font-weight:700; letter-spacing:.8px; color:var(--t3); text-transform:uppercase; padding-top:3px; }
+.mc-rt { display:flex; flex-direction:column; align-items:flex-end; gap:1px; flex-shrink:0; }
+[dir="ltr"] .mc-rt { align-items:flex-start; }
+.mc-time { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px; line-height:1; }
+.mc-time.safe { color:var(--safe); } .mc-time.warn { color:var(--warn); } .mc-time.danger { color:var(--danger); }
+.mc-et { font-size:10px; color:var(--t3); font-weight:600; }
+.score { font-family:'Bebas Neue',sans-serif; font-size:21px; letter-spacing:2px; line-height:1.1;
+  color:var(--gold); background:var(--card); padding:2px 9px; border-radius:9px;
+  border:1px solid var(--hi-border); white-space:nowrap; }
+.mc-fin { font-size:9px; color:var(--t3); font-weight:600; }
+
+.mc-teams { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.mc-team { font-size:13px; font-weight:700; color:var(--t1); flex:1; line-height:1.3; }
+.mc-team.b { text-align:end; }
+.mc-vs { font-family:'Bebas Neue',sans-serif; font-size:13px; color:var(--t2); flex-shrink:0; }
+.mc-venue { margin-top:8px; font-size:10px; color:var(--t3); font-weight:500; line-height:1.4; }
+.mc-note { color:var(--gold); }
+
+/* ── RECOMMENDED LIST ── */
+.rec-wrap { max-width:1080px; margin:16px auto 0; padding:0 20px 60px; }
+.rc { display:flex; align-items:center; gap:14px; padding:15px 18px; margin-bottom:10px;
+  border-radius:var(--radius); background:var(--hi); border:1px solid var(--hi-border);
+  position:relative; overflow:hidden;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s; }
+.rc:hover { transform:translateX(-4px); }
+[dir="ltr"] .rc:hover { transform:translateX(4px); }
+.rc:active { transform:scale(.98); }
+.rc-num { font-family:'Bebas Neue',sans-serif; font-size:32px; color:var(--gold); opacity:.5;
+  line-height:1; min-width:28px; text-align:center; flex-shrink:0; }
+.rc-info { flex:1; min-width:0; }
+.rc-match { font-size:15px; font-weight:700; color:var(--t1); margin-bottom:3px; }
+.rc-meta { font-size:11px; color:var(--t2); font-weight:500; }
+.rc-res { font-size:11px; color:var(--gold); font-weight:700; margin-top:2px; }
+.rc-rt { text-align:end; flex-shrink:0; }
+.rc-time { font-family:'Bebas Neue',sans-serif; font-size:24px; color:var(--gold); line-height:1; }
+.rc-tl { font-size:10px; color:var(--t2); font-weight:600; }
+.warn-box { border-radius:var(--radius); padding:14px 18px; font-size:13px; margin-top:14px;
+  background:rgba(251,113,133,.12); border:1px solid rgba(251,113,133,.35); color:var(--danger); }
+
+/* ── STANDINGS ── */
+.stand-wrap { max-width:1080px; margin:16px auto 0; padding:0 20px 60px; }
+.gs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:16px; }
+.gs-card { border-radius:var(--radius); overflow:hidden; background:var(--card-future);
+  border:1px solid var(--card-border); box-shadow:0 2px 12px var(--shadow); }
+.gs-title { font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--gold);
+  padding:10px 15px 8px; letter-spacing:1px; border-bottom:1px solid var(--card-border); }
+.gs-tbl { width:100%; border-collapse:collapse; font-size:12px; }
+.gs-tbl th { text-align:start; padding:6px 9px; color:var(--t3); font-weight:700; font-size:10px;
+  letter-spacing:.5px; background:var(--card); }
+.gs-tbl th.n, .gs-tbl td.n { text-align:center; }
+.gs-tbl td { padding:8px 9px; border-top:1px solid var(--card-border); color:var(--t2); }
+.gs-tbl td.n { font-weight:700; font-size:13px; color:var(--t1); }
+.gs-tbl tr.q td { color:var(--t1); }
+.gs-tbl tr.q .tc { color:var(--safe); font-weight:700; }
+.tc { display:flex; align-items:center; gap:6px; font-weight:600; font-size:12px; }
+.pos { width:17px; height:17px; border-radius:6px; flex-shrink:0; font-size:9px; font-weight:700;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--card); color:var(--t3); }
+.pos.q { background:rgba(74,222,128,.25); color:var(--safe); }
+.gd { color:var(--gold); font-weight:700; }
+
+/* ── FINAL CARD ── */
+.final-card { max-width:520px; margin:0 auto; }
+.mc.thefinal { border-color:var(--gold); background:var(--hi); }
+.mc.thefinal .mc-time { color:var(--gold); font-size:30px; }
+
+/* ── FOOTER ── */
+.footer { text-align:center; padding:26px 20px; border-top:1px solid var(--card-border);
+  font-size:12px; color:var(--t3); font-weight:500; }
+
+::-webkit-scrollbar { width:7px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:4px; }
+
+@media (max-width:520px){
+  .sidebar { width:54px; }
+  main { margin-right:54px; }
+  [dir="ltr"] main { margin-left:54px; }
+  .drawer { right:54px; } [dir="ltr"] .drawer { left:54px; }
+  .mgrid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <button class="side-btn" id="btnMatches" onclick="toggleDrawer('matches')" title="">☰</button>
+  <span class="side-label"><span data-he="נתוני משחקים" data-en="Match Data">נתוני משחקים</span></span>
+  <button class="side-btn" id="btnSettings" onclick="toggleDrawer('settings')" title="" style="margin-top:14px">⚙️</button>
+  <span class="side-label"><span data-he="הגדרות" data-en="Settings">הגדרות</span></span>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+
+<!-- DRAWER: matches -->
+<div class="drawer" id="drawerMatches">
+  <div class="drawer-title"><span data-he="נתוני משחקים" data-en="Match Data">נתוני משחקים</span></div>
+  <div class="drawer-item active" data-stage="rec" onclick="goStage('rec',this)"><span data-he="⭐ המלצות" data-en="⭐ Top Picks">⭐ המלצות</span></div>
+<div class="drawer-item" data-stage="group" onclick="goStage('group',this)"><span data-he="שלב הבתים" data-en="Group Stage">שלב הבתים</span></div>
+<div class="drawer-item" data-stage="standings" onclick="goStage('standings',this)"><span data-he="📊 טבלאות" data-en="📊 Standings">📊 טבלאות</span></div>
+<div class="drawer-item" data-stage="r32" onclick="goStage('r32',this)"><span data-he="סיבוב 32" data-en="Round of 32">סיבוב 32</span></div>
+<div class="drawer-item" data-stage="r16" onclick="goStage('r16',this)"><span data-he="שמינית גמר" data-en="Round of 16">שמינית גמר</span></div>
+<div class="drawer-item" data-stage="qf" onclick="goStage('qf',this)"><span data-he="רבע גמר" data-en="Quarter-finals">רבע גמר</span></div>
+<div class="drawer-item" data-stage="sf" onclick="goStage('sf',this)"><span data-he="חצי גמר" data-en="Semi-finals">חצי גמר</span></div>
+<div class="drawer-item" data-stage="final" onclick="goStage('final',this)"><span data-he="🏆 גמר" data-en="🏆 Final">🏆 גמר</span></div>
+</div>
+
+<!-- DRAWER: settings -->
+<div class="drawer" id="drawerSettings">
+  <div class="drawer-title"><span data-he="הגדרות" data-en="Settings">הגדרות</span></div>
+  <div class="set-group">
+    <div class="set-label"><span data-he="שפה" data-en="Language">שפה</span></div>
+    <div class="set-row">
+      <div class="set-opt active" id="langHe" onclick="setLang('he')">עברית</div>
+      <div class="set-opt" id="langEn" onclick="setLang('en')">English</div>
+    </div>
+  </div>
+  <div class="set-group">
+    <div class="set-label"><span data-he="מצב תצוגה" data-en="Theme">מצב תצוגה</span></div>
+    <div class="set-row">
+      <div class="set-opt active" id="themeDark" onclick="setTheme('dark')"><span data-he="🌙 כהה" data-en="🌙 Dark">🌙 כהה</span></div>
+      <div class="set-opt" id="themeLight" onclick="setTheme('light')"><span data-he="☀️ בהיר" data-en="☀️ Light">☀️ בהיר</span></div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <section class="hero">
+    <div class="hero-title"><span data-he="מונדיאל" data-en="WORLD CUP">מונדיאל</span><span>2026</span></div>
+    <div class="hero-sub"><span data-he="לוח שידורים · תוצאות · שעון ישראל" data-en="Schedule · Results · Israel Time">לוח שידורים · תוצאות · שעון ישראל</span></div>
+    <div class="hero-badge">🕐 <span data-he="11 יוני – 19 יולי 2026 · ארה&quot;ב · קנדה · מקסיקו" data-en="Jun 11 – Jul 19, 2026 · USA · Canada · Mexico">11 יוני – 19 יולי 2026 · ארה&quot;ב · קנדה · מקסיקו</span></div>
+  </section>
+
+  <div class="legend">
+<div class="leg-item"><div class="leg-dot" style="background:var(--safe)"></div><span data-he="שעה נוחה" data-en="Good time">שעה נוחה</span></div>
+<div class="leg-item"><div class="leg-dot" style="background:var(--warn)"></div><span data-he="מאוחר" data-en="Late">מאוחר</span></div>
+<div class="leg-item"><div class="leg-dot" style="background:var(--danger)"></div><span data-he="לילה עמוק" data-en="Deep night">לילה עמוק</span></div>
+<div class="leg-item"><div class="leg-dot" style="background:var(--gold)"></div><span data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</span></div>
+</div>
+
+  <!-- STAGES -->
+  <div id="stage-rec" class="stage active">
+    <div class="sec-head"><div class="sec-label">⭐ <span data-he="המלצות — לצפות בלי להרוס שינה" data-en="Top picks — watch without wrecking your sleep">המלצות — לצפות בלי להרוס שינה</span></div><div class="sec-sub"><span data-he="עדכון 22 יוני 2026" data-en="Updated Jun 22, 2026">עדכון 22 יוני 2026</span></div></div>
+    <div class="rec-wrap"><div class="rc">
+<div class="rc-num">1</div>
+<div class="rc-info">
+<div class="rc-match">🇫🇷🇸🇳 <span data-he="צרפת נגד סנגל" data-en="France vs Senegal">צרפת נגד סנגל</span></div>
+<div class="rc-meta" data-he="שלישי 16/6 · MetLife" data-en="Tue Jun 16 · MetLife">שלישי 16/6 · MetLife</div><div class="rc-res" data-he="✅ סיום 3–1 · מבפה שיא שערים לצרפת" data-en="✅ FT 3–1 · Mbappé France record">✅ סיום 3–1 · מבפה שיא שערים לצרפת</div>
+</div>
+<div class="rc-rt"><div class="rc-time">22:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
+</div>
+<div class="rc">
+<div class="rc-num">2</div>
+<div class="rc-info">
+<div class="rc-match">🏴󠁧󠁢󠁥󠁮󠁧󠁿🇭🇷 <span data-he="אנגליה נגד קרואטיה" data-en="England vs Croatia">אנגליה נגד קרואטיה</span></div>
+<div class="rc-meta" data-he="רביעי 17/6 · AT&amp;T" data-en="Wed Jun 17 · AT&amp;T">רביעי 17/6 · AT&amp;T</div><div class="rc-res" data-he="✅ סיום 4–2 · ריבאץ&#x27; מדהים" data-en="✅ FT 4–2 · stunning rematch">✅ סיום 4–2 · ריבאץ&#x27; מדהים</div>
+</div>
+<div class="rc-rt"><div class="rc-time">23:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
+</div>
+<div class="rc">
+<div class="rc-num">3</div>
+<div class="rc-info">
+<div class="rc-match">🇳🇱🇸🇪 <span data-he="הולנד נגד שוודיה" data-en="Netherlands vs Sweden">הולנד נגד שוודיה</span></div>
+<div class="rc-meta" data-he="שבת 20/6 · NRG" data-en="Sat Jun 20 · NRG">שבת 20/6 · NRG</div><div class="rc-res" data-he="✅ סיום 5–1 · ברוביי ×2" data-en="✅ FT 5–1 · Brobbey ×2">✅ סיום 5–1 · ברוביי ×2</div>
+</div>
+<div class="rc-rt"><div class="rc-time">20:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
+</div>
+<div class="rc">
+<div class="rc-num">4</div>
+<div class="rc-info">
+<div class="rc-match">🇩🇪🇨🇮 <span data-he="גרמניה נגד חוף השנהב" data-en="Germany vs Ivory Coast">גרמניה נגד חוף השנהב</span></div>
+<div class="rc-meta" data-he="שבת 20/6 · BMO" data-en="Sat Jun 20 · BMO">שבת 20/6 · BMO</div><div class="rc-res" data-he="✅ סיום 2–1 · אונדב הגיבור" data-en="✅ FT 2–1 · Undav hero">✅ סיום 2–1 · אונדב הגיבור</div>
+</div>
+<div class="rc-rt"><div class="rc-time">23:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
+</div>
+<div class="rc">
+<div class="rc-num">5</div>
+<div class="rc-info">
+<div class="rc-match">🇦🇷🇦🇹 <span data-he="ארגנטינה נגד אוסטריה" data-en="Argentina vs Austria">ארגנטינה נגד אוסטריה</span></div>
+<div class="rc-meta" data-he="שני 22/6 · AT&amp;T · היום" data-en="Mon Jun 22 · AT&amp;T · today">שני 22/6 · AT&amp;T · היום</div><div class="rc-res" data-he="🔴 חי · מסי מחפש להעפיל" data-en="🔴 Live · Messi eyes qualification">🔴 חי · מסי מחפש להעפיל</div>
+</div>
+<div class="rc-rt"><div class="rc-time">20:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
+</div>
+<div class="rc">
+<div class="rc-num">6</div>
+<div class="rc-info">
+<div class="rc-match">🇫🇷🇮🇶 <span data-he="צרפת נגד עיראק" data-en="France vs Iraq">צרפת נגד עיראק</span></div>
+<div class="rc-meta" data-he="שני 22/6 · Lincoln · היום" data-en="Mon Jun 22 · Lincoln · today">שני 22/6 · Lincoln · היום</div><div class="rc-res" data-he="🔴 חי" data-en="🔴 Live">🔴 חי</div>
+</div>
+<div class="rc-rt"><div class="rc-time">00:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
+</div>
+<div class="rc">
+<div class="rc-num">7</div>
+<div class="rc-info">
+<div class="rc-match">🏆 <span data-he="הגמר" data-en="The Final">הגמר</span></div>
+<div class="rc-meta" data-he="ראשון 19/7 · MetLife" data-en="Sun Jul 19 · MetLife">ראשון 19/7 · MetLife</div>
+</div>
+<div class="rc-rt"><div class="rc-time">22:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
+</div>
+<div class="warn-box" data-he="⚠️ להיזהר: רוב משחקי הבתים יוצאים 02:00–06:00. הכי קשה — ירדן נגד אלג&#x27;יריה ב-06:00 🌅" data-en="⚠️ Watch out: most group games kick off 02:00–06:00 IL. Worst — Jordan vs Algeria at 06:00 🌅">⚠️ להיזהר: רוב משחקי הבתים יוצאים 02:00–06:00. הכי קשה — ירדן נגד אלג&#x27;יריה ב-06:00 🌅</div></div>
+  </div>
+
+  <div id="stage-group" class="stage">
+    <div class="sec-head"><div class="sec-label"><span data-he="שלב הבתים" data-en="Group Stage">שלב הבתים</span></div><div class="sec-sub"><span data-he="11–27 יוני · 72 משחקים" data-en="Jun 11–27 · 72 matches">11–27 יוני · 72 משחקים</span></div></div>
+    <div class="day-block"><div class="day-hd"><div class="day-lbl" data-he="יום ה׳, 11 יוני" data-en="Thu, Jun 11">יום ה׳, 11 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past star">
+<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> A</span><div class="mc-rt"><div class="score">2 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇲🇽 <span data-he="מקסיקו" data-en="Mexico">מקסיקו</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇿🇦 <span data-he="דרום אפריקה" data-en="South Africa">דרום אפריקה</span></span></div>
+<div class="mc-venue">📍 <span data-he="אצטדיון אזטקה, מקסיקו סיטי" data-en="Estadio Azteca, Mexico City">אצטדיון אזטקה, מקסיקו סיטי</span> · <span class="mc-note" data-he="חמנס 65&#x27;, 90+5&#x27;" data-en="Giménez 65&#x27;, 90+5&#x27;">חמנס 65&#x27;, 90+5&#x27;</span></div>
+</div>
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> A</span><div class="mc-rt"><div class="score">2 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇰🇷 <span data-he="קוריאה" data-en="South Korea">קוריאה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇿 <span data-he="צ&#x27;כיה" data-en="Czechia">צ&#x27;כיה</span></span></div>
+<div class="mc-venue">📍 <span data-he="אצטדיון אקרון, גוודלחרה" data-en="Estadio Akron, Guadalajara">אצטדיון אקרון, גוודלחרה</span> · <span class="mc-note" data-he="קוריאה הפכה 0–1" data-en="Korea came back from 0–1">קוריאה הפכה 0–1</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שישי, 12 יוני" data-en="Fri, Jun 12">שישי, 12 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> B</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇦 <span data-he="קנדה" data-en="Canada">קנדה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇧🇦 <span data-he="בוסניה" data-en="Bosnia">בוסניה</span></span></div>
+<div class="mc-venue">📍 <span data-he="BMO Field, טורונטו" data-en="BMO Field, Toronto">BMO Field, טורונטו</span> · <span class="mc-note" data-he="לארין 54&#x27;" data-en="Larin 54&#x27;">לארין 54&#x27;</span></div>
+</div>
+<div class="mc past">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> D</span><div class="mc-rt"><div class="score">4 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇺🇸 <span data-he="ארה&quot;ב" data-en="USA">ארה&quot;ב</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇵🇾 <span data-he="פרגוואי" data-en="Paraguay">פרגוואי</span></span></div>
+<div class="mc-venue">📍 <span data-he="SoFi Stadium, אינגלווד" data-en="SoFi Stadium, Inglewood">SoFi Stadium, אינגלווד</span> · <span class="mc-note" data-he="בלוגון ×2, ריינה 90+8&#x27;" data-en="Balogun ×2, Reyna 90+8&#x27;">בלוגון ×2, ריינה 90+8&#x27;</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שבת, 13 יוני" data-en="Sat, Jun 13">שבת, 13 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> B</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇭 <span data-he="שוויץ" data-en="Switzerland">שוויץ</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇶🇦 <span data-he="קטאר" data-en="Qatar">קטאר</span></span></div>
+<div class="mc-venue">📍 <span data-he="Levi&#x27;s Stadium, סנטה קלרה" data-en="Levi&#x27;s Stadium, Santa Clara">Levi&#x27;s Stadium, סנטה קלרה</span> · <span class="mc-note" data-he="קטאר שווה בדקה 90+" data-en="Qatar equalize 90+&#x27;">קטאר שווה בדקה 90+</span></div>
+</div>
+<div class="mc past star">
+<div class="strip warn"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> C</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇧🇷 <span data-he="ברזיל" data-en="Brazil">ברזיל</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇲🇦 <span data-he="מרוקו" data-en="Morocco">מרוקו</span></span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span> · <span class="mc-note" data-he="וינישיוס הציל בדקה 90" data-en="Vini Jr saved it at 90&#x27;">וינישיוס הציל בדקה 90</span></div>
+</div>
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> C</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🏴󠁧󠁢󠁳󠁣󠁴󠁿 <span data-he="סקוטלנד" data-en="Scotland">סקוטלנד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇭🇹 <span data-he="האיטי" data-en="Haiti">האיטי</span></span></div>
+<div class="mc-venue">📍 <span data-he="Gillette Stadium, פוקסבורו" data-en="Gillette Stadium, Foxborough">Gillette Stadium, פוקסבורו</span> · <span class="mc-note" data-he="28 שנות ציפייה!" data-en="28-year wait ends!">28 שנות ציפייה!</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="ראשון, 14 יוני" data-en="Sun, Jun 14">ראשון, 14 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> D</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇦🇺 <span data-he="אוסטרליה" data-en="Australia">אוסטרליה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇹🇷 <span data-he="טורקיה" data-en="Türkiye">טורקיה</span></span></div>
+<div class="mc-venue">📍 <span data-he="BC Place, ונקובר" data-en="BC Place, Vancouver">BC Place, ונקובר</span> · <span class="mc-note" data-he="הפתעה" data-en="Upset">הפתעה</span></div>
+</div>
+<div class="mc past star">
+<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">7 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇩🇪 <span data-he="גרמניה" data-en="Germany">גרמניה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇼 <span data-he="קוראסאו" data-en="Curaçao">קוראסאו</span></span></div>
+<div class="mc-venue">📍 <span data-he="NRG Stadium, יוסטון" data-en="NRG Stadium, Houston">NRG Stadium, יוסטון</span> · <span class="mc-note" data-he="הוורץ ×2, מוסיאלה" data-en="Havertz ×2, Musiala">הוורץ ×2, מוסיאלה</span></div>
+</div>
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> F</span><div class="mc-rt"><div class="score">2 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇳🇱 <span data-he="הולנד" data-en="Netherlands">הולנד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇯🇵 <span data-he="יפן" data-en="Japan">יפן</span></span></div>
+<div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span> · <span class="mc-note" data-he="יפן מפתיעה!" data-en="Japan stuns!">יפן מפתיעה!</span></div>
+</div>
+<div class="mc past">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇮 <span data-he="חוף השנהב" data-en="Ivory Coast">חוף השנהב</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇪🇨 <span data-he="אקוודור" data-en="Ecuador">אקוודור</span></span></div>
+<div class="mc-venue">📍 <span data-he="Lincoln Financial Field, פילדלפיה" data-en="Lincoln Financial Field, Philadelphia">Lincoln Financial Field, פילדלפיה</span></div>
+</div>
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> F</span><div class="mc-rt"><div class="score">5 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇸🇪 <span data-he="שוודיה" data-en="Sweden">שוודיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇹🇳 <span data-he="תוניסיה" data-en="Tunisia">תוניסיה</span></span></div>
+<div class="mc-venue">📍 <span data-he="Estadio BBVA, מונטריי" data-en="Estadio BBVA, Monterrey">Estadio BBVA, מונטריי</span> · <span class="mc-note" data-he="איסאק, ג&#x27;יוקרס, אייארי" data-en="Isak, Gyökeres, Ayari">איסאק, ג&#x27;יוקרס, אייארי</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שני, 15 יוני" data-en="Mon, Jun 15">שני, 15 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> H</span><div class="mc-rt"><div class="score">0 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇪🇸 <span data-he="ספרד" data-en="Spain">ספרד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇻 <span data-he="קייפ ורד" data-en="Cape Verde">קייפ ורד</span></span></div>
+<div class="mc-venue">📍 <span data-he="Mercedes-Benz Stadium, אטלנטה" data-en="Mercedes-Benz Stadium, Atlanta">Mercedes-Benz Stadium, אטלנטה</span> · <span class="mc-note" data-he="ספרד נעצרת! הפתעה" data-en="Spain held! Big upset">ספרד נעצרת! הפתעה</span></div>
+</div>
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> G</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇧🇪 <span data-he="בלגיה" data-en="Belgium">בלגיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇪🇬 <span data-he="מצרים" data-en="Egypt">מצרים</span></span></div>
+<div class="mc-venue">📍 <span data-he="Lumen Field, סיאטל" data-en="Lumen Field, Seattle">Lumen Field, סיאטל</span> · <span class="mc-note" data-he="לוקאקו הציל" data-en="Lukaku saved it">לוקאקו הציל</span></div>
+</div>
+<div class="mc past">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> H</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇸🇦 <span data-he="סעודיה" data-en="Saudi Arabia">סעודיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇺🇾 <span data-he="אורוגוואי" data-en="Uruguay">אורוגוואי</span></span></div>
+<div class="mc-venue">📍 <span data-he="Hard Rock Stadium, מיאמי" data-en="Hard Rock Stadium, Miami">Hard Rock Stadium, מיאמי</span></div>
+</div>
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> G</span><div class="mc-rt"><div class="score">2 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇮🇷 <span data-he="איראן" data-en="Iran">איראן</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇳🇿 <span data-he="ניו זילנד" data-en="New Zealand">ניו זילנד</span></span></div>
+<div class="mc-venue">📍 <span data-he="SoFi Stadium, אינגלווד" data-en="SoFi Stadium, Inglewood">SoFi Stadium, אינגלווד</span> · <span class="mc-note" data-he="תיקו מרתק" data-en="Thriller draw">תיקו מרתק</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שלישי, 16 יוני" data-en="Tue, Jun 16">שלישי, 16 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past star">
+<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇫🇷 <span data-he="צרפת" data-en="France">צרפת</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇸🇳 <span data-he="סנגל" data-en="Senegal">סנגל</span></span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span> · <span class="mc-note" data-he="מבפה שיא שערים לצרפת!" data-en="Mbappé France record!">מבפה שיא שערים לצרפת!</span></div>
+</div>
+<div class="mc past">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="score">4 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇳🇴 <span data-he="נורווגיה" data-en="Norway">נורווגיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇮🇶 <span data-he="עיראק" data-en="Iraq">עיראק</span></span></div>
+<div class="mc-venue">📍 <span data-he="Gillette Stadium, פוקסבורו" data-en="Gillette Stadium, Foxborough">Gillette Stadium, פוקסבורו</span> · <span class="mc-note" data-he="הולנד ×2" data-en="Haaland ×2">הולנד ×2</span></div>
+</div>
+<div class="mc past star">
+<div class="strip danger"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> J</span><div class="mc-rt"><div class="score">3 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇦🇷 <span data-he="ארגנטינה" data-en="Argentina">ארגנטינה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇩🇿 <span data-he="אלג&#x27;יריה" data-en="Algeria">אלג&#x27;יריה</span></span></div>
+<div class="mc-venue">📍 <span data-he="Arrowhead Stadium, קנזס סיטי" data-en="Arrowhead Stadium, Kansas City">Arrowhead Stadium, קנזס סיטי</span> · <span class="mc-note" data-he="מסי האטריק! 🐐" data-en="Messi hat-trick! 🐐">מסי האטריק! 🐐</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="רביעי, 17 יוני" data-en="Wed, Jun 17">רביעי, 17 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> J</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇦🇹 <span data-he="אוסטריה" data-en="Austria">אוסטריה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇯🇴 <span data-he="ירדן" data-en="Jordan">ירדן</span></span></div>
+<div class="mc-venue">📍 <span data-he="Levi&#x27;s Stadium, סנטה קלרה" data-en="Levi&#x27;s Stadium, Santa Clara">Levi&#x27;s Stadium, סנטה קלרה</span></div>
+</div>
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> K</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇵🇹 <span data-he="פורטוגל" data-en="Portugal">פורטוגל</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇩 <span data-he="קונגו DR" data-en="DR Congo">קונגו DR</span></span></div>
+<div class="mc-venue">📍 <span data-he="NRG Stadium, יוסטון" data-en="NRG Stadium, Houston">NRG Stadium, יוסטון</span> · <span class="mc-note" data-he="רונאלדו מתאכזב" data-en="Ronaldo frustrated">רונאלדו מתאכזב</span></div>
+</div>
+<div class="mc past star">
+<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> L</span><div class="mc-rt"><div class="score">4 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🏴󠁧󠁢󠁥󠁮󠁧󠁿 <span data-he="אנגליה" data-en="England">אנגליה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇭🇷 <span data-he="קרואטיה" data-en="Croatia">קרואטיה</span></span></div>
+<div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span> · <span class="mc-note" data-he="ריבאץ&#x27; מדהים!" data-en="Stunning rematch!">ריבאץ&#x27; מדהים!</span></div>
+</div>
+<div class="mc past">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> L</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇬🇭 <span data-he="גאנה" data-en="Ghana">גאנה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇵🇦 <span data-he="פנמה" data-en="Panama">פנמה</span></span></div>
+<div class="mc-venue">📍 <span data-he="BMO Field, טורונטו" data-en="BMO Field, Toronto">BMO Field, טורונטו</span> · <span class="mc-note" data-he="ירנקיי בשלב מאוחר" data-en="Late Yirenkyi winner">ירנקיי בשלב מאוחר</span></div>
+</div>
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> K</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇴 <span data-he="קולומביה" data-en="Colombia">קולומביה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇺🇿 <span data-he="אוזבקיסטן" data-en="Uzbekistan">אוזבקיסטן</span></span></div>
+<div class="mc-venue">📍 <span data-he="אצטדיון אזטקה, מקסיקו סיטי" data-en="Estadio Azteca, Mexico City">אצטדיון אזטקה, מקסיקו סיטי</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="חמישי, 18 יוני" data-en="Thu, Jun 18">חמישי, 18 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> A</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇿 <span data-he="צ&#x27;כיה" data-en="Czechia">צ&#x27;כיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇿🇦 <span data-he="דרום אפריקה" data-en="South Africa">דרום אפריקה</span></span></div>
+<div class="mc-venue">📍 <span data-he="Mercedes-Benz Stadium, אטלנטה" data-en="Mercedes-Benz Stadium, Atlanta">Mercedes-Benz Stadium, אטלנטה</span></div>
+</div>
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> A</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇲🇽 <span data-he="מקסיקו" data-en="Mexico">מקסיקו</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇰🇷 <span data-he="קוריאה" data-en="South Korea">קוריאה</span></span></div>
+<div class="mc-venue">📍 <span data-he="אצטדיון אקרון, גוודלחרה" data-en="Estadio Akron, Guadalajara">אצטדיון אקרון, גוודלחרה</span></div>
+</div>
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> B</span><div class="mc-rt"><div class="score">6 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇦 <span data-he="קנדה" data-en="Canada">קנדה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇶🇦 <span data-he="קטאר" data-en="Qatar">קטאר</span></span></div>
+<div class="mc-venue">📍 <span data-he="BC Place, ונקובר" data-en="BC Place, Vancouver">BC Place, ונקובר</span> · <span class="mc-note" data-he="דיוויד האטריק!" data-en="David hat-trick!">דיוויד האטריק!</span></div>
+</div>
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> B</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇭 <span data-he="שוויץ" data-en="Switzerland">שוויץ</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇧🇦 <span data-he="בוסניה" data-en="Bosnia">בוסניה</span></span></div>
+<div class="mc-venue">📍 <span data-he="SoFi Stadium, אינגלווד" data-en="SoFi Stadium, Inglewood">SoFi Stadium, אינגלווד</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שישי, 19 יוני" data-en="Fri, Jun 19">שישי, 19 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> D</span><div class="mc-rt"><div class="score">2 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇺🇸 <span data-he="ארה&quot;ב" data-en="USA">ארה&quot;ב</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇦🇺 <span data-he="אוסטרליה" data-en="Australia">אוסטרליה</span></span></div>
+<div class="mc-venue">📍 <span data-he="Lumen Field, סיאטל" data-en="Lumen Field, Seattle">Lumen Field, סיאטל</span></div>
+</div>
+<div class="mc past">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> C</span><div class="mc-rt"><div class="score">1 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🏴󠁧󠁢󠁳󠁣󠁴󠁿 <span data-he="סקוטלנד" data-en="Scotland">סקוטלנד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇲🇦 <span data-he="מרוקו" data-en="Morocco">מרוקו</span></span></div>
+<div class="mc-venue">📍 <span data-he="Gillette Stadium, פוקסבורו" data-en="Gillette Stadium, Foxborough">Gillette Stadium, פוקסבורו</span></div>
+</div>
+<div class="mc past">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> C</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇧🇷 <span data-he="ברזיל" data-en="Brazil">ברזיל</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇭🇹 <span data-he="האיטי" data-en="Haiti">האיטי</span></span></div>
+<div class="mc-venue">📍 <span data-he="Lincoln Financial Field, פילדלפיה" data-en="Lincoln Financial Field, Philadelphia">Lincoln Financial Field, פילדלפיה</span></div>
+</div>
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> D</span><div class="mc-rt"><div class="score">2 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇹🇷 <span data-he="טורקיה" data-en="Türkiye">טורקיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇵🇾 <span data-he="פרגוואי" data-en="Paraguay">פרגוואי</span></span></div>
+<div class="mc-venue">📍 <span data-he="Levi&#x27;s Stadium, סנטה קלרה" data-en="Levi&#x27;s Stadium, Santa Clara">Levi&#x27;s Stadium, סנטה קלרה</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שבת, 20 יוני" data-en="Sat, Jun 20">שבת, 20 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past star">
+<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> F</span><div class="mc-rt"><div class="score">5 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇳🇱 <span data-he="הולנד" data-en="Netherlands">הולנד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇸🇪 <span data-he="שוודיה" data-en="Sweden">שוודיה</span></span></div>
+<div class="mc-venue">📍 <span data-he="NRG Stadium, יוסטון" data-en="NRG Stadium, Houston">NRG Stadium, יוסטון</span> · <span class="mc-note" data-he="ברוביי ×2, ג&#x27;אקפו ×2" data-en="Brobbey ×2, Gakpo ×2">ברוביי ×2, ג&#x27;אקפו ×2</span></div>
+</div>
+<div class="mc past star">
+<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">2 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇩🇪 <span data-he="גרמניה" data-en="Germany">גרמניה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇮 <span data-he="חוף השנהב" data-en="Ivory Coast">חוף השנהב</span></span></div>
+<div class="mc-venue">📍 <span data-he="BMO Field, טורונטו" data-en="BMO Field, Toronto">BMO Field, טורונטו</span> · <span class="mc-note" data-he="אונדב הגיבור!" data-en="Undav the hero!">אונדב הגיבור!</span></div>
+</div>
+<div class="mc past">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">0 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇪🇨 <span data-he="אקוודור" data-en="Ecuador">אקוודור</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇼 <span data-he="קוראסאו" data-en="Curaçao">קוראסאו</span></span></div>
+<div class="mc-venue">📍 <span data-he="Arrowhead Stadium, קנזס סיטי" data-en="Arrowhead Stadium, Kansas City">Arrowhead Stadium, קנזס סיטי</span></div>
+</div>
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> F</span><div class="mc-rt"><div class="score">4 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇯🇵 <span data-he="יפן" data-en="Japan">יפן</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇹🇳 <span data-he="תוניסיה" data-en="Tunisia">תוניסיה</span></span></div>
+<div class="mc-venue">📍 <span data-he="Estadio BBVA, מונטריי" data-en="Estadio BBVA, Monterrey">Estadio BBVA, מונטריי</span> · <span class="mc-note" data-he="יפן מדהימה!" data-en="Japan superb!">יפן מדהימה!</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="ראשון, 21 יוני" data-en="Sun, Jun 21">ראשון, 21 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc past star">
+<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> H</span><div class="mc-rt"><div class="score">4 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇪🇸 <span data-he="ספרד" data-en="Spain">ספרד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇸🇦 <span data-he="סעודיה" data-en="Saudi Arabia">סעודיה</span></span></div>
+<div class="mc-venue">📍 <span data-he="Mercedes-Benz Stadium, אטלנטה" data-en="Mercedes-Benz Stadium, Atlanta">Mercedes-Benz Stadium, אטלנטה</span> · <span class="mc-note" data-he="יאמאל חזר!" data-en="Yamal is back!">יאמאל חזר!</span></div>
+</div>
+<div class="mc past">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> H</span><div class="mc-rt"><div class="score">2 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇺🇾 <span data-he="אורוגוואי" data-en="Uruguay">אורוגוואי</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇻 <span data-he="קייפ ורד" data-en="Cape Verde">קייפ ורד</span></span></div>
+<div class="mc-venue">📍 <span data-he="Hard Rock Stadium, מיאמי" data-en="Hard Rock Stadium, Miami">Hard Rock Stadium, מיאמי</span> · <span class="mc-note" data-he="קייפ ורד שוב מפתיעה!" data-en="Cape Verde stuns again!">קייפ ורד שוב מפתיעה!</span></div>
+</div>
+<div class="mc past">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> G</span><div class="mc-rt"><div class="score">0 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇧🇪 <span data-he="בלגיה" data-en="Belgium">בלגיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇮🇷 <span data-he="איראן" data-en="Iran">איראן</span></span></div>
+<div class="mc-venue">📍 <span data-he="SoFi Stadium, אינגלווד" data-en="SoFi Stadium, Inglewood">SoFi Stadium, אינגלווד</span> · <span class="mc-note" data-he="בלגיה עם 10" data-en="Belgium down to 10">בלגיה עם 10</span></div>
+</div>
+<div class="mc past">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> G</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇪🇬 <span data-he="מצרים" data-en="Egypt">מצרים</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇳🇿 <span data-he="ניו זילנד" data-en="New Zealand">ניו זילנד</span></span></div>
+<div class="mc-venue">📍 <span data-he="BC Place, ונקובר" data-en="BC Place, Vancouver">BC Place, ונקובר</span> · <span class="mc-note" data-he="מצרים קמה לחיים!" data-en="Egypt roar back!">מצרים קמה לחיים!</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שני, 22 יוני" data-en="Mon, Jun 22">שני, 22 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc live star">
+<div class="strip safe"></div><div class="live-tag" data-he="🔴 חי" data-en="🔴 Live">🔴 חי</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> J</span><div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇦🇷 <span data-he="ארגנטינה" data-en="Argentina">ארגנטינה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇦🇹 <span data-he="אוסטריה" data-en="Austria">אוסטריה</span></span></div>
+<div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span> · <span class="mc-note" data-he="מסי מחפש להעפיל" data-en="Messi eyes qualification">מסי מחפש להעפיל</span></div>
+</div>
+<div class="mc live star">
+<div class="strip safe"></div><div class="live-tag" data-he="🔴 חי" data-en="🔴 Live">🔴 חי</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="mc-time safe">00:00</div><div class="mc-et">17:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇫🇷 <span data-he="צרפת" data-en="France">צרפת</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇮🇶 <span data-he="עיראק" data-en="Iraq">עיראק</span></span></div>
+<div class="mc-venue">📍 <span data-he="Lincoln Financial Field, פילדלפיה" data-en="Lincoln Financial Field, Philadelphia">Lincoln Financial Field, פילדלפיה</span></div>
+</div>
+<div class="mc live">
+<div class="strip warn"></div><div class="live-tag" data-he="🔴 חי" data-en="🔴 Live">🔴 חי</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="mc-time warn">03:00</div><div class="mc-et">20:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇳🇴 <span data-he="נורווגיה" data-en="Norway">נורווגיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇸🇳 <span data-he="סנגל" data-en="Senegal">סנגל</span></span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span></div>
+</div>
+<div class="mc live">
+<div class="strip danger"></div><div class="live-tag" data-he="🔴 חי" data-en="🔴 Live">🔴 חי</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> J</span><div class="mc-rt"><div class="mc-time danger">06:00</div><div class="mc-et">23:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇯🇴 <span data-he="ירדן" data-en="Jordan">ירדן</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇩🇿 <span data-he="אלג&#x27;יריה" data-en="Algeria">אלג&#x27;יריה</span></span></div>
+<div class="mc-venue">📍 <span data-he="Levi&#x27;s Stadium, סנטה קלרה" data-en="Levi&#x27;s Stadium, Santa Clara">Levi&#x27;s Stadium, סנטה קלרה</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שלישי, 23 יוני" data-en="Tue, Jun 23">שלישי, 23 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> K</span><div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇵🇹 <span data-he="פורטוגל" data-en="Portugal">פורטוגל</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇺🇿 <span data-he="אוזבקיסטן" data-en="Uzbekistan">אוזבקיסטן</span></span></div>
+<div class="mc-venue">📍 <span data-he="NRG Stadium, יוסטון" data-en="NRG Stadium, Houston">NRG Stadium, יוסטון</span></div>
+</div>
+<div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> L</span><div class="mc-rt"><div class="mc-time safe">23:00</div><div class="mc-et">16:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🏴󠁧󠁢󠁥󠁮󠁧󠁿 <span data-he="אנגליה" data-en="England">אנגליה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇬🇭 <span data-he="גאנה" data-en="Ghana">גאנה</span></span></div>
+<div class="mc-venue">📍 <span data-he="Gillette Stadium, פוקסבורו" data-en="Gillette Stadium, Foxborough">Gillette Stadium, פוקסבורו</span></div>
+</div>
+<div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> L</span><div class="mc-rt"><div class="mc-time warn">02:00</div><div class="mc-et">19:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇵🇦 <span data-he="פנמה" data-en="Panama">פנמה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇭🇷 <span data-he="קרואטיה" data-en="Croatia">קרואטיה</span></span></div>
+<div class="mc-venue">📍 <span data-he="BMO Field, טורונטו" data-en="BMO Field, Toronto">BMO Field, טורונטו</span></div>
+</div>
+<div class="mc future">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> K</span><div class="mc-rt"><div class="mc-time danger">05:00</div><div class="mc-et">22:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇴 <span data-he="קולומביה" data-en="Colombia">קולומביה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇩 <span data-he="קונגו DR" data-en="DR Congo">קונגו DR</span></span></div>
+<div class="mc-venue">📍 <span data-he="אצטדיון אקרון, גוודלחרה" data-en="Estadio Akron, Guadalajara">אצטדיון אקרון, גוודלחרה</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="רביעי, 24 יוני" data-en="Wed, Jun 24">רביעי, 24 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> B</span><div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇭 <span data-he="שוויץ" data-en="Switzerland">שוויץ</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇦 <span data-he="קנדה" data-en="Canada">קנדה</span></span></div>
+<div class="mc-venue">📍 <span data-he="BC Place, ונקובר" data-en="BC Place, Vancouver">BC Place, ונקובר</span></div>
+</div>
+<div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> B</span><div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇧🇦 <span data-he="בוסניה" data-en="Bosnia">בוסניה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇶🇦 <span data-he="קטאר" data-en="Qatar">קטאר</span></span></div>
+<div class="mc-venue">📍 <span data-he="Lumen Field, סיאטל" data-en="Lumen Field, Seattle">Lumen Field, סיאטל</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="חמישי, 25 יוני" data-en="Thu, Jun 25">חמישי, 25 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="mc-time safe">23:00</div><div class="mc-et">16:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇪🇨 <span data-he="אקוודור" data-en="Ecuador">אקוודור</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇩🇪 <span data-he="גרמניה" data-en="Germany">גרמניה</span></span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span></div>
+</div>
+<div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> F</span><div class="mc-rt"><div class="mc-time warn">02:00</div><div class="mc-et">19:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇯🇵 <span data-he="יפן" data-en="Japan">יפן</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇸🇪 <span data-he="שוודיה" data-en="Sweden">שוודיה</span></span></div>
+<div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שישי, 26 יוני" data-en="Fri, Jun 26">שישי, 26 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc future star">
+<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇳🇴 <span data-he="נורווגיה" data-en="Norway">נורווגיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇫🇷 <span data-he="צרפת" data-en="France">צרפת</span></span></div>
+<div class="mc-venue">📍 <span data-he="Gillette Stadium, פוקסבורו" data-en="Gillette Stadium, Foxborough">Gillette Stadium, פוקסבורו</span></div>
+</div>
+<div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> H</span><div class="mc-rt"><div class="mc-time warn">03:00</div><div class="mc-et">20:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇺🇾 <span data-he="אורוגוואי" data-en="Uruguay">אורוגוואי</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇪🇸 <span data-he="ספרד" data-en="Spain">ספרד</span></span></div>
+<div class="mc-venue">📍 <span data-he="אצטדיון אקרון, גוודלחרה" data-en="Estadio Akron, Guadalajara">אצטדיון אקרון, גוודלחרה</span></div>
+</div>
+</div>
+<div class="day-hd"><div class="day-lbl" data-he="שבת, 27 יוני" data-en="Sat, Jun 27">שבת, 27 יוני</div><div class="day-line"></div></div>
+<div class="mgrid">
+<div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> L</span><div class="mc-rt"><div class="mc-time warn">00:00</div><div class="mc-et">17:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇵🇦 <span data-he="פנמה" data-en="Panama">פנמה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🏴󠁧󠁢󠁥󠁮󠁧󠁿 <span data-he="אנגליה" data-en="England">אנגליה</span></span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span></div>
+</div>
+<div class="mc future star">
+<div class="strip warn"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
+<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> K</span><div class="mc-rt"><div class="mc-time warn">02:30</div><div class="mc-et">19:30 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team">🇨🇴 <span data-he="קולומביה" data-en="Colombia">קולומביה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇵🇹 <span data-he="פורטוגל" data-en="Portugal">פורטוגל</span></span></div>
+<div class="mc-venue">📍 <span data-he="Hard Rock Stadium, מיאמי" data-en="Hard Rock Stadium, Miami">Hard Rock Stadium, מיאמי</span></div>
+</div>
+</div></div>
+  </div>
+
+  <div id="stage-standings" class="stage">
+    <div class="sec-head"><div class="sec-label">📊 <span data-he="טבלאות שלב הבתים" data-en="Group Standings">טבלאות שלב הבתים</span></div><div class="sec-sub"><span data-he="✅ מתקדמים אוטומטית" data-en="✅ = qualifying spots">✅ מתקדמים אוטומטית</span></div></div>
+    <div class="stand-wrap"><div class="gs-grid"><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> A</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇲🇽 <span data-he="מקסיקו" data-en="Mexico">מקסיקו</span></div></td>
+<td class="n">2</td><td class="n">2</td><td class="n">0</td><td class="n">0</td><td class="n gd">+3</td><td class="n">6</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🇰🇷 <span data-he="קוריאה" data-en="South Korea">קוריאה</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n gd">0</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇿🇦 <span data-he="דרום אפריקה" data-en="South Africa">דרום אפריקה</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n gd">-2</td><td class="n">1</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇨🇿 <span data-he="צ&#x27;כיה" data-en="Czechia">צ&#x27;כיה</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n gd">-1</td><td class="n">1</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> B</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇨🇦 <span data-he="קנדה" data-en="Canada">קנדה</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n gd">+6</td><td class="n">4</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🇨🇭 <span data-he="שוויץ" data-en="Switzerland">שוויץ</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n gd">0</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇧🇦 <span data-he="בוסניה" data-en="Bosnia">בוסניה</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n gd">-1</td><td class="n">1</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇶🇦 <span data-he="קטאר" data-en="Qatar">קטאר</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n gd">-5</td><td class="n">1</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> C</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇧🇷 <span data-he="ברזיל" data-en="Brazil">ברזיל</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n gd">+2</td><td class="n">4</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🏴󠁧󠁢󠁳󠁣󠁴󠁿 <span data-he="סקוטלנד" data-en="Scotland">סקוטלנד</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n gd">0</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇲🇦 <span data-he="מרוקו" data-en="Morocco">מרוקו</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n gd">-1</td><td class="n">1</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇭🇹 <span data-he="האיטי" data-en="Haiti">האיטי</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">0</td><td class="n">2</td><td class="n gd">-1</td><td class="n">0</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> D</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇺🇸 <span data-he="ארה&quot;ב" data-en="USA">ארה&quot;ב</span></div></td>
+<td class="n">2</td><td class="n">2</td><td class="n">0</td><td class="n">0</td><td class="n gd">+5</td><td class="n">6</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🇦🇺 <span data-he="אוסטרליה" data-en="Australia">אוסטרליה</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n gd">0</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇹🇷 <span data-he="טורקיה" data-en="Türkiye">טורקיה</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n gd">-1</td><td class="n">0</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇵🇾 <span data-he="פרגוואי" data-en="Paraguay">פרגוואי</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n gd">-3</td><td class="n">0</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> E</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇩🇪 <span data-he="גרמניה" data-en="Germany">גרמניה</span></div></td>
+<td class="n">2</td><td class="n">2</td><td class="n">0</td><td class="n">0</td><td class="n gd">+8</td><td class="n">6</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🇨🇮 <span data-he="חוף השנהב" data-en="Ivory Coast">חוף השנהב</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n gd">0</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇪🇨 <span data-he="אקוודור" data-en="Ecuador">אקוודור</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n gd">-1</td><td class="n">1</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇨🇼 <span data-he="קוראסאו" data-en="Curaçao">קוראסאו</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n gd">-7</td><td class="n">1</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> F</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇳🇱 <span data-he="הולנד" data-en="Netherlands">הולנד</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n gd">+4</td><td class="n">4</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🇯🇵 <span data-he="יפן" data-en="Japan">יפן</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n gd">+2</td><td class="n">4</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇸🇪 <span data-he="שוודיה" data-en="Sweden">שוודיה</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n gd">-2</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇹🇳 <span data-he="תוניסיה" data-en="Tunisia">תוניסיה</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">0</td><td class="n">2</td><td class="n gd">-5</td><td class="n">0</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> G</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇪🇬 <span data-he="מצרים" data-en="Egypt">מצרים</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n gd">+2</td><td class="n">4</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🇧🇪 <span data-he="בלגיה" data-en="Belgium">בלגיה</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">2</td><td class="n">0</td><td class="n gd">0</td><td class="n">2</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇮🇷 <span data-he="איראן" data-en="Iran">איראן</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">2</td><td class="n">0</td><td class="n gd">0</td><td class="n">2</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇳🇿 <span data-he="ניו זילנד" data-en="New Zealand">ניו זילנד</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n gd">-2</td><td class="n">1</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> H</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇪🇸 <span data-he="ספרד" data-en="Spain">ספרד</span></div></td>
+<td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n gd">+4</td><td class="n">4</td></tr><tr class=""><td><div class="tc"><span class="pos ">2</span>🇨🇻 <span data-he="קייפ ורד" data-en="Cape Verde">קייפ ורד</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">2</td><td class="n">0</td><td class="n gd">+1</td><td class="n">2</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇺🇾 <span data-he="אורוגוואי" data-en="Uruguay">אורוגוואי</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">2</td><td class="n">0</td><td class="n gd">0</td><td class="n">2</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇸🇦 <span data-he="סעודיה" data-en="Saudi Arabia">סעודיה</span></div></td>
+<td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n gd">-5</td><td class="n">1</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> I</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇫🇷 <span data-he="צרפת" data-en="France">צרפת</span></div></td>
+<td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n gd">+2</td><td class="n">3</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🇳🇴 <span data-he="נורווגיה" data-en="Norway">נורווגיה</span></div></td>
+<td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n gd">+3</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇸🇳 <span data-he="סנגל" data-en="Senegal">סנגל</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n gd">-2</td><td class="n">0</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇮🇶 <span data-he="עיראק" data-en="Iraq">עיראק</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n gd">-3</td><td class="n">0</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> J</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇦🇷 <span data-he="ארגנטינה" data-en="Argentina">ארגנטינה</span></div></td>
+<td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n gd">+3</td><td class="n">3</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🇦🇹 <span data-he="אוסטריה" data-en="Austria">אוסטריה</span></div></td>
+<td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n gd">+2</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇩🇿 <span data-he="אלג&#x27;יריה" data-en="Algeria">אלג&#x27;יריה</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n gd">-3</td><td class="n">0</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇯🇴 <span data-he="ירדן" data-en="Jordan">ירדן</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n gd">-2</td><td class="n">0</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> K</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🇨🇴 <span data-he="קולומביה" data-en="Colombia">קולומביה</span></div></td>
+<td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n gd">+2</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">2</span>🇵🇹 <span data-he="פורטוגל" data-en="Portugal">פורטוגל</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n gd">0</td><td class="n">1</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇨🇩 <span data-he="קונגו DR" data-en="DR Congo">קונגו DR</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n gd">0</td><td class="n">1</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇺🇿 <span data-he="אוזבקיסטן" data-en="Uzbekistan">אוזבקיסטן</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n gd">-2</td><td class="n">0</td></tr></table></div><div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> L</div>
+<table class="gs-tbl"><tr><th><span data-he="קבוצה" data-en="Team">קבוצה</span></th><th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th><th class="n"><span data-he="נ" data-en="W">נ</span></th><th class="n"><span data-he="ת" data-en="D">ת</span></th><th class="n"><span data-he="ה" data-en="L">ה</span></th><th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th><th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th></tr><tr class="q"><td><div class="tc"><span class="pos q">1</span>🏴󠁧󠁢󠁥󠁮󠁧󠁿 <span data-he="אנגליה" data-en="England">אנגליה</span></div></td>
+<td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n gd">+2</td><td class="n">3</td></tr><tr class="q"><td><div class="tc"><span class="pos q">2</span>🇬🇭 <span data-he="גאנה" data-en="Ghana">גאנה</span></div></td>
+<td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n gd">+1</td><td class="n">3</td></tr><tr class=""><td><div class="tc"><span class="pos ">3</span>🇭🇷 <span data-he="קרואטיה" data-en="Croatia">קרואטיה</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n gd">-2</td><td class="n">0</td></tr><tr class=""><td><div class="tc"><span class="pos ">4</span>🇵🇦 <span data-he="פנמה" data-en="Panama">פנמה</span></div></td>
+<td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n gd">-1</td><td class="n">0</td></tr></table></div></div></div>
+  </div>
+
+  <div id="stage-r32" class="stage">
+    <div class="sec-head"><div class="sec-label"><span data-he="סיבוב 32" data-en="Round of 32">סיבוב 32</span></div><div class="sec-sub"><span data-he="28 יוני – 3 יולי" data-en="Jun 28 – Jul 3">28 יוני – 3 יולי</span></div></div>
+    <div class="day-block"><div class="mgrid"><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳73 ·" data-en="M73 ·">מ׳73 ·</span> <span data-he="28/6" data-en="Jun 28">28/6</span></span>
+<div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="שנייה בית A" data-en="2nd Group A">שנייה בית A</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שנייה בית B" data-en="2nd Group B">שנייה בית B</span></div>
+<div class="mc-venue">📍 <span data-he="SoFi Stadium, אינגלווד" data-en="SoFi Stadium, Inglewood">SoFi Stadium, אינגלווד</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳76 ·" data-en="M76 ·">מ׳76 ·</span> <span data-he="29/6" data-en="Jun 29">29/6</span></span>
+<div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית C" data-en="1st Group C">ראשונה בית C</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שנייה בית F" data-en="2nd Group F">שנייה בית F</span></div>
+<div class="mc-venue">📍 <span data-he="NRG Stadium, יוסטון" data-en="NRG Stadium, Houston">NRG Stadium, יוסטון</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳74 ·" data-en="M74 ·">מ׳74 ·</span> <span data-he="29/6" data-en="Jun 29">29/6</span></span>
+<div class="mc-rt"><div class="mc-time safe">23:30</div><div class="mc-et">16:30 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית E" data-en="1st Group E">ראשונה בית E</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שלישית (בית ABF)" data-en="3rd place (ABF)">שלישית (בית ABF)</span></div>
+<div class="mc-venue">📍 <span data-he="Gillette Stadium, פוקסבורו" data-en="Gillette Stadium, Foxborough">Gillette Stadium, פוקסבורו</span></div>
+</div><div class="mc future">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳75 ·" data-en="M75 ·">מ׳75 ·</span> <span data-he="29/6" data-en="Jun 29">29/6</span></span>
+<div class="mc-rt"><div class="mc-time danger">04:00</div><div class="mc-et">21:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית F" data-en="1st Group F">ראשונה בית F</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שנייה בית C" data-en="2nd Group C">שנייה בית C</span></div>
+<div class="mc-venue">📍 <span data-he="Estadio BBVA, מונטריי" data-en="Estadio BBVA, Monterrey">Estadio BBVA, מונטריי</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳78 ·" data-en="M78 ·">מ׳78 ·</span> <span data-he="30/6" data-en="Jun 30">30/6</span></span>
+<div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="שנייה בית E" data-en="2nd Group E">שנייה בית E</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שנייה בית I" data-en="2nd Group I">שנייה בית I</span></div>
+<div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span></div>
+</div><div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳77 ·" data-en="M77 ·">מ׳77 ·</span> <span data-he="30/6" data-en="Jun 30">30/6</span></span>
+<div class="mc-rt"><div class="mc-time warn">00:00</div><div class="mc-et">17:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית I" data-en="1st Group I">ראשונה בית I</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שלישית (בית CDF)" data-en="3rd place (CDF)">שלישית (בית CDF)</span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span></div>
+</div><div class="mc future">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳79 ·" data-en="M79 ·">מ׳79 ·</span> <span data-he="30/6" data-en="Jun 30">30/6</span></span>
+<div class="mc-rt"><div class="mc-time danger">04:00</div><div class="mc-et">21:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית A" data-en="1st Group A">ראשונה בית A</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שלישית (בית CEF)" data-en="3rd place (CEF)">שלישית (בית CEF)</span></div>
+<div class="mc-venue">📍 <span data-he="אצטדיון אזטקה, מקסיקו סיטי" data-en="Estadio Azteca, Mexico City">אצטדיון אזטקה, מקסיקו סיטי</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳80 ·" data-en="M80 ·">מ׳80 ·</span> <span data-he="1/7" data-en="Jul 1">1/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">19:00</div><div class="mc-et">12:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית L" data-en="1st Group L">ראשונה בית L</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שלישית (בית EHI)" data-en="3rd place (EHI)">שלישית (בית EHI)</span></div>
+<div class="mc-venue">📍 <span data-he="Mercedes-Benz Stadium, אטלנטה" data-en="Mercedes-Benz Stadium, Atlanta">Mercedes-Benz Stadium, אטלנטה</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳82 ·" data-en="M82 ·">מ׳82 ·</span> <span data-he="1/7" data-en="Jul 1">1/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">23:00</div><div class="mc-et">16:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית G" data-en="1st Group G">ראשונה בית G</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שלישית (בית HIJ)" data-en="3rd place (HIJ)">שלישית (בית HIJ)</span></div>
+<div class="mc-venue">📍 <span data-he="Lumen Field, סיאטל" data-en="Lumen Field, Seattle">Lumen Field, סיאטל</span></div>
+</div><div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳81 ·" data-en="M81 ·">מ׳81 ·</span> <span data-he="1/7" data-en="Jul 1">1/7</span></span>
+<div class="mc-rt"><div class="mc-time warn">03:00</div><div class="mc-et">20:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית D" data-en="1st Group D">ראשונה בית D</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שלישית (בית BEF)" data-en="3rd place (BEF)">שלישית (בית BEF)</span></div>
+<div class="mc-venue">📍 <span data-he="Levi&#x27;s Stadium, סנטה קלרה" data-en="Levi&#x27;s Stadium, Santa Clara">Levi&#x27;s Stadium, סנטה קלרה</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳84 ·" data-en="M84 ·">מ׳84 ·</span> <span data-he="2/7" data-en="Jul 2">2/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית H" data-en="1st Group H">ראשונה בית H</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שנייה בית J" data-en="2nd Group J">שנייה בית J</span></div>
+<div class="mc-venue">📍 <span data-he="SoFi Stadium, אינגלווד" data-en="SoFi Stadium, Inglewood">SoFi Stadium, אינגלווד</span></div>
+</div><div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳83 ·" data-en="M83 ·">מ׳83 ·</span> <span data-he="2/7" data-en="Jul 2">2/7</span></span>
+<div class="mc-rt"><div class="mc-time warn">02:00</div><div class="mc-et">19:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="שנייה בית K" data-en="2nd Group K">שנייה בית K</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שנייה בית L" data-en="2nd Group L">שנייה בית L</span></div>
+<div class="mc-venue">📍 <span data-he="BMO Field, טורונטו" data-en="BMO Field, Toronto">BMO Field, טורונטו</span></div>
+</div><div class="mc future">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳85 ·" data-en="M85 ·">מ׳85 ·</span> <span data-he="2/7" data-en="Jul 2">2/7</span></span>
+<div class="mc-rt"><div class="mc-time danger">06:00</div><div class="mc-et">23:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית B" data-en="1st Group B">ראשונה בית B</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שלישית (בית EHK)" data-en="3rd place (EHK)">שלישית (בית EHK)</span></div>
+<div class="mc-venue">📍 <span data-he="BC Place, ונקובר" data-en="BC Place, Vancouver">BC Place, ונקובר</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳88 ·" data-en="M88 ·">מ׳88 ·</span> <span data-he="3/7" data-en="Jul 3">3/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">21:00</div><div class="mc-et">14:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="שנייה בית D" data-en="2nd Group D">שנייה בית D</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שנייה בית G" data-en="2nd Group G">שנייה בית G</span></div>
+<div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span></div>
+</div><div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳86 ·" data-en="M86 ·">מ׳86 ·</span> <span data-he="3/7" data-en="Jul 3">3/7</span></span>
+<div class="mc-rt"><div class="mc-time warn">01:00</div><div class="mc-et">18:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית J" data-en="1st Group J">ראשונה בית J</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שנייה בית H" data-en="2nd Group H">שנייה בית H</span></div>
+<div class="mc-venue">📍 <span data-he="Hard Rock Stadium, מיאמי" data-en="Hard Rock Stadium, Miami">Hard Rock Stadium, מיאמי</span></div>
+</div><div class="mc future">
+<div class="strip danger"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳87 ·" data-en="M87 ·">מ׳87 ·</span> <span data-he="3/7" data-en="Jul 3">3/7</span></span>
+<div class="mc-rt"><div class="mc-time danger">04:30</div><div class="mc-et">21:30 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="ראשונה בית K" data-en="1st Group K">ראשונה בית K</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="שלישית (בית DEI)" data-en="3rd place (DEI)">שלישית (בית DEI)</span></div>
+<div class="mc-venue">📍 <span data-he="Arrowhead Stadium, קנזס סיטי" data-en="Arrowhead Stadium, Kansas City">Arrowhead Stadium, קנזס סיטי</span></div>
+</div></div></div>
+  </div>
+
+  <div id="stage-r16" class="stage">
+    <div class="sec-head"><div class="sec-label"><span data-he="שמינית גמר" data-en="Round of 16">שמינית גמר</span></div><div class="sec-sub"><span data-he="4–7 יולי" data-en="Jul 4–7">4–7 יולי</span></div></div>
+    <div class="day-block"><div class="mgrid"><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳90 ·" data-en="M90 ·">מ׳90 ·</span> <span data-he="4/7" data-en="Jul 4">4/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳73" data-en="Winner M73">מנצחת מ׳73</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳75" data-en="Winner M75">מנצחת מ׳75</span></div>
+<div class="mc-venue">📍 <span data-he="NRG Stadium, יוסטון" data-en="NRG Stadium, Houston">NRG Stadium, יוסטון</span></div>
+</div><div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳89 ·" data-en="M89 ·">מ׳89 ·</span> <span data-he="4/7" data-en="Jul 4">4/7</span></span>
+<div class="mc-rt"><div class="mc-time warn">00:00</div><div class="mc-et">17:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳74" data-en="Winner M74">מנצחת מ׳74</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳77" data-en="Winner M77">מנצחת מ׳77</span></div>
+<div class="mc-venue">📍 <span data-he="Lincoln Financial Field, פילדלפיה" data-en="Lincoln Financial Field, Philadelphia">Lincoln Financial Field, פילדלפיה</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳91 ·" data-en="M91 ·">מ׳91 ·</span> <span data-he="5/7" data-en="Jul 5">5/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">19:00</div><div class="mc-et">12:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳76" data-en="Winner M76">מנצחת מ׳76</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳80" data-en="Winner M80">מנצחת מ׳80</span></div>
+<div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳92 ·" data-en="M92 ·">מ׳92 ·</span> <span data-he="5/7" data-en="Jul 5">5/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">23:00</div><div class="mc-et">16:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳78" data-en="Winner M78">מנצחת מ׳78</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳81" data-en="Winner M81">מנצחת מ׳81</span></div>
+<div class="mc-venue">📍 <span data-he="Levi&#x27;s Stadium, סנטה קלרה" data-en="Levi&#x27;s Stadium, Santa Clara">Levi&#x27;s Stadium, סנטה קלרה</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳93 ·" data-en="M93 ·">מ׳93 ·</span> <span data-he="6/7" data-en="Jul 6">6/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳82" data-en="Winner M82">מנצחת מ׳82</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳84" data-en="Winner M84">מנצחת מ׳84</span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span></div>
+</div><div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳94 ·" data-en="M94 ·">מ׳94 ·</span> <span data-he="6/7" data-en="Jul 6">6/7</span></span>
+<div class="mc-rt"><div class="mc-time warn">00:00</div><div class="mc-et">17:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳79" data-en="Winner M79">מנצחת מ׳79</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳86" data-en="Winner M86">מנצחת מ׳86</span></div>
+<div class="mc-venue">📍 <span data-he="SoFi Stadium, אינגלווד" data-en="SoFi Stadium, Inglewood">SoFi Stadium, אינגלווד</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳95 ·" data-en="M95 ·">מ׳95 ·</span> <span data-he="7/7" data-en="Jul 7">7/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳83" data-en="Winner M83">מנצחת מ׳83</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳85" data-en="Winner M85">מנצחת מ׳85</span></div>
+<div class="mc-venue">📍 <span data-he="Hard Rock Stadium, מיאמי" data-en="Hard Rock Stadium, Miami">Hard Rock Stadium, מיאמי</span></div>
+</div><div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳96 ·" data-en="M96 ·">מ׳96 ·</span> <span data-he="7/7" data-en="Jul 7">7/7</span></span>
+<div class="mc-rt"><div class="mc-time warn">00:00</div><div class="mc-et">17:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳87" data-en="Winner M87">מנצחת מ׳87</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳88" data-en="Winner M88">מנצחת מ׳88</span></div>
+<div class="mc-venue">📍 <span data-he="Arrowhead Stadium, קנזס סיטי" data-en="Arrowhead Stadium, Kansas City">Arrowhead Stadium, קנזס סיטי</span></div>
+</div></div></div>
+  </div>
+
+  <div id="stage-qf" class="stage">
+    <div class="sec-head"><div class="sec-label"><span data-he="רבע גמר" data-en="Quarter-finals">רבע גמר</span></div><div class="sec-sub"><span data-he="9–11 יולי" data-en="Jul 9–11">9–11 יולי</span></div></div>
+    <div class="day-block"><div class="mgrid"><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳97 ·" data-en="M97 ·">מ׳97 ·</span> <span data-he="9/7" data-en="Jul 9">9/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳89" data-en="Winner M89">מנצחת מ׳89</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳90" data-en="Winner M90">מנצחת מ׳90</span></div>
+<div class="mc-venue">📍 <span data-he="Lumen Field, סיאטל" data-en="Lumen Field, Seattle">Lumen Field, סיאטל</span></div>
+</div><div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳98 ·" data-en="M98 ·">מ׳98 ·</span> <span data-he="9/7" data-en="Jul 9">9/7</span></span>
+<div class="mc-rt"><div class="mc-time warn">00:00</div><div class="mc-et">17:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳91" data-en="Winner M91">מנצחת מ׳91</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳94" data-en="Winner M94">מנצחת מ׳94</span></div>
+<div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳99 ·" data-en="M99 ·">מ׳99 ·</span> <span data-he="10/7" data-en="Jul 10">10/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳92" data-en="Winner M92">מנצחת מ׳92</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳93" data-en="Winner M93">מנצחת מ׳93</span></div>
+<div class="mc-venue">📍 <span data-he="Gillette Stadium, פוקסבורו" data-en="Gillette Stadium, Foxborough">Gillette Stadium, פוקסבורו</span></div>
+</div><div class="mc future">
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳100 ·" data-en="M100 ·">מ׳100 ·</span> <span data-he="10/7" data-en="Jul 10">10/7</span></span>
+<div class="mc-rt"><div class="mc-time warn">00:00</div><div class="mc-et">17:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳95" data-en="Winner M95">מנצחת מ׳95</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳96" data-en="Winner M96">מנצחת מ׳96</span></div>
+<div class="mc-venue">📍 <span data-he="SoFi Stadium, אינגלווד" data-en="SoFi Stadium, Inglewood">SoFi Stadium, אינגלווד</span></div>
+</div></div></div>
+  </div>
+
+  <div id="stage-sf" class="stage">
+    <div class="sec-head"><div class="sec-label"><span data-he="חצי גמר" data-en="Semi-finals">חצי גמר</span></div><div class="sec-sub"><span data-he="14–15 יולי" data-en="Jul 14–15">14–15 יולי</span></div></div>
+    <div class="day-block"><div class="mgrid"><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳101 ·" data-en="M101 ·">מ׳101 ·</span> <span data-he="14/7" data-en="Jul 14">14/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳97" data-en="Winner M97">מנצחת מ׳97</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳98" data-en="Winner M98">מנצחת מ׳98</span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span></div>
+</div><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="מ׳102 ·" data-en="M102 ·">מ׳102 ·</span> <span data-he="15/7" data-en="Jul 15">15/7</span></span>
+<div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳99" data-en="Winner M99">מנצחת מ׳99</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳100" data-en="Winner M100">מנצחת מ׳100</span></div>
+<div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span></div>
+</div></div></div>
+  </div>
+
+  <div id="stage-final" class="stage">
+    <div class="sec-head"><div class="sec-label">🏆 <span data-he="🏆 הגמר" data-en="🏆 The Final">🏆 הגמר</span></div><div class="sec-sub"><span data-he="19 יולי · MetLife · 22:00 שעון ישראל" data-en="Jul 19 · MetLife · 22:00 IL">19 יולי · MetLife · 22:00 שעון ישראל</span></div></div>
+    <div class="day-block"><div class="mgrid"><div class="mc future">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp" data-he="משחק מקום 3" data-en="3rd place">משחק מקום 3</span>
+<div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳SF1" data-en="Winner MSF1">מנצחת מ׳SF1</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳SF2" data-en="Winner MSF2">מנצחת מ׳SF2</span></div>
+<div class="mc-venue">📍 <span data-he="Hard Rock Stadium, מיאמי" data-en="Hard Rock Stadium, Miami">Hard Rock Stadium, מיאמי</span></div>
+</div></div><div style="height:14px"></div><div class="mgrid final-card"><div class="mc future thefinal">
+<div class="strip safe"></div>
+<div class="mc-top"><span class="mc-grp" style="color:var(--gold);font-size:12px" data-he="🏆 גמר העולם" data-en="🏆 WORLD CUP FINAL">🏆 גמר העולם</span>
+<div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳101" data-en="Winner M101">מנצחת מ׳101</span>
+<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
+<span class="mc-team b" data-he="מנצחת מ׳102" data-en="Winner M102">מנצחת מ׳102</span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span></div>
+</div></div></div>
+  </div>
+
+  <div class="footer"><span data-he="כל השעות בשעון ישראל (UTC+3) · נתונים: FIFA / ESPN / Yahoo · עדכון 22 יוני 2026" data-en="All times Israel (UTC+3) · Data: FIFA / ESPN / Yahoo · Updated Jun 22, 2026">כל השעות בשעון ישראל (UTC+3) · נתונים: FIFA / ESPN / Yahoo · עדכון 22 יוני 2026</span></div>
+</main>
+
+<script>
+// ── RIPPLE on every interactive element ──
+function attachRipple(el){
+  el.addEventListener('click', function(e){
+    var ink = document.createElement('span');
+    ink.className = 'ripple-ink';
+    var rect = el.getBoundingClientRect();
+    var size = Math.max(rect.width, rect.height);
+    ink.style.width = ink.style.height = size + 'px';
+    ink.style.left = (e.clientX - rect.left - size/2) + 'px';
+    ink.style.top = (e.clientY - rect.top - size/2) + 'px';
+    el.appendChild(ink);
+    setTimeout(function(){ ink.remove(); }, 600);
+  });
+}
+document.querySelectorAll('.side-btn,.drawer-item,.set-opt,.mc,.rc').forEach(attachRipple);
+
+// ── DRAWER ──
+var activeDrawer = null;
+function toggleDrawer(which){
+  if(activeDrawer === which){ closeDrawer(); return; }
+  closeDrawer();
+  activeDrawer = which;
+  document.getElementById('overlay').classList.add('open');
+  if(which==='matches'){ document.getElementById('drawerMatches').classList.add('open'); document.getElementById('btnMatches').classList.add('active'); }
+  else { document.getElementById('drawerSettings').classList.add('open'); document.getElementById('btnSettings').classList.add('active'); }
+}
+function closeDrawer(){
+  activeDrawer = null;
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('drawerMatches').classList.remove('open');
+  document.getElementById('drawerSettings').classList.remove('open');
+  document.getElementById('btnMatches').classList.remove('active');
+  document.getElementById('btnSettings').classList.remove('active');
+}
+
+// ── STAGE SWITCH ──
+function goStage(id, el){
+  document.querySelectorAll('.stage').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.drawer-item').forEach(function(d){ d.classList.remove('active'); });
+  document.getElementById('stage-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  // slow-mo close: let ripple play, then close + scroll
+  setTimeout(function(){ closeDrawer(); window.scrollTo({top:0,behavior:'smooth'}); }, 220);
+}
+
+// ── LANGUAGE ──
+var curLang = 'he';
+function setLang(lang){
+  curLang = lang;
+  var html = document.documentElement;
+  html.setAttribute('lang', lang);
+  html.setAttribute('dir', lang==='he' ? 'rtl' : 'ltr');
+  document.querySelectorAll('[data-he]').forEach(function(el){
+    var val = el.getAttribute('data-'+lang);
+    if(val !== null) el.textContent = val;
+  });
+  document.getElementById('langHe').classList.toggle('active', lang==='he');
+  document.getElementById('langEn').classList.toggle('active', lang==='en');
+}
+
+// ── THEME ──
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeDark').classList.toggle('active', theme==='dark');
+  document.getElementById('themeLight').classList.toggle('active', theme==='light');
+}
+
+// close drawer on Escape
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeDrawer(); });
+</script>
+</body>
+</html>
