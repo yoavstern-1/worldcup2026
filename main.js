@@ -572,12 +572,15 @@ function autoMarkStars() {
 }
 
 // ────────────────────────────────────────────
-// ── AI CHAT (Claude / Anthropic) ──
+// ── AI CHAT (Google Gemini via Cloudflare Worker proxy) ──
 // ────────────────────────────────────────────
-// ⚠️  Replace the empty string below with your Google Gemini API key.
-//    Get one FREE at https://aistudio.google.com → Get API key
-//    Free tier: 1,500 requests/day — no credit card needed.
-var GEMINI_KEY = '';
+// The Gemini API key is NOT stored here. It lives as a secret inside a free
+// Cloudflare Worker that proxies requests to Gemini. This keeps the key private
+// and lets any visitor use the chat with zero setup.
+//
+// After you deploy the worker (see worker.js), paste its URL below, e.g.:
+//   var CHAT_PROXY_URL = 'https://worldcup-ai.<your-subdomain>.workers.dev';
+var CHAT_PROXY_URL = '';
 
 var chatHistory = [];   // [{role, content}]
 var chatOpen = false;
@@ -693,10 +696,10 @@ function sendChat() {
   var text = inp.value.trim();
   if (!text) return;
 
-  if (!GEMINI_KEY) {
+  if (!CHAT_PROXY_URL) {
     addChatBubble('assistant', curLang === 'he'
-      ? '⚠️ לא הוגדר מפתח API. פתח את main.js והכנס את המפתח שלך ב-GEMINI_KEY.'
-      : '⚠️ No API key set. Open main.js and set your key in GEMINI_KEY.');
+      ? '⚠️ הצ\'אט עדיין לא מחובר. יש להגדיר את כתובת ה-Worker ב-CHAT_PROXY_URL בקובץ main.js.'
+      : '⚠️ Chat not connected yet. Set the Worker URL in CHAT_PROXY_URL in main.js.');
     return;
   }
 
@@ -710,7 +713,7 @@ function sendChat() {
     return { role: m.role, parts: m.parts || [{ text: m.content || '' }] };
   });
 
-  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_KEY, {
+  fetch(CHAT_PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
