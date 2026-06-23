@@ -55,14 +55,19 @@ body::after {
 
 /* ── SIDEBAR (fixed right, RTL) ── */
 .sidebar {
-  position:fixed; top:0; bottom:0; right:0; width:64px; z-index:40;
+  position:fixed; top:0; bottom:0; right:0; width:64px; z-index:50;
   background:var(--sidebar); backdrop-filter:blur(10px);
   border-left:1px solid var(--card-border);
   display:flex; flex-direction:column; align-items:center;
-  padding-top:18px; gap:10px;
+  padding-top:18px; gap:6px;
   transition:background .5s ease;
+  overflow:visible;
 }
 [dir="ltr"] .sidebar { right:auto; left:0; border-left:none; border-right:1px solid var(--card-border); }
+
+.side-item {
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+}
 .side-btn {
   width:46px; height:46px; border-radius:14px;
   border:1px solid var(--card-border); background:var(--card);
@@ -74,11 +79,50 @@ body::after {
 .side-btn:hover { background:var(--hi); color:var(--t1); border-color:var(--hi-border); }
 .side-btn:active { transform:scale(.88); }
 .side-btn.active { background:var(--usa-red); color:#fff; border-color:var(--usa-red); }
+.side-btn.spinning { animation:spin .9s linear infinite; }
 .side-label {
   font-size:8px; font-weight:700; color:var(--t3);
-  writing-mode:vertical-rl; margin-top:2px; letter-spacing:1px;
+  letter-spacing:.5px; text-align:center; line-height:1.2;
+  max-width:54px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-[dir="ltr"] .side-label { writing-mode:vertical-lr; }
+
+/* ── SIDE PANEL (shared flyout, portalled outside sidebar) ── */
+.side-panel {
+  position:fixed; z-index:60;
+  background:var(--drawer); backdrop-filter:blur(18px);
+  border:1px solid var(--card-border); border-radius:var(--radius-sm);
+  padding:6px; min-width:152px;
+  box-shadow:-6px 0 28px var(--shadow);
+  opacity:0; pointer-events:none;
+  transform:translateX(6px);
+  transition:opacity .22s ease, transform .22s ease;
+}
+[dir="ltr"] .side-panel { transform:translateX(-6px); box-shadow:6px 0 28px var(--shadow); }
+.side-panel.open { opacity:1; pointer-events:auto; transform:translateX(0); }
+.panel-title {
+  font-size:9px; font-weight:700; color:var(--t3); letter-spacing:.8px;
+  text-transform:uppercase; padding:4px 10px 8px;
+  border-bottom:1px solid var(--card-border); margin-bottom:4px;
+}
+.panel-opt {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 12px; border-radius:10px;
+  font-size:13px; font-weight:700; cursor:pointer;
+  color:var(--t2); white-space:nowrap;
+  transition:background .2s, color .2s;
+}
+.panel-opt:hover { background:var(--hi); color:var(--t1); }
+.panel-opt.active { color:var(--gold); }
+
+/* ── REFRESH TOOLTIP ── */
+.refresh-tip {
+  position:fixed; z-index:60;
+  background:var(--drawer); backdrop-filter:blur(16px);
+  border:1px solid var(--card-border); border-radius:10px;
+  padding:7px 13px; font-size:11px; font-weight:600; color:var(--t2);
+  white-space:nowrap; pointer-events:none;
+  opacity:0; transition:opacity .2s;
+}
 
 /* main content offset for sidebar */
 main { position:relative; z-index:1; margin-right:64px; }
@@ -86,18 +130,21 @@ main { position:relative; z-index:1; margin-right:64px; }
 
 /* ── DRAWER (slides in from right) ── */
 .overlay {
-  position:fixed; inset:0; z-index:45; background:rgba(0,0,0,.5);
+  position:fixed; top:0; bottom:0; left:0; right:64px; z-index:45;
+  background:rgba(0,0,0,.5);
   opacity:0; pointer-events:none; transition:opacity .35s ease;
 }
+[dir="ltr"] .overlay { left:64px; right:0; }
 .overlay.open { opacity:1; pointer-events:auto; }
 .drawer {
-  position:fixed; top:0; bottom:0; right:64px; width:300px; max-width:80vw; z-index:50;
+  position:fixed; top:0; bottom:0; right:64px; width:300px; max-width:calc(100vw - 64px); z-index:46;
   background:var(--drawer); backdrop-filter:blur(16px);
   border-left:1px solid var(--card-border);
   border-radius:var(--radius) 0 0 var(--radius);
   padding:22px 18px; overflow-y:auto;
   transform:translateX(110%);
-  transition:transform .42s cubic-bezier(.22,1,.36,1), background .5s ease;
+  visibility:hidden;
+  transition:transform .42s cubic-bezier(.22,1,.36,1), background .5s ease, visibility 0s .42s;
   box-shadow:-8px 0 40px var(--shadow);
 }
 [dir="ltr"] .drawer {
@@ -106,7 +153,11 @@ main { position:relative; z-index:1; margin-right:64px; }
   transform:translateX(-110%);
   box-shadow:8px 0 40px var(--shadow);
 }
-.drawer.open { transform:translateX(0); }
+.drawer.open {
+  transform:translateX(0);
+  visibility:visible;
+  transition:transform .42s cubic-bezier(.22,1,.36,1), background .5s ease, visibility 0s 0s;
+}
 .drawer-title {
   font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px;
   color:var(--gold); margin-bottom:16px;
@@ -123,19 +174,49 @@ main { position:relative; z-index:1; margin-right:64px; }
 .drawer-item:active { transform:scale(.96); }
 .drawer-item.active { background:var(--usa-red); color:#fff; border-color:var(--usa-red); }
 
-/* ── SETTINGS PANEL (same drawer container, different content) ── */
-.set-group { margin-bottom:22px; }
-.set-label { font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px; letter-spacing:.5px; }
+/* ── SETTINGS PANEL ── */
+.set-group {
+  margin-bottom:0;
+  padding:18px 0 16px;
+  border-bottom:1px solid var(--card-border);
+}
+.set-group:last-child { border-bottom:none; padding-bottom:4px; }
+.set-label {
+  font-size:10px; font-weight:700; color:var(--t3);
+  margin-bottom:10px; letter-spacing:1px; text-transform:uppercase;
+}
 .set-row { display:flex; gap:8px; }
 .set-opt {
-  flex:1; padding:11px; border-radius:13px; text-align:center;
-  background:var(--card); border:1px solid var(--card-border);
+  flex:1; padding:13px 10px; border-radius:14px; text-align:center;
+  background:var(--card); border:2px solid var(--card-border);
   color:var(--t2); font-size:13px; font-weight:700; cursor:pointer;
-  position:relative; overflow:hidden;
-  transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .25s, color .25s, border-color .25s;
+  position:relative; overflow:hidden; line-height:1.3;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .25s, color .25s, border-color .25s, box-shadow .25s;
 }
+.set-opt:hover { border-color:var(--hi-border); color:var(--t1); }
 .set-opt:active { transform:scale(.93); }
-.set-opt.active { background:var(--gold); color:#1a1a1a; border-color:var(--gold); }
+.set-opt.active {
+  background:var(--gold); color:#1a1a1a; border-color:var(--gold);
+  box-shadow:0 2px 14px rgba(255,215,0,.35);
+}
+.set-divider {
+  height:1px; background:var(--card-border); margin:4px 0;
+}
+
+/* ── SYNC BAR ── */
+.sync-bar {
+  max-width:1080px; margin:-8px auto 12px; padding:0 20px;
+  display:flex; align-items:center; justify-content:flex-end; gap:6px;
+  font-size:11px; color:var(--t3); font-weight:600; min-height:22px;
+}
+.sync-bar.live-state { color:var(--danger); }
+.sync-icon {
+  font-size:15px; line-height:1; display:inline-block;
+  transition:transform .4s;
+}
+.sync-bar.syncing .sync-icon { animation:spin .9s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.side-btn.spinning { animation:spin .9s linear infinite; }
 
 /* ── RIPPLE ── */
 .ripple-ink {
@@ -275,8 +356,65 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mc.thefinal { border-color:var(--gold); background:var(--hi); }
 .mc.thefinal .mc-time { color:var(--gold); font-size:30px; }
 
+/* ── TEAM SEARCH ── */
+.search-box {
+  padding:14px 16px 12px;
+  border-bottom:1px solid var(--card-border);
+  background:var(--bg);
+  position:sticky; top:0; z-index:10;
+}
+.search-title {
+  font-size:10px; font-weight:700; letter-spacing:.8px; color:var(--t3);
+  text-transform:uppercase; margin-bottom:10px;
+}
+.search-selects { display:flex; align-items:center; gap:8px; }
+.search-selects select {
+  flex:1; padding:7px 10px; border-radius:10px;
+  border:1px solid var(--card-border); background:var(--card);
+  color:var(--t1); font-size:13px; font-weight:600;
+  appearance:none; -webkit-appearance:none; cursor:pointer;
+  outline:none;
+}
+.search-selects select:focus { border-color:var(--safe); }
+.search-vs { font-size:11px; font-weight:700; color:var(--t3); white-space:nowrap; }
+.search-result {
+  margin-top:10px; border-radius:12px; padding:12px 14px;
+  background:var(--card); border:1px solid var(--card-border);
+  display:none;
+}
+.search-result.show { display:block; }
+.sr-teams { font-size:14px; font-weight:700; color:var(--t1); margin-bottom:6px; }
+.sr-score { font-size:26px; font-family:'Bebas Neue',sans-serif; color:var(--safe); letter-spacing:1px; line-height:1; }
+.sr-meta  { font-size:11px; color:var(--t3); margin-top:4px; }
+.sr-live  { color:var(--danger); }
+.sr-none  { font-size:13px; color:var(--t3); font-style:italic; }
+
+/* ── INFO BOX ── */
+.stage-info { max-width:1080px; margin:6px auto 0; padding:0 20px; }
+.info-box {
+  border-radius:var(--radius-sm); padding:12px 16px; font-size:12px;
+  background:rgba(100,200,255,.07); border:1px solid rgba(100,200,255,.22);
+  color:var(--t2); line-height:1.75; margin-bottom:4px;
+}
+.info-box + .info-box { margin-top:6px; }
+.info-box strong { color:var(--t1); font-weight:700; }
+.ib-chip {
+  display:inline-block; background:var(--card); border:1px solid var(--card-border);
+  border-radius:7px; padding:2px 8px; font-size:11px; font-weight:700;
+  color:var(--gold); white-space:nowrap; margin:0 2px;
+}
+.path-row {
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  padding:8px 12px; border-radius:10px; background:var(--card);
+  border:1px solid var(--card-border); font-size:12px; font-weight:600; color:var(--t2);
+}
+.path-row + .path-row { margin-top:6px; }
+.path-arrow { color:var(--t3); font-size:14px; }
+.path-good { color:var(--safe); }
+.path-warn { color:var(--warn); }
+
 /* ── FOOTER ── */
-.footer { text-align:center; padding:26px 20px; border-top:1px solid var(--card-border);
+.footer { display:none; text-align:center; padding:26px 20px; border-top:1px solid var(--card-border);
   font-size:12px; color:var(--t3); font-weight:500; }
 
 ::-webkit-scrollbar { width:7px; }
@@ -285,9 +423,13 @@ main { position:relative; z-index:1; margin-right:64px; }
 
 @media (max-width:520px){
   .sidebar { width:54px; }
+  .side-btn { width:42px; height:42px; font-size:18px; }
   main { margin-right:54px; }
   [dir="ltr"] main { margin-left:54px; }
-  .drawer { right:54px; } [dir="ltr"] .drawer { left:54px; }
+  .overlay { right:54px; }
+  [dir="ltr"] .overlay { left:54px; right:0; }
+  .drawer { right:54px; max-width:calc(100vw - 54px); }
+  [dir="ltr"] .drawer { left:54px; right:auto; }
   .mgrid { grid-template-columns:1fr; }
 }
 </style>
@@ -296,11 +438,43 @@ main { position:relative; z-index:1; margin-right:64px; }
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-  <button class="side-btn" id="btnMatches" onclick="toggleDrawer('matches')" title="">☰</button>
-  <span class="side-label"><span data-he="נתוני משחקים" data-en="Match Data">נתוני משחקים</span></span>
-  <button class="side-btn" id="btnSettings" onclick="toggleDrawer('settings')" title="" style="margin-top:14px">⚙️</button>
-  <span class="side-label"><span data-he="הגדרות" data-en="Settings">הגדרות</span></span>
+  <div class="side-item">
+    <button class="side-btn" id="btnMatches" onclick="closePanel();toggleDrawer('matches')">☰</button>
+    <span class="side-label" data-he="תוכן" data-en="Menu">תוכן</span>
+  </div>
+  <div class="side-item">
+    <button class="side-btn" id="btnLang" onclick="openPanel('lang',this)">🌐</button>
+    <span class="side-label" data-he="שפה" data-en="Lang">שפה</span>
+  </div>
+  <div class="side-item">
+    <button class="side-btn" id="btnTheme" onclick="openPanel('theme',this)">🌙</button>
+    <span class="side-label" data-he="צבע" data-en="Theme">צבע</span>
+  </div>
+  <div class="side-item">
+    <button class="side-btn" id="btnRefresh"
+      onclick="manualRefresh()"
+      onmouseenter="showRefreshTip(this)"
+      onmouseleave="hideRefreshTip()">↺</button>
+    <span class="side-label" data-he="רענון" data-en="Sync">רענון</span>
+  </div>
 </div>
+
+<!-- SIDE PANEL (positioned dynamically by JS) -->
+<div id="sidePanel" class="side-panel">
+  <div id="panelLang" style="display:none">
+    <div class="panel-title" data-he="שפה" data-en="Language">שפה</div>
+    <div class="panel-opt active" id="langHe" onclick="setLang('he');closePanel()">🇮🇱 עברית</div>
+    <div class="panel-opt" id="langEn" onclick="setLang('en');closePanel()">🇺🇸 English</div>
+  </div>
+  <div id="panelTheme" style="display:none">
+    <div class="panel-title" data-he="מצב תצוגה" data-en="Display">מצב תצוגה</div>
+    <div class="panel-opt active" id="themeDark" onclick="setTheme('dark');closePanel()">🌙 <span data-he="כהה" data-en="Dark">כהה</span></div>
+    <div class="panel-opt" id="themeLight" onclick="setTheme('light');closePanel()">☀️ <span data-he="בהיר" data-en="Light">בהיר</span></div>
+  </div>
+</div>
+
+<!-- REFRESH TOOLTIP -->
+<div id="refreshTip" class="refresh-tip"></div>
 
 <!-- OVERLAY -->
 <div class="overlay" id="overlay" onclick="closeDrawer()"></div>
@@ -308,6 +482,26 @@ main { position:relative; z-index:1; margin-right:64px; }
 <!-- DRAWER: matches -->
 <div class="drawer" id="drawerMatches">
   <div class="drawer-title"><span data-he="נתוני משחקים" data-en="Match Data">נתוני משחקים</span></div>
+
+  <!-- TEAM SEARCH -->
+  <div class="search-box" id="teamSearchBox">
+    <div class="search-title" data-he="חיפוש תוצאת משחק" data-en="Match Result Lookup">חיפוש תוצאת משחק</div>
+    <div class="search-selects">
+      <select id="searchTeam1" onchange="runTeamSearch()">
+        <option value="" data-he="בחר קבוצה 1" data-en="Team 1">בחר קבוצה 1</option>
+      </select>
+      <span class="search-vs" data-he="נגד" data-en="vs">נגד</span>
+      <select id="searchTeam2" onchange="runTeamSearch()">
+        <option value="" data-he="בחר קבוצה 2" data-en="Team 2">בחר קבוצה 2</option>
+      </select>
+    </div>
+    <div class="search-result" id="searchResult">
+      <div class="sr-teams" id="srTeams"></div>
+      <div class="sr-score" id="srScore"></div>
+      <div class="sr-meta"  id="srMeta"></div>
+    </div>
+  </div>
+
   <div class="drawer-item active" data-stage="rec" onclick="goStage('rec',this)"><span data-he="⭐ המלצות" data-en="⭐ Top Picks">⭐ המלצות</span></div>
 <div class="drawer-item" data-stage="group" onclick="goStage('group',this)"><span data-he="שלב הבתים" data-en="Group Stage">שלב הבתים</span></div>
 <div class="drawer-item" data-stage="standings" onclick="goStage('standings',this)"><span data-he="📊 טבלאות" data-en="📊 Standings">📊 טבלאות</span></div>
@@ -318,24 +512,6 @@ main { position:relative; z-index:1; margin-right:64px; }
 <div class="drawer-item" data-stage="final" onclick="goStage('final',this)"><span data-he="🏆 גמר" data-en="🏆 Final">🏆 גמר</span></div>
 </div>
 
-<!-- DRAWER: settings -->
-<div class="drawer" id="drawerSettings">
-  <div class="drawer-title"><span data-he="הגדרות" data-en="Settings">הגדרות</span></div>
-  <div class="set-group">
-    <div class="set-label"><span data-he="שפה" data-en="Language">שפה</span></div>
-    <div class="set-row">
-      <div class="set-opt active" id="langHe" onclick="setLang('he')">עברית</div>
-      <div class="set-opt" id="langEn" onclick="setLang('en')">English</div>
-    </div>
-  </div>
-  <div class="set-group">
-    <div class="set-label"><span data-he="מצב תצוגה" data-en="Theme">מצב תצוגה</span></div>
-    <div class="set-row">
-      <div class="set-opt active" id="themeDark" onclick="setTheme('dark')"><span data-he="🌙 כהה" data-en="🌙 Dark">🌙 כהה</span></div>
-      <div class="set-opt" id="themeLight" onclick="setTheme('light')"><span data-he="☀️ בהיר" data-en="☀️ Light">☀️ בהיר</span></div>
-    </div>
-  </div>
-</div>
 
 <main>
   <section class="hero">
@@ -348,78 +524,21 @@ main { position:relative; z-index:1; margin-right:64px; }
 <div class="leg-item"><div class="leg-dot" style="background:var(--safe)"></div><span data-he="שעה נוחה" data-en="Good time">שעה נוחה</span></div>
 <div class="leg-item"><div class="leg-dot" style="background:var(--warn)"></div><span data-he="מאוחר" data-en="Late">מאוחר</span></div>
 <div class="leg-item"><div class="leg-dot" style="background:var(--danger)"></div><span data-he="לילה עמוק" data-en="Deep night">לילה עמוק</span></div>
-<div class="leg-item"><div class="leg-dot" style="background:var(--gold)"></div><span data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</span></div>
+<div class="leg-item"><div class="leg-dot" style="background:var(--gold)"></div><span data-he="⭐ קבוצת טופ-10 FIFA" data-en="⭐ FIFA Top-10 team">⭐ קבוצת טופ-10 FIFA</span></div>
 </div>
 
   <!-- STAGES -->
   <div id="stage-rec" class="stage active">
-    <div class="sec-head"><div class="sec-label">⭐ <span data-he="המלצות — לצפות בלי להרוס שינה" data-en="Top picks — watch without wrecking your sleep">המלצות — לצפות בלי להרוס שינה</span></div><div class="sec-sub"><span data-he="עדכון 22 יוני 2026" data-en="Updated Jun 22, 2026">עדכון 22 יוני 2026</span></div></div>
-    <div class="rec-wrap"><div class="rc">
-<div class="rc-num">1</div>
-<div class="rc-info">
-<div class="rc-match">🇫🇷🇸🇳 <span data-he="צרפת נגד סנגל" data-en="France vs Senegal">צרפת נגד סנגל</span></div>
-<div class="rc-meta" data-he="שלישי 16/6 · MetLife" data-en="Tue Jun 16 · MetLife">שלישי 16/6 · MetLife</div><div class="rc-res" data-he="✅ סיום 3–1 · מבפה שיא שערים לצרפת" data-en="✅ FT 3–1 · Mbappé France record">✅ סיום 3–1 · מבפה שיא שערים לצרפת</div>
-</div>
-<div class="rc-rt"><div class="rc-time">22:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
-</div>
-<div class="rc">
-<div class="rc-num">2</div>
-<div class="rc-info">
-<div class="rc-match">🏴󠁧󠁢󠁥󠁮󠁧󠁿🇭🇷 <span data-he="אנגליה נגד קרואטיה" data-en="England vs Croatia">אנגליה נגד קרואטיה</span></div>
-<div class="rc-meta" data-he="רביעי 17/6 · AT&amp;T" data-en="Wed Jun 17 · AT&amp;T">רביעי 17/6 · AT&amp;T</div><div class="rc-res" data-he="✅ סיום 4–2 · ריבאץ&#x27; מדהים" data-en="✅ FT 4–2 · stunning rematch">✅ סיום 4–2 · ריבאץ&#x27; מדהים</div>
-</div>
-<div class="rc-rt"><div class="rc-time">23:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
-</div>
-<div class="rc">
-<div class="rc-num">3</div>
-<div class="rc-info">
-<div class="rc-match">🇳🇱🇸🇪 <span data-he="הולנד נגד שוודיה" data-en="Netherlands vs Sweden">הולנד נגד שוודיה</span></div>
-<div class="rc-meta" data-he="שבת 20/6 · NRG" data-en="Sat Jun 20 · NRG">שבת 20/6 · NRG</div><div class="rc-res" data-he="✅ סיום 5–1 · ברוביי ×2" data-en="✅ FT 5–1 · Brobbey ×2">✅ סיום 5–1 · ברוביי ×2</div>
-</div>
-<div class="rc-rt"><div class="rc-time">20:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
-</div>
-<div class="rc">
-<div class="rc-num">4</div>
-<div class="rc-info">
-<div class="rc-match">🇩🇪🇨🇮 <span data-he="גרמניה נגד חוף השנהב" data-en="Germany vs Ivory Coast">גרמניה נגד חוף השנהב</span></div>
-<div class="rc-meta" data-he="שבת 20/6 · BMO" data-en="Sat Jun 20 · BMO">שבת 20/6 · BMO</div><div class="rc-res" data-he="✅ סיום 2–1 · אונדב הגיבור" data-en="✅ FT 2–1 · Undav hero">✅ סיום 2–1 · אונדב הגיבור</div>
-</div>
-<div class="rc-rt"><div class="rc-time">23:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
-</div>
-<div class="rc">
-<div class="rc-num">5</div>
-<div class="rc-info">
-<div class="rc-match">🇦🇷🇦🇹 <span data-he="ארגנטינה נגד אוסטריה" data-en="Argentina vs Austria">ארגנטינה נגד אוסטריה</span></div>
-<div class="rc-meta" data-he="שני 22/6 · AT&amp;T · היום" data-en="Mon Jun 22 · AT&amp;T · today">שני 22/6 · AT&amp;T · היום</div><div class="rc-res" data-he="🔴 חי · מסי מחפש להעפיל" data-en="🔴 Live · Messi eyes qualification">🔴 חי · מסי מחפש להעפיל</div>
-</div>
-<div class="rc-rt"><div class="rc-time">20:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
-</div>
-<div class="rc">
-<div class="rc-num">6</div>
-<div class="rc-info">
-<div class="rc-match">🇫🇷🇮🇶 <span data-he="צרפת נגד עיראק" data-en="France vs Iraq">צרפת נגד עיראק</span></div>
-<div class="rc-meta" data-he="שני 22/6 · Lincoln · היום" data-en="Mon Jun 22 · Lincoln · today">שני 22/6 · Lincoln · היום</div><div class="rc-res" data-he="🔴 חי" data-en="🔴 Live">🔴 חי</div>
-</div>
-<div class="rc-rt"><div class="rc-time">00:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
-</div>
-<div class="rc">
-<div class="rc-num">7</div>
-<div class="rc-info">
-<div class="rc-match">🏆 <span data-he="הגמר" data-en="The Final">הגמר</span></div>
-<div class="rc-meta" data-he="ראשון 19/7 · MetLife" data-en="Sun Jul 19 · MetLife">ראשון 19/7 · MetLife</div>
-</div>
-<div class="rc-rt"><div class="rc-time">22:00</div><div class="rc-tl" data-he="שעון ישראל" data-en="Israel time">שעון ישראל</div></div>
-</div>
-<div class="warn-box" data-he="⚠️ להיזהר: רוב משחקי הבתים יוצאים 02:00–06:00. הכי קשה — ירדן נגד אלג&#x27;יריה ב-06:00 🌅" data-en="⚠️ Watch out: most group games kick off 02:00–06:00 IL. Worst — Jordan vs Algeria at 06:00 🌅">⚠️ להיזהר: רוב משחקי הבתים יוצאים 02:00–06:00. הכי קשה — ירדן נגד אלג&#x27;יריה ב-06:00 🌅</div></div>
+    <div class="sec-head"><div class="sec-label">⭐</div><div class="sec-sub"><span data-he="12:00–22:00 שעון ישראל · מתעדכן אוטומטית" data-en="12:00–22:00 Israel time · auto-refreshed">12:00–22:00 שעון ישראל · מתעדכן אוטומטית</span></div></div>
+    <div id="recGrid" class="day-block"><div class="mgrid" id="recCards"></div></div>
   </div>
 
   <div id="stage-group" class="stage">
     <div class="sec-head"><div class="sec-label"><span data-he="שלב הבתים" data-en="Group Stage">שלב הבתים</span></div><div class="sec-sub"><span data-he="11–27 יוני · 72 משחקים" data-en="Jun 11–27 · 72 matches">11–27 יוני · 72 משחקים</span></div></div>
     <div class="day-block"><div class="day-hd"><div class="day-lbl" data-he="יום ה׳, 11 יוני" data-en="Thu, Jun 11">יום ה׳, 11 יוני</div><div class="day-line"></div></div>
 <div class="mgrid">
-<div class="mc past star">
-<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> A</span><div class="mc-rt"><div class="score">2 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc past">
+<div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> A</span><div class="mc-rt"><div class="score">2 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇲🇽 <span data-he="מקסיקו" data-en="Mexico">מקסיקו</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇿🇦 <span data-he="דרום אפריקה" data-en="South Africa">דרום אפריקה</span></span></div>
 <div class="mc-venue">📍 <span data-he="אצטדיון אזטקה, מקסיקו סיטי" data-en="Estadio Azteca, Mexico City">אצטדיון אזטקה, מקסיקו סיטי</span> · <span class="mc-note" data-he="חמנס 65&#x27;, 90+5&#x27;" data-en="Giménez 65&#x27;, 90+5&#x27;">חמנס 65&#x27;, 90+5&#x27;</span></div>
 </div>
@@ -453,9 +572,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 <div class="mc-teams"><span class="mc-team">🇨🇭 <span data-he="שוויץ" data-en="Switzerland">שוויץ</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇶🇦 <span data-he="קטאר" data-en="Qatar">קטאר</span></span></div>
 <div class="mc-venue">📍 <span data-he="Levi&#x27;s Stadium, סנטה קלרה" data-en="Levi&#x27;s Stadium, Santa Clara">Levi&#x27;s Stadium, סנטה קלרה</span> · <span class="mc-note" data-he="קטאר שווה בדקה 90+" data-en="Qatar equalize 90+&#x27;">קטאר שווה בדקה 90+</span></div>
 </div>
-<div class="mc past star">
-<div class="strip warn"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> C</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc past">
+<div class="strip warn"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> C</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇧🇷 <span data-he="ברזיל" data-en="Brazil">ברזיל</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇲🇦 <span data-he="מרוקו" data-en="Morocco">מרוקו</span></span></div>
 <div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span> · <span class="mc-note" data-he="וינישיוס הציל בדקה 90" data-en="Vini Jr saved it at 90&#x27;">וינישיוס הציל בדקה 90</span></div>
 </div>
@@ -474,9 +592,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 <div class="mc-teams"><span class="mc-team">🇦🇺 <span data-he="אוסטרליה" data-en="Australia">אוסטרליה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇹🇷 <span data-he="טורקיה" data-en="Türkiye">טורקיה</span></span></div>
 <div class="mc-venue">📍 <span data-he="BC Place, ונקובר" data-en="BC Place, Vancouver">BC Place, ונקובר</span> · <span class="mc-note" data-he="הפתעה" data-en="Upset">הפתעה</span></div>
 </div>
-<div class="mc past star">
-<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">7 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc past">
+<div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">7 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇩🇪 <span data-he="גרמניה" data-en="Germany">גרמניה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇼 <span data-he="קוראסאו" data-en="Curaçao">קוראסאו</span></span></div>
 <div class="mc-venue">📍 <span data-he="NRG Stadium, יוסטון" data-en="NRG Stadium, Houston">NRG Stadium, יוסטון</span> · <span class="mc-note" data-he="הוורץ ×2, מוסיאלה" data-en="Havertz ×2, Musiala">הוורץ ×2, מוסיאלה</span></div>
 </div>
@@ -528,9 +645,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 </div>
 <div class="day-hd"><div class="day-lbl" data-he="שלישי, 16 יוני" data-en="Tue, Jun 16">שלישי, 16 יוני</div><div class="day-line"></div></div>
 <div class="mgrid">
-<div class="mc past star">
-<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc past">
+<div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇫🇷 <span data-he="צרפת" data-en="France">צרפת</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇸🇳 <span data-he="סנגל" data-en="Senegal">סנגל</span></span></div>
 <div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span> · <span class="mc-note" data-he="מבפה שיא שערים לצרפת!" data-en="Mbappé France record!">מבפה שיא שערים לצרפת!</span></div>
 </div>
@@ -540,9 +656,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 <div class="mc-teams"><span class="mc-team">🇳🇴 <span data-he="נורווגיה" data-en="Norway">נורווגיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇮🇶 <span data-he="עיראק" data-en="Iraq">עיראק</span></span></div>
 <div class="mc-venue">📍 <span data-he="Gillette Stadium, פוקסבורו" data-en="Gillette Stadium, Foxborough">Gillette Stadium, פוקסבורו</span> · <span class="mc-note" data-he="הולנד ×2" data-en="Haaland ×2">הולנד ×2</span></div>
 </div>
-<div class="mc past star">
-<div class="strip danger"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> J</span><div class="mc-rt"><div class="score">3 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc past">
+<div class="strip danger"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> J</span><div class="mc-rt"><div class="score">3 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇦🇷 <span data-he="ארגנטינה" data-en="Argentina">ארגנטינה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇩🇿 <span data-he="אלג&#x27;יריה" data-en="Algeria">אלג&#x27;יריה</span></span></div>
 <div class="mc-venue">📍 <span data-he="Arrowhead Stadium, קנזס סיטי" data-en="Arrowhead Stadium, Kansas City">Arrowhead Stadium, קנזס סיטי</span> · <span class="mc-note" data-he="מסי האטריק! 🐐" data-en="Messi hat-trick! 🐐">מסי האטריק! 🐐</span></div>
 </div>
@@ -561,9 +676,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 <div class="mc-teams"><span class="mc-team">🇵🇹 <span data-he="פורטוגל" data-en="Portugal">פורטוגל</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇩 <span data-he="קונגו DR" data-en="DR Congo">קונגו DR</span></span></div>
 <div class="mc-venue">📍 <span data-he="NRG Stadium, יוסטון" data-en="NRG Stadium, Houston">NRG Stadium, יוסטון</span> · <span class="mc-note" data-he="רונאלדו מתאכזב" data-en="Ronaldo frustrated">רונאלדו מתאכזב</span></div>
 </div>
-<div class="mc past star">
-<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> L</span><div class="mc-rt"><div class="score">4 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc past">
+<div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> L</span><div class="mc-rt"><div class="score">4 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
 <div class="mc-teams"><span class="mc-team">🏴󠁧󠁢󠁥󠁮󠁧󠁿 <span data-he="אנגליה" data-en="England">אנגליה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇭🇷 <span data-he="קרואטיה" data-en="Croatia">קרואטיה</span></span></div>
 <div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span> · <span class="mc-note" data-he="ריבאץ&#x27; מדהים!" data-en="Stunning rematch!">ריבאץ&#x27; מדהים!</span></div>
 </div>
@@ -636,15 +750,13 @@ main { position:relative; z-index:1; margin-right:64px; }
 </div>
 <div class="day-hd"><div class="day-lbl" data-he="שבת, 20 יוני" data-en="Sat, Jun 20">שבת, 20 יוני</div><div class="day-line"></div></div>
 <div class="mgrid">
-<div class="mc past star">
-<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> F</span><div class="mc-rt"><div class="score">5 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc past">
+<div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> F</span><div class="mc-rt"><div class="score">5 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇳🇱 <span data-he="הולנד" data-en="Netherlands">הולנד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇸🇪 <span data-he="שוודיה" data-en="Sweden">שוודיה</span></span></div>
 <div class="mc-venue">📍 <span data-he="NRG Stadium, יוסטון" data-en="NRG Stadium, Houston">NRG Stadium, יוסטון</span> · <span class="mc-note" data-he="ברוביי ×2, ג&#x27;אקפו ×2" data-en="Brobbey ×2, Gakpo ×2">ברוביי ×2, ג&#x27;אקפו ×2</span></div>
 </div>
-<div class="mc past star">
-<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">2 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc past">
+<div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">2 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇩🇪 <span data-he="גרמניה" data-en="Germany">גרמניה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇮 <span data-he="חוף השנהב" data-en="Ivory Coast">חוף השנהב</span></span></div>
 <div class="mc-venue">📍 <span data-he="BMO Field, טורונטו" data-en="BMO Field, Toronto">BMO Field, טורונטו</span> · <span class="mc-note" data-he="אונדב הגיבור!" data-en="Undav the hero!">אונדב הגיבור!</span></div>
 </div>
@@ -663,9 +775,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 </div>
 <div class="day-hd"><div class="day-lbl" data-he="ראשון, 21 יוני" data-en="Sun, Jun 21">ראשון, 21 יוני</div><div class="day-line"></div></div>
 <div class="mgrid">
-<div class="mc past star">
-<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> H</span><div class="mc-rt"><div class="score">4 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
+<div class="mc past">
+<div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> H</span><div class="mc-rt"><div class="score">4 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇪🇸 <span data-he="ספרד" data-en="Spain">ספרד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇸🇦 <span data-he="סעודיה" data-en="Saudi Arabia">סעודיה</span></span></div>
 <div class="mc-venue">📍 <span data-he="Mercedes-Benz Stadium, אטלנטה" data-en="Mercedes-Benz Stadium, Atlanta">Mercedes-Benz Stadium, אטלנטה</span> · <span class="mc-note" data-he="יאמאל חזר!" data-en="Yamal is back!">יאמאל חזר!</span></div>
 </div>
@@ -690,13 +801,13 @@ main { position:relative; z-index:1; margin-right:64px; }
 </div>
 <div class="day-hd"><div class="day-lbl" data-he="שני, 22 יוני" data-en="Mon, Jun 22">שני, 22 יוני</div><div class="day-line"></div></div>
 <div class="mgrid">
-<div class="mc live star">
+<div class="mc live">
 <div class="strip safe"></div><div class="live-tag" data-he="🔴 חי" data-en="🔴 Live">🔴 חי</div>
 <div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> J</span><div class="mc-rt"><div class="mc-time safe">20:00</div><div class="mc-et">13:00 ET</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇦🇷 <span data-he="ארגנטינה" data-en="Argentina">ארגנטינה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇦🇹 <span data-he="אוסטריה" data-en="Austria">אוסטריה</span></span></div>
 <div class="mc-venue">📍 <span data-he="AT&amp;T Stadium, ארלינגטון" data-en="AT&amp;T Stadium, Arlington">AT&amp;T Stadium, ארלינגטון</span> · <span class="mc-note" data-he="מסי מחפש להעפיל" data-en="Messi eyes qualification">מסי מחפש להעפיל</span></div>
 </div>
-<div class="mc live star">
+<div class="mc live">
 <div class="strip safe"></div><div class="live-tag" data-he="🔴 חי" data-en="🔴 Live">🔴 חי</div>
 <div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="mc-time safe">00:00</div><div class="mc-et">17:00 ET</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇫🇷 <span data-he="צרפת" data-en="France">צרפת</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇮🇶 <span data-he="עיראק" data-en="Iraq">עיראק</span></span></div>
@@ -774,9 +885,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 </div>
 <div class="day-hd"><div class="day-lbl" data-he="שישי, 26 יוני" data-en="Fri, Jun 26">שישי, 26 יוני</div><div class="day-line"></div></div>
 <div class="mgrid">
-<div class="mc future star">
-<div class="strip safe"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
+<div class="mc future">
+<div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇳🇴 <span data-he="נורווגיה" data-en="Norway">נורווגיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇫🇷 <span data-he="צרפת" data-en="France">צרפת</span></span></div>
 <div class="mc-venue">📍 <span data-he="Gillette Stadium, פוקסבורו" data-en="Gillette Stadium, Foxborough">Gillette Stadium, פוקסבורו</span></div>
 </div>
@@ -795,9 +905,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 <div class="mc-teams"><span class="mc-team">🇵🇦 <span data-he="פנמה" data-en="Panama">פנמה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🏴󠁧󠁢󠁥󠁮󠁧󠁿 <span data-he="אנגליה" data-en="England">אנגליה</span></span></div>
 <div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span></div>
 </div>
-<div class="mc future star">
-<div class="strip warn"></div><div class="star-tag" data-he="⭐ מומלץ" data-en="⭐ Pick">⭐ מומלץ</div>
-<div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> K</span><div class="mc-rt"><div class="mc-time warn">02:30</div><div class="mc-et">19:30 ET</div></div></div>
+<div class="mc future">
+<div class="strip warn"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> K</span><div class="mc-rt"><div class="mc-time warn">02:30</div><div class="mc-et">19:30 ET</div></div></div>
 <div class="mc-teams"><span class="mc-team">🇨🇴 <span data-he="קולומביה" data-en="Colombia">קולומביה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇵🇹 <span data-he="פורטוגל" data-en="Portugal">פורטוגל</span></span></div>
 <div class="mc-venue">📍 <span data-he="Hard Rock Stadium, מיאמי" data-en="Hard Rock Stadium, Miami">Hard Rock Stadium, מיאמי</span></div>
 </div>
@@ -871,6 +980,16 @@ main { position:relative; z-index:1; margin-right:64px; }
 
   <div id="stage-r32" class="stage">
     <div class="sec-head"><div class="sec-label"><span data-he="סיבוב 32" data-en="Round of 32">סיבוב 32</span></div><div class="sec-sub"><span data-he="28 יוני – 3 יולי" data-en="Jun 28 – Jul 3">28 יוני – 3 יולי</span></div></div>
+    <div class="stage-info">
+      <div class="info-box">
+        <span class="ib-chip" data-he="מ׳73" data-en="M73">מ׳73</span><span data-he="– " data-en="– ">– </span><span class="ib-chip" data-he="מ׳96" data-en="M96">מ׳96</span>
+        <span data-he=" = מספר המשחק הרשמי בטורניר (M = Match). לדוגמה, מ׳74 הוא המשחק ה-74 בכל המונדיאל." data-en=" = Official match number in the tournament (M = Match). E.g., M74 is the 74th match of the entire World Cup."> = מספר המשחק הרשמי בטורניר (M = Match). לדוגמה, מ׳74 הוא המשחק ה-74 בכל המונדיאל.</span>
+      </div>
+      <div class="info-box">
+        <strong data-he="שלישית (בית ABF)" data-en="3rd place (ABF)">שלישית (בית ABF)</strong>
+        <span data-he=" = הנבחרת שסיימה במקום ה-3 בבית A, B, או F — אחת מ-8 השלישיות הטובות ביותר שמעפילות. FIFA קובעת אילו שלוש אותיות מגיעות לכל משבצת לפי הנתונים הסופיים של שלב הבתים." data-en=" = The 3rd-place team from Group A, B, or F — one of the 8 best 3rd-place teams that advance. FIFA determines which group letters fill each slot based on final group-stage results."> = הנבחרת שסיימה במקום ה-3 בבית A, B, או F — אחת מ-8 השלישיות הטובות ביותר שמעפילות. FIFA קובעת אילו שלוש אותיות מגיעות לכל משבצת לפי הנתונים הסופיים של שלב הבתים.</span>
+      </div>
+    </div>
     <div class="day-block"><div class="mgrid"><div class="mc future">
 <div class="strip safe"></div>
 <div class="mc-top"><span class="mc-grp"><span data-he="מ׳73 ·" data-en="M73 ·">מ׳73 ·</span> <span data-he="28/6" data-en="Jun 28">28/6</span></span>
@@ -1004,6 +1123,12 @@ main { position:relative; z-index:1; margin-right:64px; }
 
   <div id="stage-r16" class="stage">
     <div class="sec-head"><div class="sec-label"><span data-he="שמינית גמר" data-en="Round of 16">שמינית גמר</span></div><div class="sec-sub"><span data-he="4–7 יולי" data-en="Jul 4–7">4–7 יולי</span></div></div>
+    <div class="stage-info">
+      <div class="info-box">
+        <strong data-he="מנצחת מ׳ + מספר" data-en="Winner M + number">מנצחת מ׳ + מספר</strong>
+        <span data-he=" = הנבחרת שניצחה באותו מספר משחק בסיבוב ה-32. לדוגמה: מנצחת מ׳75 = מי שניצחה במשחק 75 (1 ביולי)." data-en=" = The team that won that match number in the Round of 32. E.g., Winner M75 = whoever won match 75 (Jul 1)."> = הנבחרת שניצחה באותו מספר משחק בסיבוב ה-32. לדוגמה: מנצחת מ׳75 = מי שניצחה במשחק 75 (1 ביולי).</span>
+      </div>
+    </div>
     <div class="day-block"><div class="mgrid"><div class="mc future">
 <div class="strip safe"></div>
 <div class="mc-top"><span class="mc-grp"><span data-he="מ׳90 ·" data-en="M90 ·">מ׳90 ·</span> <span data-he="4/7" data-en="Jul 4">4/7</span></span>
@@ -1073,6 +1198,12 @@ main { position:relative; z-index:1; margin-right:64px; }
 
   <div id="stage-qf" class="stage">
     <div class="sec-head"><div class="sec-label"><span data-he="רבע גמר" data-en="Quarter-finals">רבע גמר</span></div><div class="sec-sub"><span data-he="9–11 יולי" data-en="Jul 9–11">9–11 יולי</span></div></div>
+    <div class="stage-info">
+      <div class="info-box">
+        <strong data-he="מנצחת מ׳89–מ׳96" data-en="Winner M89–M96">מנצחת מ׳89–מ׳96</strong>
+        <span data-he=" = מנצחת משחק שמינית גמר. ארבע הזוכות ברבע הגמר יעפילו לחצי הגמר." data-en=" = Winner from the Round of 16. The four quarter-final winners advance to the semi-finals."> = מנצחת משחק שמינית גמר. ארבע הזוכות ברבע הגמר יעפילו לחצי הגמר.</span>
+      </div>
+    </div>
     <div class="day-block"><div class="mgrid"><div class="mc future">
 <div class="strip safe"></div>
 <div class="mc-top"><span class="mc-grp"><span data-he="מ׳97 ·" data-en="M97 ·">מ׳97 ·</span> <span data-he="9/7" data-en="Jul 9">9/7</span></span>
@@ -1110,6 +1241,32 @@ main { position:relative; z-index:1; margin-right:64px; }
 
   <div id="stage-sf" class="stage">
     <div class="sec-head"><div class="sec-label"><span data-he="חצי גמר" data-en="Semi-finals">חצי גמר</span></div><div class="sec-sub"><span data-he="14–15 יולי" data-en="Jul 14–15">14–15 יולי</span></div></div>
+    <div class="stage-info">
+      <div class="info-box">
+        <div class="path-row">
+          <span class="ib-chip" data-he="מ׳101 (14/7 · MetLife)" data-en="M101 (Jul 14 · MetLife)">מ׳101 (14/7 · MetLife)</span>
+          <span class="path-arrow">→</span>
+          <span class="path-good" data-he="מנצחת" data-en="Winner">מנצחת</span>
+          <span class="path-arrow">→</span>
+          <span data-he="🏆 גמר (19/7)" data-en="🏆 Final (Jul 19)">🏆 גמר (19/7)</span>
+          <span style="opacity:.4">·</span>
+          <span class="path-warn" data-he="מפסידה" data-en="Loser">מפסידה</span>
+          <span class="path-arrow">→</span>
+          <span data-he="🥉 מקום שלישי (19/7 · מיאמי)" data-en="🥉 3rd place (Jul 19 · Miami)">🥉 מקום שלישי (19/7 · מיאמי)</span>
+        </div>
+        <div class="path-row">
+          <span class="ib-chip" data-he="מ׳102 (15/7 · AT&T)" data-en="M102 (Jul 15 · AT&T)">מ׳102 (15/7 · AT&T)</span>
+          <span class="path-arrow">→</span>
+          <span class="path-good" data-he="מנצחת" data-en="Winner">מנצחת</span>
+          <span class="path-arrow">→</span>
+          <span data-he="🏆 גמר (19/7)" data-en="🏆 Final (Jul 19)">🏆 גמר (19/7)</span>
+          <span style="opacity:.4">·</span>
+          <span class="path-warn" data-he="מפסידה" data-en="Loser">מפסידה</span>
+          <span class="path-arrow">→</span>
+          <span data-he="🥉 מקום שלישי (19/7 · מיאמי)" data-en="🥉 3rd place (Jul 19 · Miami)">🥉 מקום שלישי (19/7 · מיאמי)</span>
+        </div>
+      </div>
+    </div>
     <div class="day-block"><div class="mgrid"><div class="mc future">
 <div class="strip safe"></div>
 <div class="mc-top"><span class="mc-grp"><span data-he="מ׳101 ·" data-en="M101 ·">מ׳101 ·</span> <span data-he="14/7" data-en="Jul 14">14/7</span></span>
@@ -1130,23 +1287,39 @@ main { position:relative; z-index:1; margin-right:64px; }
   </div>
 
   <div id="stage-final" class="stage">
-    <div class="sec-head"><div class="sec-label">🏆 <span data-he="🏆 הגמר" data-en="🏆 The Final">🏆 הגמר</span></div><div class="sec-sub"><span data-he="19 יולי · MetLife · 22:00 שעון ישראל" data-en="Jul 19 · MetLife · 22:00 IL">19 יולי · MetLife · 22:00 שעון ישראל</span></div></div>
+    <div class="sec-head"><div class="sec-label">🏆 <span data-he="🏆 הגמר" data-en="🏆 The Final">🏆 הגמר</span></div><div class="sec-sub"><span data-he="19 יולי · ניו ג׳רזי + מיאמי" data-en="Jul 19 · New Jersey + Miami">19 יולי · ניו ג׳רזי + מיאמי</span></div></div>
+    <div class="stage-info">
+      <div class="info-box">
+        <div class="path-row">
+          <span style="font-size:13px">🥉</span>
+          <strong data-he="משחק מקום 3" data-en="3rd Place Match">משחק מקום 3</strong>
+          <span class="path-arrow">—</span>
+          <span data-he="המפסידות בשני חצאי הגמר (מ׳101 ומ׳102) · 19/7 · Hard Rock Stadium, מיאמי · 22:00 שעון ישראל" data-en="Losers of both semi-finals (M101 & M102) · Jul 19 · Hard Rock Stadium, Miami · 22:00 IL">המפסידות בשני חצאי הגמר (מ׳101 ומ׳102) · 19/7 · Hard Rock Stadium, מיאמי · 22:00 שעון ישראל</span>
+        </div>
+        <div class="path-row">
+          <span style="font-size:13px">🏆</span>
+          <strong data-he="גמר המונדיאל" data-en="World Cup Final">גמר המונדיאל</strong>
+          <span class="path-arrow">—</span>
+          <span data-he="המנצחות בשני חצאי הגמר (מ׳101 ומ׳102) · 19/7 · MetLife Stadium, ניו ג׳רזי · 22:00 שעון ישראל" data-en="Winners of both semi-finals (M101 & M102) · Jul 19 · MetLife Stadium, New Jersey · 22:00 IL">המנצחות בשני חצאי הגמר (מ׳101 ומ׳102) · 19/7 · MetLife Stadium, ניו ג׳רזי · 22:00 שעון ישראל</span>
+        </div>
+      </div>
+    </div>
     <div class="day-block"><div class="mgrid"><div class="mc future">
-<div class="strip safe"></div>
-<div class="mc-top"><span class="mc-grp" data-he="משחק מקום 3" data-en="3rd place">משחק מקום 3</span>
+<div class="strip warn"></div>
+<div class="mc-top"><span class="mc-grp"><span data-he="🥉 מקום 3 · 19/7 · מיאמי" data-en="🥉 3rd Place · Jul 19 · Miami">🥉 מקום 3 · 19/7 · מיאמי</span></span>
 <div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
-<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳SF1" data-en="Winner MSF1">מנצחת מ׳SF1</span>
+<div class="mc-teams"><span class="mc-team" data-he="מפסידה מ׳101 (חצי גמר 1)" data-en="Loser M101 (SF1)">מפסידה מ׳101 (חצי גמר 1)</span>
 <span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
-<span class="mc-team b" data-he="מנצחת מ׳SF2" data-en="Winner MSF2">מנצחת מ׳SF2</span></div>
+<span class="mc-team b" data-he="מפסידה מ׳102 (חצי גמר 2)" data-en="Loser M102 (SF2)">מפסידה מ׳102 (חצי גמר 2)</span></div>
 <div class="mc-venue">📍 <span data-he="Hard Rock Stadium, מיאמי" data-en="Hard Rock Stadium, Miami">Hard Rock Stadium, מיאמי</span></div>
 </div></div><div style="height:14px"></div><div class="mgrid final-card"><div class="mc future thefinal">
 <div class="strip safe"></div>
-<div class="mc-top"><span class="mc-grp" style="color:var(--gold);font-size:12px" data-he="🏆 גמר העולם" data-en="🏆 WORLD CUP FINAL">🏆 גמר העולם</span>
+<div class="mc-top"><span class="mc-grp" style="color:var(--gold);font-size:12px" data-he="🏆 גמר המונדיאל · 19/7 · MetLife" data-en="🏆 WORLD CUP FINAL · Jul 19 · MetLife">🏆 גמר המונדיאל · 19/7 · MetLife</span>
 <div class="mc-rt"><div class="mc-time safe">22:00</div><div class="mc-et">15:00 ET</div></div></div>
-<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳101" data-en="Winner M101">מנצחת מ׳101</span>
+<div class="mc-teams"><span class="mc-team" data-he="מנצחת מ׳101 (חצי גמר 1)" data-en="Winner M101 (SF1)">מנצחת מ׳101 (חצי גמר 1)</span>
 <span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>
-<span class="mc-team b" data-he="מנצחת מ׳102" data-en="Winner M102">מנצחת מ׳102</span></div>
-<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג&#x27;רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג&#x27;רזי</span></div>
+<span class="mc-team b" data-he="מנצחת מ׳102 (חצי גמר 2)" data-en="Winner M102 (SF2)">מנצחת מ׳102 (חצי גמר 2)</span></div>
+<div class="mc-venue">📍 <span data-he="MetLife Stadium, ניו ג׳רזי" data-en="MetLife Stadium, New Jersey">MetLife Stadium, ניו ג׳רזי</span></div>
 </div></div></div>
   </div>
 
@@ -1172,21 +1345,27 @@ document.querySelectorAll('.side-btn,.drawer-item,.set-opt,.mc,.rc').forEach(att
 
 // ── DRAWER ──
 var activeDrawer = null;
+var drawerTimer = null;
 function toggleDrawer(which){
+  closePanel();
   if(activeDrawer === which){ closeDrawer(); return; }
+  var wasOpen = activeDrawer !== null;
   closeDrawer();
-  activeDrawer = which;
-  document.getElementById('overlay').classList.add('open');
-  if(which==='matches'){ document.getElementById('drawerMatches').classList.add('open'); document.getElementById('btnMatches').classList.add('active'); }
-  else { document.getElementById('drawerSettings').classList.add('open'); document.getElementById('btnSettings').classList.add('active'); }
+  clearTimeout(drawerTimer);
+  function _open(){
+    activeDrawer = which;
+    document.getElementById('overlay').classList.add('open');
+    document.getElementById('drawerMatches').classList.add('open');
+    document.getElementById('btnMatches').classList.add('active');
+  }
+  if(wasOpen){ drawerTimer = setTimeout(_open, 440); } else { _open(); }
 }
 function closeDrawer(){
   activeDrawer = null;
+  clearTimeout(drawerTimer);
   document.getElementById('overlay').classList.remove('open');
   document.getElementById('drawerMatches').classList.remove('open');
-  document.getElementById('drawerSettings').classList.remove('open');
   document.getElementById('btnMatches').classList.remove('active');
-  document.getElementById('btnSettings').classList.remove('active');
 }
 
 // ── STAGE SWITCH ──
@@ -1219,10 +1398,579 @@ function setTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   document.getElementById('themeDark').classList.toggle('active', theme==='dark');
   document.getElementById('themeLight').classList.toggle('active', theme==='light');
+  var btn = document.getElementById('btnTheme');
+  if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
+}
+
+// ── SIDE PANEL ──
+var activePanel = null;
+function openPanel(which, btn) {
+  var panel = document.getElementById('sidePanel');
+  if (activePanel === which) { closePanel(); return; }
+  activePanel = which;
+
+  // Show correct section
+  ['panelLang','panelTheme'].forEach(function(id){
+    document.getElementById(id).style.display =
+      (id === 'panel' + which.charAt(0).toUpperCase() + which.slice(1)) ? '' : 'none';
+  });
+
+  // Position next to the button
+  var rect = btn.getBoundingClientRect();
+  var isRTL = document.documentElement.dir === 'rtl';
+  panel.style.top = rect.top + 'px';
+  if (isRTL) {
+    panel.style.right = (window.innerWidth - rect.left + 8) + 'px';
+    panel.style.left = 'auto';
+  } else {
+    panel.style.left = (rect.right + 8) + 'px';
+    panel.style.right = 'auto';
+  }
+
+  requestAnimationFrame(function(){ panel.classList.add('open'); });
+}
+function closePanel() {
+  document.getElementById('sidePanel').classList.remove('open');
+  activePanel = null;
+}
+document.addEventListener('click', function(e) {
+  if (activePanel && !e.target.closest('.side-item') && !e.target.closest('.side-panel')) closePanel();
+});
+
+// ── REFRESH TOOLTIP ──
+var refreshTipText = '';
+function showRefreshTip(btn) {
+  var tip = document.getElementById('refreshTip');
+  if (!tip || !refreshTipText) return;
+  var rect = btn.getBoundingClientRect();
+  var isRTL = document.documentElement.dir === 'rtl';
+  tip.textContent = refreshTipText;
+  tip.style.top = (rect.top + rect.height/2 - 16) + 'px';
+  if (isRTL) {
+    tip.style.right = (window.innerWidth - rect.left + 8) + 'px';
+    tip.style.left = 'auto';
+  } else {
+    tip.style.left = (rect.right + 8) + 'px';
+    tip.style.right = 'auto';
+  }
+  tip.style.opacity = '1';
+}
+function hideRefreshTip() {
+  var tip = document.getElementById('refreshTip');
+  if (tip) tip.style.opacity = '0';
 }
 
 // close drawer on Escape
 document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeDrawer(); });
+
+// ── LIVE DATA (ESPN public API) ──
+var matchIndex = {};
+var liveRefreshTimer = null;
+var hasLiveGames = false;
+var lastFetchTime = 0;
+
+// Normalize team name for fuzzy matching between ESPN names and HTML data-en values
+var TEAM_NORM_MAP = {
+  'unitedstates':'usa','usa':'usa',
+  'bosniaandherzegovina':'bosnia','bosnia':'bosnia',
+  'southkorea':'korea','korea':'korea','republicofkorea':'korea',
+  'cotedivoire':'ivorycoast','ivorycoast':'ivorycoast',
+  'islamicrepublicofiran':'iran',
+  'democraticrepublicofthecongo':'drcongo','congodr':'drcongo','drcongo':'drcongo',
+  'trinidadandtobago':'trinidad',
+  'czechrepublic':'czechia','czechia':'czechia',
+  'northernireland':'northernireland',
+  'newzealand':'newzealand',
+  'saudiarabia':'saudiarabia',
+  'capeverde':'capeverde',
+  'centralafricanrepublic':'car',
+  'antiguaandbarbuda':'antigua',
+  'trinidadtobago':'trinidad',
+  'papuanewguinea':'png',
+};
+
+function normTeam(name) {
+  var n = (name || '').toLowerCase().replace(/[^a-z]/g, '');
+  return TEAM_NORM_MAP[n] || n;
+}
+
+function buildMatchIndex() {
+  matchIndex = {};
+  document.querySelectorAll('.mc').forEach(function(card) {
+    var teams = card.querySelectorAll('.mc-team span[data-en]');
+    if (teams.length < 2) return;
+    var t1 = normTeam(teams[0].getAttribute('data-en'));
+    var t2 = normTeam(teams[1].getAttribute('data-en'));
+    if (t1 && t2) {
+      matchIndex[t1 + '_' + t2] = card;
+      matchIndex[t2 + '_' + t1] = card;
+    }
+  });
+}
+
+function getUTCDateStrings() {
+  var now = new Date();
+  var results = [];
+  // Fetch today + 2 days back to catch all recent matches
+  // (Israeli UTC+3 means matches starting at 03:00 IL = 00:00 UTC = previous UTC date)
+  for (var i = 0; i <= 2; i++) {
+    var d = new Date(now);
+    d.setUTCDate(d.getUTCDate() - i);
+    var y = d.getUTCFullYear();
+    var m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    var day = String(d.getUTCDate()).padStart(2, '0');
+    results.push('' + y + m + day);
+  }
+  return results;
+}
+
+function setSyncBar(state, text) {
+  var btn = document.getElementById('btnRefresh');
+  refreshTipText = text;
+  if (state === 'loading') {
+    if (btn) btn.classList.add('spinning');
+  } else {
+    if (btn) btn.classList.remove('spinning');
+    if (btn) btn.textContent = (state === 'live') ? '🔴' : '↺';
+  }
+}
+
+function ensureScoreEls(card) {
+  var rt = card.querySelector('.mc-rt');
+  if (!rt) return { scoreEl: null, finEl: null };
+
+  var scoreEl = card.querySelector('.score');
+  var finEl   = card.querySelector('.mc-fin');
+  var timeEl  = card.querySelector('.mc-time');
+  var etEl    = card.querySelector('.mc-et');
+
+  if (!scoreEl) {
+    scoreEl = document.createElement('div');
+    scoreEl.className = 'score';
+    scoreEl.style.display = 'none';
+    rt.insertBefore(scoreEl, rt.firstChild);
+  }
+  if (!finEl) {
+    finEl = document.createElement('div');
+    finEl.className = 'mc-fin';
+    finEl.style.display = 'none';
+    rt.appendChild(finEl);
+  }
+  return { scoreEl: scoreEl, finEl: finEl, timeEl: timeEl, etEl: etEl };
+}
+
+function applyEventToCard(event) {
+  var comp = event.competitions && event.competitions[0];
+  if (!comp) return;
+  var comps = comp.competitors || [];
+  if (comps.length < 2) return;
+
+  var home = comps.find(function(c){ return c.homeAway === 'home'; }) || comps[0];
+  var away = comps.find(function(c){ return c.homeAway === 'away'; }) || comps[1];
+  var t1n = normTeam(home.team.displayName);
+  var t2n = normTeam(away.team.displayName);
+
+  var card = matchIndex[t1n + '_' + t2n] || matchIndex[t2n + '_' + t1n];
+  if (!card) return;
+
+  var status = comp.status || {};
+  var statusName = (status.type && status.type.name) || '';
+  var els = ensureScoreEls(card);
+  var scoreEl = els.scoreEl, finEl = els.finEl;
+  var timeEl = els.timeEl, etEl = els.etEl;
+  var liveTag = card.querySelector('.live-tag');
+
+  // Determine card team order to assign scores correctly
+  var cardTeams = card.querySelectorAll('.mc-team span[data-en], .mc-team[data-en]');
+  var cardT1 = cardTeams[0] ? normTeam(cardTeams[0].getAttribute('data-en')) : '';
+  var homeFirst = (cardT1 === t1n);
+  var scoreHome = home.score != null ? String(home.score) : '0';
+  var scoreAway = away.score != null ? String(away.score) : '0';
+  var scoreText = homeFirst
+    ? (scoreHome + ' – ' + scoreAway)
+    : (scoreAway + ' – ' + scoreHome);
+
+  // ESPN uses STATUS_FULL_TIME for regular-time finals (group stage + knockout)
+  // and STATUS_FULL_TIME_AET (extra time), STATUS_FINAL_PEN (penalties)
+  var isFinal = (
+    statusName === 'STATUS_FULL_TIME' ||
+    statusName === 'STATUS_FINAL' ||
+    statusName === 'STATUS_FULL_TIME_AET' ||
+    statusName === 'STATUS_FINAL_AET' ||
+    statusName === 'STATUS_FINAL_PEN' ||
+    (status.type && status.type.completed === true && status.type.state === 'post')
+  );
+
+  if (isFinal) {
+    // Suffix for AET / PEN
+    var suffix = '';
+    if (statusName === 'STATUS_FULL_TIME_AET' || statusName === 'STATUS_FINAL_AET') {
+      suffix = curLang === 'he' ? ' (א"ת)' : ' (AET)';
+    } else if (statusName === 'STATUS_FINAL_PEN') {
+      suffix = curLang === 'he' ? ' (פנד׳)' : ' (PEN)';
+    }
+    card.classList.remove('future', 'live');
+    card.classList.add('past');
+    if (timeEl) timeEl.style.display = 'none';
+    if (etEl)   etEl.style.display = 'none';
+    if (scoreEl) { scoreEl.textContent = scoreText; scoreEl.style.display = ''; }
+    if (finEl)   { finEl.setAttribute('data-he','סיום' + suffix); finEl.setAttribute('data-en','FT' + suffix);
+                   finEl.textContent = (curLang === 'he') ? ('סיום' + suffix) : ('FT' + suffix); finEl.style.display = ''; }
+    if (liveTag) liveTag.remove();
+
+  } else if (statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_HALFTIME') {
+    card.classList.remove('past', 'future');
+    card.classList.add('live');
+    hasLiveGames = true;
+    var clock = (statusName === 'STATUS_HALFTIME')
+      ? 'HT'
+      : ((status.displayClock || (status.type && status.type.detail)) || '');
+    if (timeEl) timeEl.style.display = 'none';
+    if (etEl)   etEl.style.display = 'none';
+    if (scoreEl) { scoreEl.textContent = scoreText; scoreEl.style.display = ''; }
+    if (finEl)   finEl.style.display = 'none';
+    if (!liveTag) {
+      liveTag = document.createElement('div');
+      liveTag.className = 'live-tag';
+      card.insertBefore(liveTag, card.firstChild);
+    }
+    liveTag.textContent = '🔴 ' + clock;
+
+  } else if (statusName === 'STATUS_SCHEDULED') {
+    card.classList.remove('past', 'live');
+    card.classList.add('future');
+    if (timeEl) timeEl.style.display = '';
+    if (etEl)   etEl.style.display = '';
+    if (scoreEl) scoreEl.style.display = 'none';
+    if (finEl)   finEl.style.display = 'none';
+    if (liveTag) liveTag.remove();
+  }
+}
+
+function processAPIEvents(events) {
+  events.forEach(applyEventToCard);
+  lastFetchTime = Date.now();
+  var timeStr = new Date().toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'});
+  if (hasLiveGames) {
+    setSyncBar('live', (curLang === 'he' ? '🔴 משחק חי · עדכון: ' : '🔴 Live now · Updated: ') + timeStr);
+  } else {
+    setSyncBar('ok', (curLang === 'he' ? 'עודכן: ' : 'Updated: ') + timeStr);
+  }
+  // Schedule next auto-refresh
+  clearTimeout(liveRefreshTimer);
+  liveRefreshTimer = setTimeout(fetchLiveData, hasLiveGames ? 60000 : 300000);
+  buildRecs();
+}
+
+function fetchLiveData() {
+  hasLiveGames = false;
+  setSyncBar('loading', curLang === 'he' ? 'מעדכן נתונים...' : 'Fetching live data...');
+  var dates = getUTCDateStrings();
+  var pending = dates.length;
+  var allEvents = [];
+
+  dates.forEach(function(dateStr) {
+    fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=' + dateStr)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.events) allEvents = allEvents.concat(data.events);
+        if (--pending === 0) processAPIEvents(allEvents);
+      })
+      .catch(function() {
+        if (--pending === 0) processAPIEvents(allEvents);
+      });
+  });
+}
+
+function manualRefresh() {
+  clearTimeout(liveRefreshTimer);
+  hideRefreshTip();
+  fetchLiveData();
+}
+
+// ── TEAM SEARCH ──
+// Collect all teams with real names (group stage cards that have emoji+span structure)
+var allTeams = [];   // [{en, he, norm}]
+var teamMatchMap = {}; // norm1+'_'+norm2 -> card element
+
+function buildTeamSearch() {
+  var seen = {};
+  allTeams = [];
+  teamMatchMap = {};
+
+  document.querySelectorAll('.mc').forEach(function(card) {
+    var spans = card.querySelectorAll('.mc-team span[data-en]');
+    if (spans.length < 2) return;
+    var t = [spans[0], spans[1]];
+    var norms = t.map(function(s){ return normTeam(s.getAttribute('data-en')); });
+
+    // Only real national teams (not placeholders like "1st Group A", "Winner M74")
+    var isReal = norms.every(function(n){ return n && !/^(1st|2nd|3rd|winner|loser)/i.test(n) && !/group[a-z]/i.test(n); });
+    if (!isReal) return;
+
+    t.forEach(function(s, i) {
+      var enVal = s.getAttribute('data-en');
+      var heVal = s.getAttribute('data-he') || enVal;
+      var n = norms[i];
+      if (!seen[n]) {
+        seen[n] = true;
+        allTeams.push({ en: enVal, he: heVal, norm: n });
+      }
+    });
+
+    var key = norms[0] + '_' + norms[1];
+    teamMatchMap[key] = card;
+    teamMatchMap[norms[1] + '_' + norms[0]] = card;
+  });
+
+  // Sort alphabetically (English)
+  allTeams.sort(function(a,b){ return a.en.localeCompare(b.en); });
+
+  // Populate selects
+  ['searchTeam1','searchTeam2'].forEach(function(id) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var placeholder = id === 'searchTeam1'
+      ? { he:'בחר קבוצה 1', en:'Team 1' }
+      : { he:'בחר קבוצה 2', en:'Team 2' };
+    sel.innerHTML = '<option value="" data-he="' + placeholder.he + '" data-en="' + placeholder.en + '">' +
+      (curLang === 'he' ? placeholder.he : placeholder.en) + '</option>';
+    allTeams.forEach(function(team) {
+      var opt = document.createElement('option');
+      opt.value = team.norm;
+      opt.setAttribute('data-en', team.en);
+      opt.setAttribute('data-he', team.he);
+      opt.textContent = (curLang === 'he') ? team.he : team.en;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+function runTeamSearch() {
+  var n1 = document.getElementById('searchTeam1').value;
+  var n2 = document.getElementById('searchTeam2').value;
+  var res = document.getElementById('searchResult');
+  if (!n1 || !n2) { res.classList.remove('show'); return; }
+  if (n1 === n2)  { res.classList.remove('show'); return; }
+
+  var card = teamMatchMap[n1 + '_' + n2] || teamMatchMap[n2 + '_' + n1];
+  if (!card) {
+    // Teams exist but never played each other
+    document.getElementById('srTeams').textContent = '';
+    document.getElementById('srScore').textContent = '';
+    document.getElementById('srMeta').textContent =
+      curLang === 'he' ? 'הקבוצות לא שיחקו אחת נגד השניה' : 'These teams did not face each other';
+    document.getElementById('srMeta').className = 'sr-meta sr-none';
+    res.classList.add('show');
+    return;
+  }
+
+  var isPast  = card.classList.contains('past');
+  var isLive  = card.classList.contains('live');
+
+  if (!isPast && !isLive) {
+    // Match hasn't happened yet
+    var timeEl = card.querySelector('.mc-time');
+    var grpEl  = card.querySelector('.mc-grp');
+    var timeStr = timeEl ? timeEl.textContent.trim() : '';
+    var grpStr  = grpEl  ? grpEl.textContent.replace(/·/g,'').trim() : '';
+    document.getElementById('srTeams').textContent = '';
+    document.getElementById('srScore').textContent = '';
+    document.getElementById('srMeta').textContent =
+      (curLang === 'he'
+        ? 'המשחק טרם התרחש · ' + grpStr + ' · ' + timeStr
+        : 'Match not played yet · ' + grpStr + ' · ' + timeStr);
+    document.getElementById('srMeta').className = 'sr-meta sr-none';
+    res.classList.add('show');
+    return;
+  }
+
+  // Get team display names respecting current language
+  var spans = card.querySelectorAll('.mc-team span[data-en]');
+  var name1 = spans[0] ? (curLang==='he' ? spans[0].getAttribute('data-he') : spans[0].getAttribute('data-en')) : '';
+  var name2 = spans[1] ? (curLang==='he' ? spans[1].getAttribute('data-he') : spans[1].getAttribute('data-en')) : '';
+
+  var scoreEl = card.querySelector('.score');
+  var score   = scoreEl ? scoreEl.textContent.trim() : (curLang==='he' ? 'מתעדכן...' : 'Updating...');
+
+  var grpEl  = card.querySelector('.mc-grp');
+  var grpStr = grpEl ? grpEl.textContent.replace(/·/g,'').trim() : '';
+
+  document.getElementById('srTeams').textContent = name1 + '  ·  ' + name2;
+  document.getElementById('srScore').textContent = score;
+  document.getElementById('srMeta').textContent = grpStr;
+  document.getElementById('srMeta').className = isLive ? 'sr-meta sr-live' : 'sr-meta';
+  res.classList.add('show');
+}
+
+// ── RECOMMENDATIONS: next 8 future matches in IL 12:00–22:00 window ──
+var REC_MONTHS = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+
+function parseDateENRec(str) {
+  var m = (str || '').match(/([A-Z][a-z]{2})\s+(\d+)/);
+  if (!m || !(m[1] in REC_MONTHS)) return null;
+  return { month: REC_MONTHS[m[1]], day: parseInt(m[2], 10) };
+}
+
+function tagMatchDates() {
+  // Group stage: propagate date from day-hd labels to mc cards in the same mgrid
+  document.querySelectorAll('.day-block').forEach(function(block) {
+    var curDate = null;
+    Array.from(block.childNodes).forEach(function(node) {
+      if (!node.classList) return;
+      if (node.classList.contains('day-hd')) {
+        var lbl = node.querySelector('.day-lbl');
+        if (lbl) {
+          var d = parseDateENRec(lbl.getAttribute('data-en') || lbl.textContent);
+          if (d) curDate = d;
+        }
+      } else if (node.classList.contains('mgrid') && curDate) {
+        node.querySelectorAll('.mc').forEach(function(card) {
+          if (!card.dataset.dt) {
+            card.dataset.dt = '2026-' +
+              String(curDate.month + 1).padStart(2, '0') + '-' +
+              String(curDate.day).padStart(2, '0');
+          }
+        });
+      }
+    });
+  });
+  // Knockout stages: extract date from mc-grp span matching "Jun 29" format
+  document.querySelectorAll('.mc:not([data-dt])').forEach(function(card) {
+    card.querySelectorAll('.mc-grp span[data-en]').forEach(function(s) {
+      if (card.dataset.dt) return;
+      var d = parseDateENRec(s.getAttribute('data-en'));
+      if (d) {
+        card.dataset.dt = '2026-' +
+          String(d.month + 1).padStart(2, '0') + '-' +
+          String(d.day).padStart(2, '0');
+      }
+    });
+  });
+}
+
+function buildRecs() {
+  var recCards = document.getElementById('recCards');
+  if (!recCards) return;
+  recCards.innerHTML = '';
+
+  var recSection = document.getElementById('stage-rec');
+  var picks = [];
+  var allCards = document.querySelectorAll('.mc');
+
+  for (var i = 0; i < allCards.length && picks.length < 8; i++) {
+    var card = allCards[i];
+    if (recSection && recSection.contains(card)) continue;
+    if (card.classList.contains('past') || card.classList.contains('live')) continue;
+    var timeEl = card.querySelector('.mc-time');
+    if (!timeEl) continue;
+    var timeText = timeEl.textContent.trim();
+    if (!/^\d{1,2}:\d{2}$/.test(timeText)) continue;
+    var hour = parseInt(timeText.split(':')[0], 10);
+    if (hour < 12 || hour > 22) continue;
+    picks.push(card);
+  }
+
+  if (picks.length === 0) {
+    var msg = document.createElement('p');
+    msg.style.cssText = 'color:var(--t3);font-size:13px;padding:20px;text-align:center;';
+    msg.setAttribute('data-he', 'אין משחקים בשעות נוחות בקרוב');
+    msg.setAttribute('data-en', 'No convenient matches coming up');
+    msg.textContent = curLang === 'en' ? 'No convenient matches coming up' : 'אין משחקים בשעות נוחות בקרוב';
+    recCards.appendChild(msg);
+    return;
+  }
+
+  // Compute today's date in Israel time (UTC+3) formatted as "Jun 23"
+  var nowIsrael = new Date(Date.now() + 3 * 3600 * 1000);
+  var todayMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var todayEnStr = todayMonths[nowIsrael.getUTCMonth()] + ' ' + nowIsrael.getUTCDate();
+
+  picks.forEach(function(c) {
+    var clone = c.cloneNode(true);
+
+    // Fix 3: remove star styling from cloned card
+    clone.classList.remove('star');
+    var starTag = clone.querySelector('.star-tag');
+    if (starTag) starTag.remove();
+
+    // Fix 2: mark today's matches with "היום" / "Today"
+    var grp = clone.querySelector('.mc-grp');
+    if (grp) {
+      var spans = grp.querySelectorAll('span[data-en]');
+      spans.forEach(function(sp) {
+        if (sp.getAttribute('data-en') === todayEnStr) {
+          sp.setAttribute('data-he', 'היום');
+          sp.setAttribute('data-en', 'Today');
+          sp.textContent = curLang === 'en' ? 'Today' : 'היום';
+        }
+      });
+    }
+
+    recCards.appendChild(clone);
+  });
+
+  // Apply current language to all cloned elements
+  recCards.querySelectorAll('[data-he]').forEach(function(el) {
+    var val = el.getAttribute('data-' + curLang);
+    if (val !== null) el.textContent = val;
+  });
+}
+
+// Rebuild search selects and recommendations after language change
+var _origSetLang = setLang;
+setLang = function(lang) {
+  _origSetLang(lang);
+  buildTeamSearch();
+  buildRecs();
+  runTeamSearch();
+};
+
+function autoMarkStars() {
+  var FIFA_TOP10 = [
+    'france','england','brazil','argentina','portugal','spain',
+    'netherlands','belgium','germany','italy'
+  ].map(normTeam);
+
+  document.querySelectorAll('.mc').forEach(function(card) {
+    var teams = card.querySelectorAll('.mc-team span[data-en]');
+    if (teams.length < 2) return;
+    var t1 = normTeam(teams[0].getAttribute('data-en'));
+    var t2 = normTeam(teams[1].getAttribute('data-en'));
+    var isTop = FIFA_TOP10.indexOf(t1) !== -1 || FIFA_TOP10.indexOf(t2) !== -1;
+
+    if (isTop) {
+      card.classList.add('star');
+      if (!card.querySelector('.star-tag')) {
+        var tag = document.createElement('div');
+        tag.className = 'star-tag';
+        tag.setAttribute('data-he', '⭐ מומלץ');
+        tag.setAttribute('data-en', '⭐ Pick');
+        tag.textContent = curLang === 'en' ? '⭐ Pick' : '⭐ מומלץ';
+        var strip = card.querySelector('.strip');
+        if (strip && strip.nextSibling) {
+          card.insertBefore(tag, strip.nextSibling);
+        } else {
+          card.insertBefore(tag, card.children[1] || card.firstChild);
+        }
+      } else {
+        var existing = card.querySelector('.star-tag');
+        existing.textContent = curLang === 'en' ? '⭐ Pick' : '⭐ מומלץ';
+      }
+    } else {
+      card.classList.remove('star');
+      var starTag = card.querySelector('.star-tag');
+      if (starTag) starTag.remove();
+    }
+  });
+}
+
+// Build index and kick off first fetch on page load
+buildMatchIndex();
+buildTeamSearch();
+autoMarkStars();
+buildRecs();
+fetchLiveData();
 </script>
 </body>
 </html>
