@@ -574,10 +574,10 @@ function autoMarkStars() {
 // ────────────────────────────────────────────
 // ── AI CHAT (Claude / Anthropic) ──
 // ────────────────────────────────────────────
-// ⚠️  Replace the empty string below with your Anthropic API key.
-//    Get one at https://console.anthropic.com → API Keys
-//    Recommended: set a monthly spending limit in Billing settings.
-var ANTHROPIC_KEY = '';
+// ⚠️  Replace the empty string below with your Google Gemini API key.
+//    Get one FREE at https://aistudio.google.com → Get API key
+//    Free tier: 1,500 requests/day — no credit card needed.
+var GEMINI_KEY = '';
 
 var chatHistory = [];   // [{role, content}]
 var chatOpen = false;
@@ -693,46 +693,48 @@ function sendChat() {
   var text = inp.value.trim();
   if (!text) return;
 
-  if (!ANTHROPIC_KEY) {
+  if (!GEMINI_KEY) {
     addChatBubble('assistant', curLang === 'he'
-      ? '⚠️ לא הוגדר מפתח API. פתח את main.js והכנס את המפתח שלך ב-ANTHROPIC_KEY.'
-      : '⚠️ No API key set. Open main.js and set your key in ANTHROPIC_KEY.');
+      ? '⚠️ לא הוגדר מפתח API. פתח את main.js והכנס את המפתח שלך ב-GEMINI_KEY.'
+      : '⚠️ No API key set. Open main.js and set your key in GEMINI_KEY.');
     return;
   }
 
   inp.value = '';
   addChatBubble('user', text);
-  chatHistory.push({ role: 'user', content: text });
+  chatHistory.push({ role: 'user', parts: [{ text: text }] });
   setChatTyping(true);
 
-  var messages = chatHistory.slice(-10); // last 10 turns for context window
+  // Gemini uses "model" role (not "assistant") and parts array format
+  var contents = chatHistory.slice(-10).map(function(m) {
+    return { role: m.role, parts: m.parts || [{ text: m.content || '' }] };
+  });
 
-  fetch('https://api.anthropic.com/v1/messages', {
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_KEY, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5',
-      max_tokens: 512,
-      system: buildSystemPrompt(),
-      messages: messages
+      system_instruction: { parts: [{ text: buildSystemPrompt() }] },
+      contents: contents,
+      generationConfig: { maxOutputTokens: 512 }
     })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     setChatTyping(false);
-    var reply = (data.content && data.content[0] && data.content[0].text) || '';
+    var reply = (data.candidates && data.candidates[0] &&
+      data.candidates[0].content && data.candidates[0].content.parts &&
+      data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
     if (!reply) {
-      reply = curLang === 'he' ? 'שגיאה בתשובה מה-API.' : 'Error: empty response from API.';
+      var errMsg = data.error && data.error.message ? data.error.message : '';
+      reply = curLang === 'he'
+        ? ('⚠️ שגיאה מה-API' + (errMsg ? ': ' + errMsg : '.'))
+        : ('⚠️ API error' + (errMsg ? ': ' + errMsg : '.'));
     }
-    chatHistory.push({ role: 'assistant', content: reply });
+    chatHistory.push({ role: 'model', parts: [{ text: reply }] });
     addChatBubble('assistant', reply);
   })
-  .catch(function(err) {
+  .catch(function() {
     setChatTyping(false);
     addChatBubble('assistant', curLang === 'he'
       ? '⚠️ שגיאת חיבור. בדוק שהמפתח תקין ושיש חיבור אינטרנט.'
