@@ -635,13 +635,17 @@ function toggleChat() {
   chatOpen ? closeChat() : openChat();
 }
 
+var chatGreetingShown = false;  // הודעת ברוכים הבאים רק פעם אחת בסשן
+
 function openChat() {
   chatOpen = true;
   var panel = document.getElementById('chatPanel');
   if (panel) panel.classList.add('open');
   var btn = document.getElementById('chatFloatBtn');
   if (btn) btn.classList.add('active');
-  if (chatHistory.length === 0) {
+  // הצג הודעת פתיחה רק פעם אחת בכל סשן
+  if (!chatGreetingShown) {
+    chatGreetingShown = true;
     addChatBubble('assistant', curLang === 'he'
       ? 'שלום! אני יכול לענות על שאלות לגבי המונדיאל 2026 — תוצאות, לוח משחקים, קבוצות ועוד. שאל אותי!'
       : 'Hi! Ask me anything about the 2026 World Cup — results, schedule, groups, and more.');
@@ -653,12 +657,19 @@ function openChat() {
 }
 
 function closeChat() {
+  // כיווץ בלבד — לא מוחק את השיחה
   chatOpen = false;
   var panel = document.getElementById('chatPanel');
   if (panel) panel.classList.remove('open');
   var btn = document.getElementById('chatFloatBtn');
   if (btn) btn.classList.remove('active');
 }
+
+// איפוס שיחה רק ברענון או סגירת טאב
+window.addEventListener('beforeunload', function() {
+  chatHistory = [];
+  chatGreetingShown = false;
+});
 
 function chatUpdateDir() {
   var panel = document.getElementById('chatPanel');
