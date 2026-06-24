@@ -15,7 +15,9 @@ style.textContent = `
 body,button,input,select,.panel-opt,.drawer-item,.set-opt,.mc-team,.mc-venue,.mc-et,.leg-item,.sync-bar,.hero-sub,.hero-badge,.side-label,.set-label,.day-lbl,.mc-grp,.mc-fin,.mc-note,.mc-vs,.search-vs,.sr-teams,.sr-score,.sr-meta,.panel-title,.search-title,.info-box,.gs-tbl{font-family:'Exo 2','Inter',sans-serif !important;}
 
 /* ══ CHAT FLOAT BUTTON — Pique the jaguar ══ */
-#chatFloatBtn{background:transparent !important;border:none !important;box-shadow:none !important;width:68px !important;height:68px !important;padding:0 !important;font-size:0 !important;animation:chatFloat 3s ease-in-out infinite;bottom:20px !important;left:16px !important;}
+#chatFloatBtn{background:transparent !important;border:none !important;box-shadow:none !important;width:68px !important;height:90px !important;padding:0 !important;font-size:0 !important;animation:chatFloat 3s ease-in-out infinite;bottom:16px !important;left:16px !important;display:flex !important;flex-direction:column !important;align-items:center !important;gap:2px !important;}
+#chatFloatBtn::before{content:'ASK ME';font-family:'Exo 2',sans-serif;font-size:10px;font-weight:900;letter-spacing:1.5px;color:#ffd700;text-shadow:0 1px 6px rgba(0,0,0,.7);font-size:0 !important;}
+#chat-ask-label{font-family:'Exo 2',sans-serif;font-size:10px;font-weight:900;letter-spacing:1.5px;color:#ffd700;text-shadow:0 1px 8px rgba(0,0,0,.8),0 0 12px rgba(255,215,0,.4);pointer-events:none;line-height:1;}
 #chatFloatBtn svg{width:68px;height:68px;filter:drop-shadow(0 4px 16px rgba(0,0,0,.5));transition:transform .22s cubic-bezier(.34,1.56,.64,1);}
 #chatFloatBtn:hover{transform:scale(1) !important;}
 #chatFloatBtn:hover svg{transform:scale(1.1) rotate(-4deg);}
@@ -207,9 +209,15 @@ var strikerSVG = `<svg viewBox="0 0 52 72" xmlns="http://www.w3.org/2000/svg">
   <text x="26" y="53" text-anchor="middle" font-size="7" font-weight="bold" fill="#fff">1</text>
 </svg>`;
 
-// ── 3. Replace chat button with Pique ──
+// ── 3. Replace chat button with Pique + ASK ME label ──
 var btn = document.getElementById('chatFloatBtn');
-if (btn) btn.innerHTML = piqueSVG;
+if (btn) {
+  var label = document.createElement('span');
+  label.id = 'chat-ask-label';
+  label.textContent = 'ASK ME';
+  btn.innerHTML = piqueSVG;
+  btn.insertBefore(label, btn.firstChild);
+}
 
 // ── 4. Add Roo & Striker — fixed position next to chat button ──
 var rooEl = document.createElement('div');
