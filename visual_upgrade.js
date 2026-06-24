@@ -48,14 +48,14 @@ body,button,input,select,.panel-opt,.drawer-item,.set-opt,.mc-team,.mc-venue,.mc
 
 /* ══ MASCOT DECORATIONS on chat panel ══ */
 .mascot-roo,.mascot-striker{
-  position:absolute;bottom:0;width:52px;height:72px;
-  pointer-events:none;opacity:0;transition:opacity .35s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
-  transform:translateY(20px);z-index:198;
+  position:fixed;bottom:86px;width:56px;height:76px;
+  pointer-events:none;opacity:0;
+  transition:opacity .4s ease, transform .4s cubic-bezier(.34,1.56,.64,1);
+  transform:translateY(24px);z-index:198;
 }
-.mascot-roo{left:-48px;}
-.mascot-striker{right:-48px;}
-#chatPanel.open .mascot-roo,
-#chatPanel.open .mascot-striker{opacity:1;transform:translateY(0);}
+.mascot-roo{left:16px;}
+.mascot-striker{left:88px;}
+.mascot-roo.visible,.mascot-striker.visible{opacity:1;transform:translateY(0);}
 
 /* ══ SPLASH SCREEN ══ */
 #splashScreen{position:fixed;inset:0;z-index:9999;background:#06120a;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
@@ -211,19 +211,34 @@ var strikerSVG = `<svg viewBox="0 0 52 72" xmlns="http://www.w3.org/2000/svg">
 var btn = document.getElementById('chatFloatBtn');
 if (btn) btn.innerHTML = piqueSVG;
 
-// ── 4. Add Roo & Striker to chat panel ──
-var panel = document.getElementById('chatPanel');
-if (panel) {
-  var rooEl = document.createElement('div');
-  rooEl.className = 'mascot-roo';
-  rooEl.innerHTML = rooSVG;
-  panel.appendChild(rooEl);
+// ── 4. Add Roo & Striker — fixed position next to chat button ──
+var rooEl = document.createElement('div');
+rooEl.className = 'mascot-roo';
+rooEl.innerHTML = rooSVG;
+document.body.appendChild(rooEl);
 
-  var strikerEl = document.createElement('div');
-  strikerEl.className = 'mascot-striker';
-  strikerEl.innerHTML = strikerSVG;
-  panel.appendChild(strikerEl);
-}
+var strikerEl = document.createElement('div');
+strikerEl.className = 'mascot-striker';
+strikerEl.innerHTML = strikerSVG;
+document.body.appendChild(strikerEl);
+
+// Show/hide mascots when chat opens/closes
+var origToggle = window.toggleChat;
+window.toggleChat = function() {
+  if (origToggle) origToggle.apply(this, arguments);
+  setTimeout(function() {
+    var panel = document.getElementById('chatPanel');
+    var isOpen = panel && panel.classList.contains('open');
+    rooEl.classList.toggle('visible', isOpen);
+    strikerEl.classList.toggle('visible', isOpen);
+  }, 50);
+};
+var origClose = window.closeChat;
+window.closeChat = function() {
+  if (origClose) origClose.apply(this, arguments);
+  rooEl.classList.remove('visible');
+  strikerEl.classList.remove('visible');
+};
 
 // ── 5. Create splash screen ──
 var splash = document.createElement('div');
