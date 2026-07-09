@@ -585,50 +585,46 @@ var CHAT_PROXY_URL = 'https://worldcup-ai.yoavstern1357.workers.dev';
 var chatHistory = [];   // [{role, content}]
 var chatOpen = false;
 
-function buildSystemPrompt() {
-  var results = [];
+// נתונים חיים שנשלפו מה-Worker
+var _liveScoresCache = { data: null, ts: 0 };
+
+async function fetchLiveScoresFromWorker() {
+  var now = Date.now();
+  if (_liveScoresCache.data && (now - _liveScoresCache.ts) < 60000) return _liveScoresCache.data;
+  try {
+    var r = await fetch(CHAT_PROXY_URL + '/scores');
+    var d = await r.json();
+    _liveScoresCache = { data: d, ts: now };
+    return d;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildSystemPrompt(liveData) {
+  var base = 'You are a helpful assistant for a FIFA World Cup 2026 live schedule page.\n' +
+    'Answer questions concisely. Reply in the same language the user writes (Hebrew or English).\n' +
+    'Today\'s date: ' + new Date().toLocaleDateString('en-GB') + '. All times are Israel time (UTC+3).\n' +
+    'Tournament: Jun 11 – Jul 19 2026 · USA / Canada / Mexico · 48 teams · 104 matches.\n\n';
+
+  if (liveData) {
+    base += 'LIVE DATA (fetched now from ESPN):\n' + (liveData.scores || '') + '\n' + (liveData.football || '') + '\n';
+  }
+
+  // גם מה שנראה בדף
+  var pageResults = [];
   document.querySelectorAll('.mc.past').forEach(function(card) {
     var teams = card.querySelectorAll('.mc-team span[data-en]');
     var score = card.querySelector('.score');
     if (teams.length >= 2 && score) {
-      results.push(teams[0].getAttribute('data-en') + ' ' + score.textContent.trim() + ' ' + teams[1].getAttribute('data-en'));
+      pageResults.push(teams[0].getAttribute('data-en') + ' ' + score.textContent.trim() + ' ' + teams[1].getAttribute('data-en'));
     }
   });
+  if (pageResults.length) {
+    base += 'PAGE GROUP STAGE RESULTS:\n' + pageResults.slice(-30).join('\n') + '\n';
+  }
 
-  var live = [];
-  document.querySelectorAll('.mc.live').forEach(function(card) {
-    var teams = card.querySelectorAll('.mc-team span[data-en]');
-    var score = card.querySelector('.score');
-    var liveTag = card.querySelector('.live-tag');
-    if (teams.length >= 2) {
-      live.push(teams[0].getAttribute('data-en') + ' ' + (score ? score.textContent.trim() : '?') +
-        ' ' + teams[1].getAttribute('data-en') + (liveTag ? ' [' + liveTag.textContent + ']' : ''));
-    }
-  });
-
-  var upcoming = [];
-  document.querySelectorAll('.mc.future').forEach(function(card) {
-    var teams = card.querySelectorAll('.mc-team span[data-en]');
-    var time = card.querySelector('.mc-time');
-    var grp = card.querySelector('.mc-grp');
-    if (teams.length >= 2) {
-      upcoming.push(
-        (grp ? grp.textContent.trim() + ' ' : '') +
-        teams[0].getAttribute('data-en') + ' vs ' + teams[1].getAttribute('data-en') +
-        (time ? ' at ' + time.textContent.trim() + ' IL' : '')
-      );
-    }
-  });
-
-  return 'You are a helpful assistant for a FIFA World Cup 2026 live schedule page.\n' +
-    'Answer questions concisely. Reply in the same language the user writes (Hebrew or English).\n' +
-    'Today\'s date: ' + new Date().toLocaleDateString('en-GB') + '. All times are Israel time (UTC+3).\n\n' +
-    (live.length ? 'LIVE NOW:\n' + live.join('\n') + '\n\n' : '') +
-    'COMPLETED RESULTS (' + results.length + ' matches):\n' +
-    (results.length ? results.join('\n') : 'None yet') + '\n\n' +
-    'UPCOMING (next matches):\n' +
-    (upcoming.slice(0, 15).join('\n') || 'None') + '\n\n' +
-    'Tournament: Jun 11 – Jul 19 2026 · USA / Canada / Mexico · 48 teams · 104 matches.';
+  return base;
 }
 
 function toggleChat() {
@@ -643,9 +639,11 @@ function openChat() {
   if (panel) panel.classList.add('open');
   var btn = document.getElementById('chatFloatBtn');
   if (btn) btn.classList.add('active');
-  // הצג הודעת פתיחה רק פעם אחת בכל סשן
+  // הצג הודעת פתיחה רק פעם אחת בכל סשן — ונקה הודעות כפולות
   if (!chatGreetingShown) {
     chatGreetingShown = true;
+    var msgs = document.getElementById('chatMessages');
+    if (msgs) msgs.innerHTML = ''; // נקה כל בועות קיימות
     addChatBubble('assistant', curLang === 'he'
       ? 'שלום! אני יכול לענות על שאלות לגבי המונדיאל 2026 — תוצאות, לוח משחקים, קבוצות ועוד. שאל אותי!'
       : 'Hi! Ask me anything about the 2026 World Cup — results, schedule, groups, and more.');
@@ -709,8 +707,8 @@ function sendChat() {
 
   if (!CHAT_PROXY_URL) {
     addChatBubble('assistant', curLang === 'he'
-      ? '⚠️ הצ\'אט עדיין לא מחובר. יש להגדיר את כתובת ה-Worker ב-CHAT_PROXY_URL בקובץ main.js.'
-      : '⚠️ Chat not connected yet. Set the Worker URL in CHAT_PROXY_URL in main.js.');
+      ? '⚠️ הצ\'אט עדיין לא מחובר.'
+      : '⚠️ Chat not connected yet.');
     return;
   }
 
@@ -719,19 +717,21 @@ function sendChat() {
   chatHistory.push({ role: 'user', parts: [{ text: text }] });
   setChatTyping(true);
 
-  // Gemini uses "model" role (not "assistant") and parts array format
   var contents = chatHistory.slice(-10).map(function(m) {
     return { role: m.role, parts: m.parts || [{ text: m.content || '' }] };
   });
 
-  fetch(CHAT_PROXY_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: buildSystemPrompt() }] },
-      contents: contents,
-      generationConfig: { maxOutputTokens: 512 }
-    })
+  // שלוף נתונים חיים תחילה, אחר כך שלח ל-Gemini
+  fetchLiveScoresFromWorker().then(function(liveData) {
+    return fetch(CHAT_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: buildSystemPrompt(liveData) }] },
+        contents: contents,
+        generationConfig: { maxOutputTokens: 512 }
+      })
+    });
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
@@ -751,8 +751,8 @@ function sendChat() {
   .catch(function() {
     setChatTyping(false);
     addChatBubble('assistant', curLang === 'he'
-      ? '⚠️ שגיאת חיבור. בדוק שהמפתח תקין ושיש חיבור אינטרנט.'
-      : '⚠️ Connection error. Check your API key and internet connection.');
+      ? '⚠️ שגיאת חיבור.'
+      : '⚠️ Connection error.');
   });
 }
 
@@ -772,3 +772,406 @@ buildTeamSearch();
 autoMarkStars();
 buildRecs();
 fetchLiveData();
+
+// ══════════════════════════════════════════════════════════
+// ── DYNAMIC MATCH BUILDER — builds all stages from ESPN ──
+// ══════════════════════════════════════════════════════════
+
+var ESPN_WC = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+var FOOTBALL_DATA_KEY = 'REDACTED_SEE_GIT_HISTORY_PURGE';
+
+// Flag emojis
+var FLAGS = {
+  'MEX':'🇲🇽','ZAF':'🇿🇦','KOR':'🇰🇷','CZE':'🇨🇿','CAN':'🇨🇦','BIH':'🇧🇦','SUI':'🇨🇭','QAT':'🇶🇦',
+  'BRA':'🇧🇷','MAR':'🇲🇦','SCO':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','HTI':'🇭🇹','USA':'🇺🇸','AUS':'🇦🇺','PAR':'🇵🇾','TUR':'🇹🇷',
+  'GER':'🇩🇪','CIV':'🇨🇮','ECU':'🇪🇨','CUW':'🇨🇼','NED':'🇳🇱','JPN':'🇯🇵','SWE':'🇸🇪','TUN':'🇹🇳',
+  'BEL':'🇧🇪','EGY':'🇪🇬','IRN':'🇮🇷','NZL':'🇳🇿','ESP':'🇪🇸','CPV':'🇨🇻','URU':'🇺🇾','KSA':'🇸🇦',
+  'FRA':'🇫🇷','NOR':'🇳🇴','SEN':'🇸🇳','IRQ':'🇮🇶','ARG':'🇦🇷','AUT':'🇦🇹','DZA':'🇩🇿','JOR':'🇯🇴',
+  'COL':'🇨🇴','POR':'🇵🇹','COD':'🇨🇩','UZB':'🇺🇿','ENG':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','CRO':'🇭🇷','GHA':'🇬🇭','PAN':'🇵🇦',
+  'GHA':'🇬🇭','ALG':'🇩🇿',
+};
+
+var TEAM_HE = {
+  'Mexico':'מקסיקו','South Africa':'דרום אפריקה','Korea Republic':'קוריאה','Czechia':'צ\'כיה',
+  'Canada':'קנדה','Bosnia and Herzegovina':'בוסניה','Switzerland':'שוויץ','Qatar':'קטאר',
+  'Brazil':'ברזיל','Morocco':'מרוקו','Scotland':'סקוטלנד','Haiti':'האיטי',
+  'USA':'ארה"ב','Australia':'אוסטרליה','Paraguay':'פרגוואי','Turkiye':'טורקיה',
+  'Germany':'גרמניה','Ivory Coast':'חוף השנהב','Ecuador':'אקוודור','Curacao':'קוראסאו',
+  'Netherlands':'הולנד','Japan':'יפן','Sweden':'שוודיה','Tunisia':'תוניסיה',
+  'Belgium':'בלגיה','Egypt':'מצרים','IR Iran':'איראן','New Zealand':'ניו זילנד',
+  'Spain':'ספרד','Cape Verde':'קייפ ורד','Uruguay':'אורוגוואי','Saudi Arabia':'סעודיה',
+  'France':'צרפת','Norway':'נורווגיה','Senegal':'סנגל','Iraq':'עיראק',
+  'Argentina':'ארגנטינה','Austria':'אוסטריה','Algeria':'אלג\'יריה','Jordan':'ירדן',
+  'Colombia':'קולומביה','Portugal':'פורטוגל','Congo DR':'קונגו DR','Uzbekistan':'אוזבקיסטן',
+  'England':'אנגליה','Croatia':'קרואטיה','Ghana':'גאנה','Panama':'פנמה',
+};
+
+var VENUES_HE = {
+  'SoFi Stadium':'SoFi Stadium, אינגלווד',
+  'NRG Stadium':'NRG Stadium, יוסטון',
+  'MetLife Stadium':'MetLife Stadium, ניו ג\'רזי',
+  'AT&T Stadium':'AT&T Stadium, ארלינגטון',
+  'Levi\'s Stadium':'Levi\'s Stadium, סנטה קלרה',
+  'Gillette Stadium':'Gillette Stadium, פוקסבורו',
+  'Rose Bowl':'Rose Bowl, פסדינה',
+  'Lincoln Financial Field':'Lincoln Financial Field, פילדלפיה',
+  'Hard Rock Stadium':'Hard Rock Stadium, מיאמי',
+  'Mercedes-Benz Stadium':'Mercedes-Benz Stadium, אטלנטה',
+  'Lumen Field':'Lumen Field, סיאטל',
+  'BMO Field':'BMO Field, טורונטו',
+  'BC Place':'BC Place, ונקובר',
+  'Arrowhead Stadium':'Arrowhead Stadium, קנזס סיטי',
+  'Estadio Azteca':'אצטדיון אזטקה, מקסיקו סיטי',
+  'Estadio Akron':'אצטדיון אקרון, גוודלחרה',
+  'Estadio BBVA':'Estadio BBVA, מונטריי',
+};
+
+function getFlag(abbr) { return FLAGS[abbr] || '🏳️'; }
+function teamHe(name) { return TEAM_HE[name] || name; }
+function venueHe(name) {
+  for (var k in VENUES_HE) {
+    if (name && name.indexOf(k) !== -1) return VENUES_HE[k];
+  }
+  return name || '';
+}
+
+// Convert UTC to Israel time string "HH:MM"
+function toIsraelTime(utcStr) {
+  var d = new Date(new Date(utcStr).getTime() + 3 * 3600000);
+  return String(d.getUTCHours()).padStart(2,'0') + ':' + String(d.getUTCMinutes()).padStart(2,'0');
+}
+
+function toIsraelDate(utcStr) {
+  var d = new Date(new Date(utcStr).getTime() + 3 * 3600000);
+  var days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  var months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  var daysEn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return {
+    he: days[d.getUTCDay()] + ', ' + d.getUTCDate() + ' ' + months[d.getUTCMonth()],
+    en: daysEn[d.getUTCDay()] + ', ' + monthsEn[d.getUTCMonth()] + ' ' + d.getUTCDate(),
+    key: d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0')
+  };
+}
+
+function hourClass(timeStr) {
+  var h = parseInt(timeStr.split(':')[0], 10);
+  if (h >= 12 && h <= 22) return 'safe';
+  if (h >= 23 || h <= 1) return 'warn';
+  return 'danger';
+}
+
+// Build a match card HTML
+function buildMatchCard(opts) {
+  // opts: {status, home, away, homeAbbr, awayAbbr, score, timeStr, venue, group, isLive, clock, isFinal, suffix}
+  var cls = 'mc';
+  if (opts.isFinal) cls += ' past';
+  else if (opts.isLive) cls += ' live';
+  else cls += ' future';
+
+  var hc = hourClass(opts.timeStr || '20:00');
+  var strip = '<div class="strip ' + hc + '"></div>';
+  var liveTag = opts.isLive ? '<div class="live-tag">🔴 ' + (opts.clock || '') + '</div>' : '';
+
+  var scoreHTML = '';
+  if (opts.isFinal || opts.isLive) {
+    scoreHTML = '<div class="score">' + (opts.score || '? – ?') + '</div>';
+    if (opts.isFinal) scoreHTML += '<div class="mc-fin" data-he="סיום' + (opts.suffix||'') + '" data-en="FT' + (opts.suffix||'') + '">סיום' + (opts.suffix||'') + '</div>';
+  } else {
+    scoreHTML = '<div class="mc-time ' + hc + '">' + (opts.timeStr||'') + '</div>';
+    if (opts.etStr) scoreHTML += '<div class="mc-et">' + opts.etStr + '</div>';
+  }
+
+  var homeFlag = getFlag(opts.homeAbbr);
+  var awayFlag = getFlag(opts.awayAbbr);
+  var homeHe = teamHe(opts.home);
+  var awayHe = teamHe(opts.away);
+
+  var grpLabel = opts.group ? '<span data-he="' + (curLang==='he'?'בית':'Group') + '" data-en="Group">בית</span> ' + opts.group : (opts.roundLabel || '');
+
+  var venueStr = opts.venue ? venueHe(opts.venue) : '';
+
+  return '<div class="' + cls + '">' + strip + liveTag +
+    '<div class="mc-top"><span class="mc-grp">' + grpLabel + '</span>' +
+    '<div class="mc-rt">' + scoreHTML + '</div></div>' +
+    '<div class="mc-teams">' +
+    '<span class="mc-team">' + homeFlag + ' <span data-he="' + homeHe + '" data-en="' + opts.home + '">' + (curLang==='he'?homeHe:opts.home) + '</span></span>' +
+    '<span class="mc-vs" data-he="נגד" data-en="vs">' + (curLang==='he'?'נגד':'vs') + '</span>' +
+    '<span class="mc-team b">' + awayFlag + ' <span data-he="' + awayHe + '" data-en="' + opts.away + '">' + (curLang==='he'?awayHe:opts.away) + '</span></span>' +
+    '</div>' +
+    (venueStr ? '<div class="mc-venue">📍 <span data-he="' + venueStr + '" data-en="' + (opts.venue||'') + '">' + (curLang==='he'?venueStr:opts.venue||'') + '</span></div>' : '') +
+    '</div>';
+}
+
+// Build standings table for one group
+function buildGroupTable(group, rows) {
+  var head = '<div class="gs-card"><div class="gs-title"><span data-he="בית" data-en="Group">בית</span> ' + group + '</div>' +
+    '<table class="gs-tbl"><tr>' +
+    '<th><span data-he="קבוצה" data-en="Team">קבוצה</span></th>' +
+    '<th class="n"><span data-he="מ׳" data-en="P">מ׳</span></th>' +
+    '<th class="n"><span data-he="נ" data-en="W">נ</span></th>' +
+    '<th class="n"><span data-he="ת" data-en="D">ת</span></th>' +
+    '<th class="n"><span data-he="ה" data-en="L">ה</span></th>' +
+    '<th class="n"><span data-he="הפרש" data-en="GD">הפרש</span></th>' +
+    '<th class="n"><span data-he="נק׳" data-en="Pts">נק׳</span></th>' +
+    '</tr>';
+  var body = rows.map(function(r, i) {
+    var isQ = i < 2;
+    var gd = (r.goalsFor || 0) - (r.goalsAgainst || 0);
+    var gdStr = (gd > 0 ? '+' : '') + gd;
+    var flag = getFlag(r.team && r.team.tla);
+    var name = r.team ? (curLang==='he' ? teamHe(r.team.name) : r.team.name) : '?';
+    return '<tr class="' + (isQ?'q':'') + '"><td><div class="tc">' +
+      '<span class="pos ' + (isQ?'q':'') + '">' + r.position + '</span>' +
+      flag + ' <span data-he="' + teamHe(r.team&&r.team.name||'') + '" data-en="' + (r.team&&r.team.name||'') + '">' + name + '</span>' +
+      '</div></td>' +
+      '<td class="n">' + r.playedGames + '</td>' +
+      '<td class="n">' + r.won + '</td>' +
+      '<td class="n">' + r.draw + '</td>' +
+      '<td class="n">' + r.lost + '</td>' +
+      '<td class="n gd">' + gdStr + '</td>' +
+      '<td class="n">' + r.points + '</td></tr>';
+  }).join('');
+  return head + body + '</table></div>';
+}
+
+// Main dynamic builder
+async function buildDynamicContent() {
+  var loadingHTML = '<div style="text-align:center;padding:40px;color:var(--t3);font-size:14px;">⏳ ' +
+    (curLang==='he' ? 'טוען נתונים...' : 'Loading live data...') + '</div>';
+
+  // Set loading state on all stages
+  ['stage-group','stage-standings','stage-rec','stage-r32','stage-r16','stage-qf','stage-sf','stage-final'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      var content = el.querySelector('.day-block, .stand-wrap, .rec-wrap, #recCards');
+      if (content) content.innerHTML = loadingHTML;
+    }
+  });
+
+  // Fetch from ESPN — multiple dates
+  var dates = [];
+  var now = Date.now();
+  for (var i = 40; i >= -14; i--) {
+    var d = new Date(now - i * 86400000);
+    dates.push(d.toISOString().slice(0,10).replace(/-/g,''));
+  }
+
+  var allEvents = [];
+  try {
+    var fetches = dates.map(function(dt) {
+      return fetch(ESPN_WC + '?dates=' + dt).then(function(r){return r.json();}).catch(function(){return {};});
+    });
+    var results = await Promise.all(fetches);
+    results.forEach(function(data) {
+      if (data.events) allEvents = allEvents.concat(data.events);
+    });
+  } catch(e) {}
+
+  // Fetch standings from football-data.org
+  var standingsData = null;
+  var scorersData = null;
+  try {
+    var sRes = await fetch('https://api.football-data.org/v4/competitions/WC/standings?season=2026',
+      {headers:{'X-Auth-Token': FOOTBALL_DATA_KEY}});
+    if (sRes.ok) standingsData = await sRes.json();
+    var scRes = await fetch('https://api.football-data.org/v4/competitions/WC/scorers?season=2026&limit=20',
+      {headers:{'X-Auth-Token': FOOTBALL_DATA_KEY}});
+    if (scRes.ok) scorersData = await scRes.json();
+  } catch(e) {}
+
+  // Process ESPN events
+  var groupMatches = [];
+  var knockoutMatches = [];
+
+  allEvents.forEach(function(event) {
+    var comp = event.competitions && event.competitions[0];
+    if (!comp) return;
+    var competitors = comp.competitors || [];
+    if (competitors.length < 2) return;
+
+    var home = competitors.find(function(c){return c.homeAway==='home';}) || competitors[0];
+    var away = competitors.find(function(c){return c.homeAway==='away';}) || competitors[1];
+    var status = comp.status && comp.status.type && comp.status.type.name || '';
+    var isFinal = status==='STATUS_FULL_TIME'||status==='STATUS_FINAL'||
+      status==='STATUS_FULL_TIME_AET'||status==='STATUS_FINAL_AET'||status==='STATUS_FINAL_PEN'||
+      (comp.status&&comp.status.type&&comp.status.type.completed);
+    var isLive = status==='STATUS_IN_PROGRESS'||status==='STATUS_HALFTIME';
+    var suffix = '';
+    if (status==='STATUS_FULL_TIME_AET'||status==='STATUS_FINAL_AET') suffix=' (א"ת)';
+    else if (status==='STATUS_FINAL_PEN') suffix=' (פנד׳)';
+
+    var homeScore = home.score != null ? home.score : '';
+    var awayScore = away.score != null ? away.score : '';
+    var scoreStr = (homeScore !== '' && awayScore !== '') ? homeScore + ' – ' + awayScore : '';
+
+    var venueRaw = (comp.venue && comp.venue.fullName) || '';
+    var timeStr = toIsraelTime(event.date);
+    var dateInfo = toIsraelDate(event.date);
+
+    // Detect group vs knockout by event notes/type
+    var notes = event.notes || [];
+    var groupName = '';
+    notes.forEach(function(n) {
+      var m = (n.headline||'').match(/Group ([A-L])/i);
+      if (m) groupName = m[1].toUpperCase();
+    });
+    // Also check season/type
+    var isKnockout = !groupName && (
+      (event.season && event.season.type && event.season.type.type === 'post') ||
+      event.name && /round|quarter|semi|final/i.test(event.name)
+    );
+
+    var matchObj = {
+      id: event.id,
+      date: event.date,
+      dateInfo: dateInfo,
+      timeStr: timeStr,
+      home: home.team && home.team.displayName || '?',
+      homeAbbr: home.team && home.team.abbreviation || '',
+      away: away.team && away.team.displayName || '?',
+      awayAbbr: away.team && away.team.abbreviation || '',
+      score: scoreStr,
+      isFinal: isFinal,
+      isLive: isLive,
+      suffix: suffix,
+      clock: comp.status && comp.status.displayClock || '',
+      venue: venueRaw,
+      group: groupName,
+      name: event.name || '',
+    };
+
+    if (groupName) groupMatches.push(matchObj);
+    else knockoutMatches.push(matchObj);
+  });
+
+  // Sort by date
+  groupMatches.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+  knockoutMatches.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+
+  // ── BUILD GROUP STAGE ──
+  var groupStage = document.getElementById('stage-group');
+  if (groupStage) {
+    // Group by day
+    var byDay = {};
+    var dayOrder = [];
+    groupMatches.forEach(function(m) {
+      var k = m.dateInfo.key;
+      if (!byDay[k]) { byDay[k] = []; dayOrder.push(k); }
+      byDay[k].push(m);
+    });
+
+    var html = '<div class="day-block">';
+    dayOrder.forEach(function(k) {
+      var dayMatches = byDay[k];
+      var di = dayMatches[0].dateInfo;
+      html += '<div class="day-hd"><div class="day-lbl" data-he="' + di.he + '" data-en="' + di.en + '">' +
+        (curLang==='he'?di.he:di.en) + '</div><div class="day-line"></div></div><div class="mgrid">';
+      dayMatches.forEach(function(m) {
+        html += buildMatchCard(m);
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // Find the day-block container
+    var db = groupStage.querySelector('.day-block');
+    if (db) db.outerHTML = html;
+    else groupStage.innerHTML += html;
+  }
+
+  // ── BUILD STANDINGS ──
+  var standStage = document.getElementById('stage-standings');
+  if (standStage && standingsData && standingsData.standings) {
+    var gsGrid = standStage.querySelector('.gs-grid');
+    if (gsGrid) {
+      var standHTML = '';
+      standingsData.standings.forEach(function(group) {
+        if (group.table) standHTML += buildGroupTable(group.group || '?', group.table);
+      });
+      gsGrid.innerHTML = standHTML;
+    }
+  }
+
+  // ── BUILD KNOCKOUT STAGES ──
+  // Detect round by match name/count
+  var r32=[],r16=[],qf=[],sf=[],final_=[];
+  knockoutMatches.forEach(function(m) {
+    var n = (m.name||'').toLowerCase();
+    if (n.indexOf('round of 32')!==-1||n.indexOf('round of 48')!==-1) r32.push(m);
+    else if (n.indexOf('round of 16')!==-1) r16.push(m);
+    else if (n.indexOf('quarterfinal')!==-1||n.indexOf('quarter-final')!==-1) qf.push(m);
+    else if (n.indexOf('semifinal')!==-1||n.indexOf('semi-final')!==-1) sf.push(m);
+    else if (n.indexOf('final')!==-1) final_.push(m);
+    else r32.push(m); // default to r32
+  });
+
+  function buildKnockoutSection(stageId, matches, labelHe, labelEn) {
+    var stage = document.getElementById(stageId);
+    if (!stage || !matches.length) return;
+    var html = '<div class="day-block"><div class="mgrid">';
+    matches.forEach(function(m) {
+      var home = m.home || '?';
+      var away = m.away || '?';
+      // If TBD, show potential
+      if (home === 'TBD' || home === '?' || home.indexOf('Winner')!==-1) {
+        home = m.name ? m.name.split(' vs ')[0] || home : home;
+      }
+      html += buildMatchCard(m);
+    });
+    html += '</div></div>';
+    var db = stage.querySelector('.day-block');
+    if (db) db.outerHTML = html;
+  }
+
+  buildKnockoutSection('stage-r32', r32);
+  buildKnockoutSection('stage-r16', r16);
+  buildKnockoutSection('stage-qf', qf);
+  buildKnockoutSection('stage-sf', sf);
+  buildKnockoutSection('stage-final', final_);
+
+  // ── BUILD RECOMMENDATIONS ──
+  var recCards = document.getElementById('recCards');
+  if (recCards) {
+    var allMatchesSorted = groupMatches.concat(knockoutMatches)
+      .sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+
+    // לייב תמיד ראשון, אחר כך עתידי בשעות נוחות
+    var liveNow = allMatchesSorted.filter(function(m) { return m.isLive; });
+    var upcoming = allMatchesSorted.filter(function(m) {
+      if (m.isFinal || m.isLive) return false;
+      var h = parseInt(m.timeStr, 10);
+      return h >= 12 && h <= 22;
+    });
+
+    var picks = liveNow.concat(upcoming).slice(0, 8);
+
+    if (!picks.length) {
+      recCards.innerHTML = '<p style="color:var(--t3);font-size:13px;padding:20px;text-align:center;">' +
+        (curLang==='he' ? 'אין משחקים בשעות נוחות בקרוב' : 'No convenient matches soon') + '</p>';
+    } else {
+      recCards.innerHTML = picks.map(function(m) {
+        return buildMatchCard(m);
+      }).join('');
+    }
+  }
+
+  // ── SCORERS ──
+  if (scorersData && scorersData.scorers) {
+    // Store globally for chat
+    window._wc2026Scorers = scorersData.scorers;
+  }
+
+  // Rebuild match index for live updates
+  buildMatchIndex();
+  attachRipple && document.querySelectorAll('.mc').forEach(attachRipple);
+
+  console.log('Dynamic build complete:', groupMatches.length, 'group matches,', knockoutMatches.length, 'knockout matches');
+}
+
+// Run on load
+document.addEventListener('DOMContentLoaded', function() {
+  buildDynamicContent();
+  // Refresh every 5 minutes
+  setInterval(buildDynamicContent, 5 * 60 * 1000);
+});
