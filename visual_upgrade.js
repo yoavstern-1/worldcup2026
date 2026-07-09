@@ -16,12 +16,13 @@ body,button,input,select,.panel-opt,.drawer-item,.set-opt,.mc-team,.mc-venue,.mc
 
 /* ══ CHAT FLOAT BUTTON — Pique the jaguar ══ */
 #chatFloatBtn{background:transparent !important;border:none !important;box-shadow:none !important;width:68px !important;height:90px !important;padding:0 !important;font-size:0 !important;animation:chatFloat 3s ease-in-out infinite;bottom:16px !important;left:16px !important;display:flex !important;flex-direction:column !important;align-items:center !important;gap:2px !important;}
-#chatFloatBtn::before{content:'ASK ME';font-family:'Exo 2',sans-serif;font-size:10px;font-weight:900;letter-spacing:1.5px;color:#ffd700;text-shadow:0 1px 6px rgba(0,0,0,.7);font-size:0 !important;}
-#chat-ask-label{font-family:'Exo 2',sans-serif;font-size:10px;font-weight:900;letter-spacing:1.5px;color:#ffd700;text-shadow:0 1px 8px rgba(0,0,0,.8),0 0 12px rgba(255,215,0,.4);pointer-events:none;line-height:1;}
+#chat-ask-label{font-family:'Exo 2',sans-serif;font-size:10px;font-weight:900;letter-spacing:1.5px;color:#ffd700;text-shadow:0 1px 8px rgba(0,0,0,.8),0 0 12px rgba(255,215,0,.4);pointer-events:none;line-height:1;margin-bottom:2px;}
 #chatFloatBtn svg{width:68px;height:68px;filter:drop-shadow(0 4px 16px rgba(0,0,0,.5));transition:transform .22s cubic-bezier(.34,1.56,.64,1);}
 #chatFloatBtn:hover{transform:scale(1) !important;}
 #chatFloatBtn:hover svg{transform:scale(1.1) rotate(-4deg);}
 @keyframes chatFloat{0%,100%{transform:translateY(0px);}50%{transform:translateY(-8px);}}
+/* ממקם את פאנל הצ'אט מעל הכפתור עם מרווח מספיק */
+#chatPanel{bottom:116px !important;}
 
 /* ══ CHAT PANEL ══ */
 [data-theme="dark"] #chatPanel{background:#f0f4f1 !important;border-color:rgba(0,0,0,.15) !important;box-shadow:0 8px 32px rgba(0,0,0,.3) !important;}
