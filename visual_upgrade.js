@@ -304,16 +304,22 @@ function buildBracket() {
     }).join('')
     +'</div></div>';
 
-  // Find the recommendations cards container and replace
-  var recCards = document.getElementById('recCards');
-  if (recCards) {
-    recCards.innerHTML = bracketHTML;
-    return;
+  // Insert after hero section, or into recCards as fallback
+  var hero = document.querySelector('.hero, .hero-block, [class*="hero"]');
+  var existing = document.getElementById('bracketSection');
+  if (existing) existing.remove();
+
+  var container = document.createElement('div');
+  container.id = 'bracketSection';
+  container.style.cssText = 'padding:12px 16px;';
+  container.innerHTML = bracketHTML;
+
+  if (hero && hero.parentNode) {
+    hero.parentNode.insertBefore(container, hero.nextSibling);
+  } else {
+    var recCards = document.getElementById('recCards');
+    if (recCards) recCards.innerHTML = bracketHTML;
   }
-  // Fallback — find by section
-  var recWrap = recSection.querySelector('.rec-wrap, .mgrid, .day-block');
-  if (recWrap) recWrap.innerHTML = bracketHTML;
-  else recSection.innerHTML += bracketHTML;
 }
 
 // Run after DOM ready
