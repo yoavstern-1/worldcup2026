@@ -304,7 +304,7 @@ function buildBracket() {
     }).join('')
     +'</div></div>';
 
-  // Insert after hero section, or into recCards as fallback
+  // Insert INSIDE hero so it survives hero rebuilds
   var hero = document.querySelector('.hero, .hero-block, [class*="hero"]');
   var existing = document.getElementById('bracketSection');
   if (existing) existing.remove();
@@ -314,12 +314,26 @@ function buildBracket() {
   container.style.cssText = 'padding:12px 16px;';
   container.innerHTML = bracketHTML;
 
-  if (hero && hero.parentNode) {
-    hero.parentNode.insertBefore(container, hero.nextSibling);
+  if (hero) {
+    hero.appendChild(container);
   } else {
     var recCards = document.getElementById('recCards');
     if (recCards) recCards.innerHTML = bracketHTML;
   }
+
+  // Re-insert every 3 seconds if removed
+  setInterval(function() {
+    if (!document.getElementById('bracketSection')) {
+      var h = document.querySelector('.hero, .hero-block, [class*="hero"]');
+      if (h) {
+        var c = document.createElement('div');
+        c.id = 'bracketSection';
+        c.style.cssText = 'padding:12px 16px;';
+        c.innerHTML = bracketHTML;
+        h.appendChild(c);
+      }
+    }
+  }, 3000);
 }
 
 // Run after DOM ready
