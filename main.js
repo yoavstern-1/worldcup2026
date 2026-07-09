@@ -580,7 +580,7 @@ function autoMarkStars() {
 //
 // After you deploy the worker (see worker.js), paste its URL below, e.g.:
 //   var CHAT_PROXY_URL = 'https://worldcup-ai.<your-subdomain>.workers.dev';
-var CHAT_PROXY_URL = '';
+var CHAT_PROXY_URL = 'https://worldcup-ai.yoavstern1357.workers.dev';
 
 var chatHistory = [];   // [{role, content}]
 var chatOpen = false;
@@ -763,8 +763,7 @@ buildRecs();
 fetchLiveData();
 
 // ══════════════════════════════════════════════════════
-// KNOCKOUT STAGE UPDATER — stable, data-driven
-// Updates r16, qf, sf, final with real match data
+// KNOCKOUT STAGE UPDATER
 // ══════════════════════════════════════════════════════
 
 var KO_DATA = {
@@ -828,7 +827,6 @@ function updateKnockoutStages() {
   });
 }
 
-// Run on load
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', updateKnockoutStages);
 } else {
