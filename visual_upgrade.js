@@ -164,36 +164,36 @@ function buildBracket() {
 
   var bracketCSS = `
 <style>
-.bk-wrap{width:100%;overflow-x:auto;padding:.5rem 0;direction:rtl}
-.bk{display:flex;align-items:stretch;min-width:680px;gap:0}
+.bk-wrap{width:100%;overflow-x:auto;padding:.5rem 0;direction:rtl;background:rgba(0,0,0,.35);border-radius:12px;margin-bottom:12px}
+.bk{display:flex;align-items:stretch;min-width:680px;gap:0;padding:12px 8px}
 .bk-round{display:flex;flex-direction:column;justify-content:space-around;flex:1;min-width:0}
-.bk-title{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-align:center;padding:2px 0 6px;letter-spacing:.5px;text-transform:uppercase}
+.bk-title{font-size:13px;font-weight:800;color:rgba(255,255,255,.9);text-align:center;padding:2px 0 8px;letter-spacing:.5px;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.5)}
 .bk-matches{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:3px;padding:0 3px}
-.bk-match{background:rgba(255,255,255,.08);border:.5px solid rgba(255,255,255,.15);border-radius:5px;overflow:hidden}
-.bk-match.done{opacity:.8}
-.bk-match.up{border-color:rgba(99,179,237,.6)}
-.bk-team{display:flex;align-items:center;gap:4px;padding:3px 6px;font-size:10px;font-weight:600;color:rgba(255,255,255,.85);min-height:20px}
-.bk-team.w{background:rgba(72,199,116,.2);color:#48c774}
-.bk-team .bf{font-size:12px;flex-shrink:0}
+.bk-match{background:rgba(255,255,255,.07);border:.5px solid rgba(255,255,255,.12);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)}
+.bk-match.done{background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.08)}
+.bk-match.up{border-color:rgba(99,200,255,.5);background:rgba(99,200,255,.06)}
+.bk-team{display:flex;align-items:center;gap:4px;padding:4px 7px;font-size:11px;font-weight:600;color:rgba(255,255,255,.8);min-height:22px}
+.bk-team.w{background:rgba(72,199,116,.18);color:#6ee7a0}
+.bk-team .bf{font-size:13px;flex-shrink:0}
 .bk-team .bn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bk-team .bs{font-size:11px;font-weight:700;margin-left:auto;padding-left:4px;color:#fff}
-.bk-div{height:.5px;background:rgba(255,255,255,.1)}
-.bk-ph{opacity:.4}
+.bk-team .bs{font-size:12px;font-weight:800;margin-left:auto;padding-left:4px;color:#fff}
+.bk-div{height:.5px;background:rgba(255,255,255,.08)}
+.bk-ph .bk-team{opacity:.3}
 .bk-conn{display:flex;flex-direction:column;justify-content:space-around;width:10px;flex-shrink:0}
 .bk-cx{position:relative;flex:1}
-.bk-cx.top{border-right:.5px solid rgba(255,255,255,.2)}
-.bk-cx.top::after{content:'';position:absolute;right:0;bottom:0;width:10px;height:.5px;background:rgba(255,255,255,.2)}
-.bk-cx.bot{border-right:.5px solid rgba(255,255,255,.2)}
-.bk-cx.bot::before{content:'';position:absolute;right:0;top:0;width:10px;height:.5px;background:rgba(255,255,255,.2)}
-.bk-trophy-col{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;width:72px;padding:0 4px}
-.bk-trophy-lbl{font-size:10px;font-weight:600;color:rgba(255,255,255,.5);text-align:center;margin-top:4px;line-height:1.4}
+.bk-cx.top{border-right:.5px solid rgba(255,255,255,.18)}
+.bk-cx.top::after{content:'';position:absolute;right:0;bottom:0;width:10px;height:.5px;background:rgba(255,255,255,.18)}
+.bk-cx.bot{border-right:.5px solid rgba(255,255,255,.18)}
+.bk-cx.bot::before{content:'';position:absolute;right:0;top:0;width:10px;height:.5px;background:rgba(255,255,255,.18)}
+.bk-trophy-col{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;width:80px;padding:0 4px}
+.bk-trophy-lbl{font-size:11px;font-weight:700;color:rgba(255,215,0,.8);text-align:center;margin-top:6px;line-height:1.4;text-shadow:0 0 8px rgba(255,215,0,.4)}
 .bk-ct{display:flex;flex-direction:column;justify-content:center;width:10px;flex-shrink:0;align-self:stretch}
-.bk-ct-line{position:relative;flex:1;border-right:.5px solid rgba(255,255,255,.2)}
-.bk-ct-line::after{content:'';position:absolute;right:0;top:50%;width:10px;height:.5px;background:rgba(255,255,255,.2)}
-.bk-sched{margin-top:1rem;border-top:.5px solid rgba(255,255,255,.1);padding-top:1rem}
-.bk-sched-h{font-size:11px;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:8px;letter-spacing:.3px}
-.bk-sched-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:5px}
-.bk-si{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,.06);border-radius:6px;font-size:11px}
+.bk-ct-line{position:relative;flex:1;border-right:.5px solid rgba(255,255,255,.18)}
+.bk-ct-line::after{content:'';position:absolute;right:0;top:50%;width:10px;height:.5px;background:rgba(255,255,255,.18)}
+.bk-sched{margin-top:.75rem;border-top:.5px solid rgba(255,255,255,.1);padding-top:.75rem}
+.bk-sched-h{font-size:12px;font-weight:800;color:rgba(255,255,255,.7);margin-bottom:8px;letter-spacing:.3px}
+.bk-sched-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:5px}
+.bk-si{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,.05);border-radius:6px;font-size:11px;border:.5px solid rgba(255,255,255,.08)}
 .bk-si-date{color:rgba(255,255,255,.4);min-width:34px;font-weight:600}
 .bk-si-time{font-weight:700;color:#fff;min-width:42px}
 .bk-si-match{flex:1;color:rgba(255,255,255,.85)}
@@ -201,9 +201,10 @@ function buildBracket() {
 .bk-badge.good{background:rgba(72,199,116,.2);color:#48c774}
 .bk-badge.ok{background:rgba(255,189,0,.2);color:#ffbd00}
 .bk-badge.bad{background:rgba(255,86,86,.2);color:#ff5656}
-@media(max-width:600px){.bk{min-width:520px}.bk-trophy-col{width:54px}}
+@media(max-width:600px){.bk{min-width:520px}.bk-trophy-col{width:60px}.bk-title{font-size:11px}}
 </style>`;
 
+  // Updated data — including Portugal vs Croatia result
   var R16L = [
     {f1:'🇦🇷',n1:'ארגנטינה',s1:3,f2:'🇨🇻',n2:'קייפ ורד',s2:2,w:1},
     {f1:'🇲🇦',n1:'מרוקו',s1:3,f2:'🇨🇦',n2:'קנדה',s2:0,w:1},
@@ -211,7 +212,7 @@ function buildBracket() {
     {f1:'🇧🇷',n1:'ברזיל',s1:1,f2:'🇳🇴',n2:'נורווגיה',s2:2,w:2},
   ];
   var R16R = [
-    {f1:'🇵🇹',n1:'פורטוגל',s1:0,f2:'🇪🇸',n2:'ספרד',s2:1,w:2},
+    {f1:'🇵🇹',n1:'פורטוגל',s1:2,f2:'🇭🇷',n2:'קרואטיה',s2:1,w:1},
     {f1:'🇧🇪',n1:'בלגיה',s1:4,f2:'🇺🇸',n2:'ארה"ב',s2:1,w:1},
     {f1:'🇦🇷',n1:'ארגנטינה',s1:3,f2:'🇪🇬',n2:'מצרים',s2:2,w:1},
     {f1:'🇨🇭',n1:'שוויץ',s1:0,f2:'🇨🇴',n2:'קולומביה',s2:0,w:2,note:"פנד'"},
@@ -221,8 +222,8 @@ function buildBracket() {
     {f1:'🇳🇴',n1:'נורווגיה',f2:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n2:'אנגליה',up:true},
   ];
   var QFR = [
-    {f1:'🇪🇸',n1:'ספרד',f2:'🇧🇪',n2:'בלגיה',up:true},
-    {f1:'🇦🇷',n1:'ארגנטינה',f2:'🇨🇭',n2:'שוויץ',up:true},
+    {f1:'🇵🇹',n1:'פורטוגל',f2:'🇪🇸',n2:'ספרד',up:true},
+    {f1:'🇦🇷',n1:'ארגנטינה',f2:'🇨🇴',n2:'קולומביה',up:true},
   ];
 
   function tm(f,n,s,win) {
@@ -253,26 +254,33 @@ function buildBracket() {
     return '<div class="bk-ct"><div class="bk-ct-line"></div></div>';
   }
 
-  var trophySVG = '<svg width="44" height="44" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">'
-    +'<defs><linearGradient id="tg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFD700"/><stop offset="50%" stop-color="#FFA500"/><stop offset="100%" stop-color="#FFD700"/></linearGradient></defs>'
-    +'<ellipse cx="32" cy="58" rx="14" ry="3" fill="rgba(255,200,0,.2)"/>'
-    +'<rect x="22" y="50" width="20" height="4" rx="2" fill="url(#tg2)"/>'
-    +'<rect x="26" y="44" width="12" height="8" rx="1" fill="url(#tg2)"/>'
-    +'<path d="M18 8 Q16 28 26 36 Q29 38 32 38 Q35 38 38 36 Q48 28 46 8 Z" fill="url(#tg2)"/>'
-    +'<path d="M18 8 Q10 8 10 18 Q10 26 18 28" stroke="#FFA500" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
-    +'<path d="M46 8 Q54 8 54 18 Q54 26 46 28" stroke="#FFA500" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
-    +'<ellipse cx="32" cy="23" rx="8" ry="3" fill="rgba(255,255,255,.15)"/>'
+  var trophySVG = '<svg width="52" height="52" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">'
+    +'<defs>'
+    +'<linearGradient id="tg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFE55C"/><stop offset="50%" stop-color="#FFA500"/><stop offset="100%" stop-color="#FFE55C"/></linearGradient>'
+    +'<filter id="glow2"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+    +'</defs>'
+    +'<ellipse cx="32" cy="60" rx="16" ry="3.5" fill="rgba(255,200,0,.15)"/>'
+    +'<rect x="21" y="51" width="22" height="4" rx="2" fill="url(#tg2)" filter="url(#glow2)"/>'
+    +'<rect x="25" y="44" width="14" height="9" rx="1.5" fill="url(#tg2)"/>'
+    +'<path d="M17 7 Q15 28 26 37 Q29 39 32 39 Q35 39 38 37 Q49 28 47 7 Z" fill="url(#tg2)" filter="url(#glow2)"/>'
+    +'<path d="M17 7 Q8 7 8 18 Q8 27 17 30" stroke="#FFD700" stroke-width="3" fill="none" stroke-linecap="round"/>'
+    +'<path d="M47 7 Q56 7 56 18 Q56 27 47 30" stroke="#FFD700" stroke-width="3" fill="none" stroke-linecap="round"/>'
+    +'<ellipse cx="32" cy="22" rx="9" ry="3.5" fill="rgba(255,255,255,.2)"/>'
+    +'<path d="M26 13 L28 20 L22 16 L30 16 L24 20 Z" fill="rgba(255,255,255,.25)"/>'
     +'</svg>';
 
-  var sched = [
-    {date:'9/7',time:'23:00',match:'🇫🇷 צרפת vs 🇲🇦 מרוקו',c:'good',cl:'שעה נוחה'},
-    {date:'10/7',time:'22:00',match:'🇪🇸 ספרד vs 🇧🇪 בלגיה',c:'good',cl:'שעה נוחה'},
-    {date:'12/7',time:'00:00',match:'🇳🇴 נורווגיה vs 🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה',c:'ok',cl:'מאוחר'},
-    {date:'12/7',time:'04:00',match:'🇦🇷 ארגנטינה vs 🇨🇭 שוויץ',c:'bad',cl:'לילה עמוק'},
-    {date:'14/7',time:'22:00',match:'חצי גמר 1',c:'good',cl:'שעה נוחה'},
-    {date:'15/7',time:'22:00',match:'חצי גמר 2',c:'good',cl:'שעה נוחה'},
-    {date:'19/7',time:'22:00',match:'🏆 גמר המונדיאל',c:'good',cl:'שעה נוחה'},
+  // Only future matches in schedule
+  var now = new Date();
+  var allSched = [
+    {date:'9/7', ts:new Date('2026-07-09T20:00Z'), time:'23:00',match:'🇫🇷 צרפת vs 🇲🇦 מרוקו',c:'good',cl:'שעה נוחה'},
+    {date:'10/7',ts:new Date('2026-07-10T19:00Z'), time:'22:00',match:'🇵🇹 פורטוגל vs 🇪🇸 ספרד',c:'good',cl:'שעה נוחה'},
+    {date:'12/7',ts:new Date('2026-07-11T21:00Z'), time:'00:00',match:'🇳🇴 נורווגיה vs 🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה',c:'ok',cl:'מאוחר'},
+    {date:'12/7',ts:new Date('2026-07-12T01:00Z'), time:'04:00',match:'🇦🇷 ארגנטינה vs 🇨🇴 קולומביה',c:'bad',cl:'לילה עמוק'},
+    {date:'14/7',ts:new Date('2026-07-14T19:00Z'), time:'22:00',match:'חצי גמר 1',c:'good',cl:'שעה נוחה'},
+    {date:'15/7',ts:new Date('2026-07-15T19:00Z'), time:'22:00',match:'חצי גמר 2',c:'good',cl:'שעה נוחה'},
+    {date:'19/7',ts:new Date('2026-07-19T19:00Z'), time:'22:00',match:'🏆 גמר המונדיאל',c:'good',cl:'שעה נוחה'},
   ];
+  var sched = allSched.filter(function(s){ return s.ts > now; });
 
   var bracketHTML = bracketCSS + '<div class="bk-wrap"><div class="bk">'
     +'<div class="bk-round"><div class="bk-title">שמינית</div><div class="bk-matches">'+R16L.map(function(m){return mc(m,true);}).join('')+'</div></div>'
