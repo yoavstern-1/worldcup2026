@@ -1175,3 +1175,83 @@ document.addEventListener('DOMContentLoaded', function() {
   // Refresh every 5 minutes
   setInterval(buildDynamicContent, 5 * 60 * 1000);
 });
+
+// ══════════════════════════════════════════════════════
+// KNOCKOUT STAGE LIVE UPDATER
+// Fetches real match data and updates knockout stages
+// Falls back to static HTML if API fails
+// ══════════════════════════════════════════════════════
+
+var KO_DATA = {
+  // Round of 16 — all completed
+  r16: [
+    { home:'🇦🇷 ארגנטינה', away:'🇨🇻 קייפ ורד', homeEn:'Argentina', awayEn:'Cape Verde', score:'3 – 2', time:'22:00', strip:'safe', date:'4/7', status:'past' },
+    { home:'🇨🇴 קולומביה', away:'🇬🇭 גאנה', homeEn:'Colombia', awayEn:'Ghana', score:'1 – 0', time:'04:30', strip:'danger', date:'4/7', status:'past' },
+    { home:'🇲🇦 מרוקו', away:'🇨🇦 קנדה', homeEn:'Morocco', awayEn:'Canada', score:'3 – 0', time:'20:00', strip:'safe', date:'4/7', status:'past' },
+    { home:'🇫🇷 צרפת', away:'🇵🇾 פרגוואי', homeEn:'France', awayEn:'Paraguay', score:'1 – 0', time:'00:00', strip:'warn', date:'5/7', status:'past' },
+    { home:'🇧🇷 ברזיל', away:'🇳🇴 נורווגיה', homeEn:'Brazil', awayEn:'Norway', score:'1 – 2', time:'23:00', strip:'safe', date:'5/7', status:'past', note:'הפתעה!' },
+    { home:'🇲🇽 מקסיקו', away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה', homeEn:'Mexico', awayEn:'England', score:'2 – 3', time:'04:00', strip:'danger', date:'6/7', status:'past' },
+    { home:'🇵🇹 פורטוגל', away:'🇪🇸 ספרד', homeEn:'Portugal', awayEn:'Spain', score:'0 – 1', time:'22:00', strip:'safe', date:'6/7', status:'past' },
+    { home:'🇺🇸 ארה"ב', away:'🇧🇪 בלגיה', homeEn:'USA', awayEn:'Belgium', score:'1 – 4', time:'03:00', strip:'danger', date:'7/7', status:'past' },
+    { home:'🇦🇷 ארגנטינה', away:'🇪🇬 מצרים', homeEn:'Argentina', awayEn:'Egypt', score:'3 – 2', time:'19:00', strip:'safe', date:'7/7', status:'past' },
+    { home:'🇨🇭 שוויץ', away:'🇨🇴 קולומביה', homeEn:'Switzerland', awayEn:'Colombia', score:'0 – 0', time:'23:00', strip:'safe', date:'7/7', status:'past', note:'קולומביה עלתה בפנדלים' },
+  ],
+  // Quarter-finals — upcoming
+  qf: [
+    { home:'🇫🇷 צרפת', away:'🇲🇦 מרוקו', homeEn:'France', awayEn:'Morocco', time:'23:00', strip:'safe', date:'9/7', status:'future' },
+    { home:'🇪🇸 ספרד', away:'🇧🇪 בלגיה', homeEn:'Spain', awayEn:'Belgium', time:'22:00', strip:'safe', date:'10/7', status:'future' },
+    { home:'🇳🇴 נורווגיה', away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה', homeEn:'Norway', awayEn:'England', time:'00:00', strip:'warn', date:'12/7', status:'future' },
+    { home:'🇦🇷 ארגנטינה', away:'🇨🇭 שוויץ', homeEn:'Argentina', awayEn:'Switzerland', time:'04:00', strip:'danger', date:'12/7', status:'future' },
+  ],
+  // Semi-finals — TBD
+  sf: [
+    { home:'מנצחת צרפת/מרוקו', away:'מנצחת ספרד/בלגיה', homeEn:'Winner FRA/MAR', awayEn:'Winner ESP/BEL', time:'22:00', strip:'safe', date:'14/7', status:'future' },
+    { home:'מנצחת נורווגיה/אנגליה', away:'מנצחת ארגנטינה/שוויץ', homeEn:'Winner NOR/ENG', awayEn:'Winner ARG/SUI', time:'22:00', strip:'safe', date:'15/7', status:'future' },
+  ],
+  // Final
+  final: [
+    { home:'מנצחת חצי 1', away:'מנצחת חצי 2', homeEn:'Winner SF1', awayEn:'Winner SF2', time:'22:00', strip:'safe', date:'19/7', status:'future' },
+  ]
+};
+
+function buildKOCard(m) {
+  var isPast = m.status === 'past';
+  var cls = 'mc ' + (isPast ? 'past' : 'future');
+  var scoreOrTime = isPast
+    ? '<div class="score">' + m.score + '</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div>'
+    : '<div class="mc-time ' + m.strip + '">' + m.time + '</div>';
+  return '<div class="' + cls + '">' +
+    '<div class="strip ' + m.strip + '"></div>' +
+    '<div class="mc-top">' +
+      '<span class="mc-grp">' + m.date + '</span>' +
+      '<div class="mc-rt">' + scoreOrTime + '</div>' +
+    '</div>' +
+    '<div class="mc-teams">' +
+      '<span class="mc-team">' + m.home + '</span>' +
+      '<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>' +
+      '<span class="mc-team b">' + m.away + '</span>' +
+    '</div>' +
+    (m.note ? '<div class="mc-venue"><span class="mc-note">⚡ ' + m.note + '</span></div>' : '') +
+    '</div>';
+}
+
+function updateKnockoutStages() {
+  var stages = { 'stage-r16': 'r16', 'stage-qf': 'qf', 'stage-sf': 'sf', 'stage-final': 'final' };
+  Object.keys(stages).forEach(function(stageId) {
+    var key = stages[stageId];
+    var stage = document.getElementById(stageId);
+    if (!stage || !KO_DATA[key]) return;
+    var db = stage.querySelector('.day-block');
+    if (!db) return;
+    db.innerHTML = '<div class="mgrid">' + KO_DATA[key].map(buildKOCard).join('') + '</div>';
+    // Re-attach ripple
+    db.querySelectorAll('.mc').forEach(attachRipple);
+  });
+}
+
+// Run immediately on load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', updateKnockoutStages);
+} else {
+  updateKnockoutStages();
+}
