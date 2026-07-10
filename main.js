@@ -41,9 +41,11 @@ function closeDrawer(){
 
 // ── STAGE SWITCH ──
 function goStage(id, el){
+  stageWasChosen = true;
   document.querySelectorAll('.stage').forEach(function(s){ s.classList.remove('active'); });
   document.querySelectorAll('.drawer-item').forEach(function(d){ d.classList.remove('active'); });
-  document.getElementById('stage-'+id).classList.add('active');
+  var st = document.getElementById('stage-'+id);
+  if (st) st.classList.add('active');
   if(el) el.classList.add('active');
   setTimeout(function(){ closeDrawer(); window.scrollTo({top:0,behavior:'smooth'}); }, 220);
 }
@@ -58,6 +60,11 @@ function setLang(lang){
   document.querySelectorAll('[data-he]').forEach(function(el){
     var val = el.getAttribute('data-'+lang);
     if(val !== null) el.textContent = val;
+  });
+  // placeholders aren't textContent — swap them separately
+  document.querySelectorAll('[data-ph-he]').forEach(function(el){
+    var val = el.getAttribute('data-ph-'+lang);
+    if(val !== null) el.setAttribute('placeholder', val);
   });
   document.getElementById('langHe').classList.toggle('active', lang==='he');
   document.getElementById('langEn').classList.toggle('active', lang==='en');
@@ -133,458 +140,508 @@ var liveRefreshTimer = null;
 var hasLiveGames = false;
 var lastFetchTime = 0;
 
-var TEAM_NORM_MAP = {
-  'unitedstates':'usa','usa':'usa',
-  'bosniaandherzegovina':'bosnia','bosnia':'bosnia',
-  'southkorea':'korea','korea':'korea','republicofkorea':'korea',
-  'cotedivoire':'ivorycoast','ivorycoast':'ivorycoast',
-  'islamicrepublicofiran':'iran',
-  'democraticrepublicofthecongo':'drcongo','congodr':'drcongo','drcongo':'drcongo',
-  'trinidadandtobago':'trinidad',
-  'czechrepublic':'czechia','czechia':'czechia',
-  'northernireland':'northernireland',
-  'newzealand':'newzealand',
-  'saudiarabia':'saudiarabia',
-  'capeverde':'capeverde',
-  'centralafricanrepublic':'car',
-  'antiguaandbarbuda':'antigua',
-  'trinidadtobago':'trinidad',
-  'papuanewguinea':'png',
-  'norway':'norway',
-  'england':'england',
-  'morocco':'morocco',
-  'france':'france',
-  'spain':'spain',
-  'belgium':'belgium',
-  'argentina':'argentina',
-  'switzerland':'switzerland','schweiz':'switzerland',
-  'colombia':'colombia',
-  'portugal':'portugal',
-  'croatia':'croatia',
-  'egypt':'egypt',
-};
 
-function normTeam(name) {
-  var n = (name || '').toLowerCase().replace(/[^a-z]/g, '');
-  return TEAM_NORM_MAP[n] || n;
-}
 
-function buildMatchIndex() {
-  matchIndex = {};
-  document.querySelectorAll('.mc').forEach(function(card) {
-    var teams = card.querySelectorAll('.mc-team span[data-en]');
-    if (teams.length < 2) return;
-    var t1 = normTeam(teams[0].getAttribute('data-en'));
-    var t2 = normTeam(teams[1].getAttribute('data-en'));
-    if (t1 && t2) {
-      matchIndex[t1 + '_' + t2] = card;
-      matchIndex[t2 + '_' + t1] = card;
-    }
-  });
-}
 
-// ── Get date strings for ESPN: today + 2 days back (for Israeli timezone offset)
-// Also adds tomorrow to catch upcoming matches
-function getUTCDateStrings() {
-  var now = new Date();
-  var results = [];
-  // yesterday, today, tomorrow — covers all Israeli timezone edge cases
-  for (var i = -1; i <= 2; i++) {
-    var d = new Date(now);
-    d.setUTCDate(d.getUTCDate() + i);
-    var y = d.getUTCFullYear();
-    var m = String(d.getUTCMonth() + 1).padStart(2, '0');
-    var day = String(d.getUTCDate()).padStart(2, '0');
-    results.push('' + y + m + day);
-  }
-  return results;
-}
+
+var SYNC_ICON = { live: '🔴', stale: '⚠️', error: '⚠️', ok: '↺' };
 
 function setSyncBar(state, text) {
   var btn = document.getElementById('btnRefresh');
   refreshTipText = text;
   if (state === 'loading') {
     if (btn) btn.classList.add('spinning');
-  } else {
-    if (btn) btn.classList.remove('spinning');
-    if (btn) btn.textContent = (state === 'live') ? '🔴' : '↺';
+    return;
   }
+  if (!btn) return;
+  btn.classList.remove('spinning');
+  btn.textContent = SYNC_ICON[state] || SYNC_ICON.ok;
 }
 
-function ensureScoreEls(card) {
-  var rt = card.querySelector('.mc-rt');
-  if (!rt) return { scoreEl: null, finEl: null };
-  var scoreEl = card.querySelector('.score');
-  var finEl   = card.querySelector('.mc-fin');
-  var timeEl  = card.querySelector('.mc-time');
-  var etEl    = card.querySelector('.mc-et');
-  if (!scoreEl) {
-    scoreEl = document.createElement('div');
-    scoreEl.className = 'score';
-    scoreEl.style.display = 'none';
-    rt.insertBefore(scoreEl, rt.firstChild);
-  }
-  if (!finEl) {
-    finEl = document.createElement('div');
-    finEl.className = 'mc-fin';
-    finEl.style.display = 'none';
-    rt.appendChild(finEl);
-  }
-  return { scoreEl: scoreEl, finEl: finEl, timeEl: timeEl, etEl: etEl };
+// ── TOURNAMENT LOAD + RENDER ─────────────────────────────────────────
+var TOURNAMENT = null;
+
+function loadTournament(force) {
+  setSyncBar('loading', curLang === 'he' ? 'מעדכן נתונים...' : 'Fetching live data...');
+  WC.load(function(err, t) {
+    if (err) { renderHardError(err); return; }
+    TOURNAMENT = t;
+    hasLiveGames = t.hasLive;
+    renderAll(t);
+    reportSync(t);
+    clearTimeout(liveRefreshTimer);
+    liveRefreshTimer = setTimeout(function(){ loadTournament(true); }, t.hasLive ? 60000 : 300000);
+  }, { force: !!force });
 }
 
-function applyEventToCard(event) {
-  var comp = event.competitions && event.competitions[0];
-  if (!comp) return;
-  var comps = comp.competitors || [];
-  if (comps.length < 2) return;
-  var home = comps.find(function(c){ return c.homeAway === 'home'; }) || comps[0];
-  var away = comps.find(function(c){ return c.homeAway === 'away'; }) || comps[1];
-  var t1n = normTeam(home.team.displayName);
-  var t2n = normTeam(away.team.displayName);
-  var card = matchIndex[t1n + '_' + t2n] || matchIndex[t2n + '_' + t1n];
-  if (!card) return;
-  var status = comp.status || {};
-  var statusName = (status.type && status.type.name) || '';
-  var els = ensureScoreEls(card);
-  var scoreEl = els.scoreEl, finEl = els.finEl;
-  var timeEl = els.timeEl, etEl = els.etEl;
-  var liveTag = card.querySelector('.live-tag');
-  var cardTeams = card.querySelectorAll('.mc-team span[data-en], .mc-team[data-en]');
-  var cardT1 = cardTeams[0] ? normTeam(cardTeams[0].getAttribute('data-en')) : '';
-  var homeFirst = (cardT1 === t1n);
-  var scoreHome = home.score != null ? String(home.score) : '0';
-  var scoreAway = away.score != null ? String(away.score) : '0';
-  var scoreText = homeFirst ? (scoreHome + ' – ' + scoreAway) : (scoreAway + ' – ' + scoreHome);
-
-  var isFinal = (
-    statusName === 'STATUS_FULL_TIME' ||
-    statusName === 'STATUS_FINAL' ||
-    statusName === 'STATUS_FULL_TIME_AET' ||
-    statusName === 'STATUS_FINAL_AET' ||
-    statusName === 'STATUS_FINAL_PEN' ||
-    (status.type && status.type.completed === true && status.type.state === 'post')
-  );
-
-  if (isFinal) {
-    var suffix = '';
-    if (statusName === 'STATUS_FULL_TIME_AET' || statusName === 'STATUS_FINAL_AET') {
-      suffix = curLang === 'he' ? ' (א"ת)' : ' (AET)';
-    } else if (statusName === 'STATUS_FINAL_PEN') {
-      suffix = curLang === 'he' ? ' (פנד׳)' : ' (PEN)';
-    }
-    card.classList.remove('future', 'live');
-    card.classList.add('past');
-    if (timeEl) timeEl.style.display = 'none';
-    if (etEl)   etEl.style.display = 'none';
-    if (scoreEl) { scoreEl.textContent = scoreText; scoreEl.style.display = ''; }
-    if (finEl)   { finEl.setAttribute('data-he','סיום' + suffix); finEl.setAttribute('data-en','FT' + suffix);
-                   finEl.textContent = (curLang === 'he') ? ('סיום' + suffix) : ('FT' + suffix); finEl.style.display = ''; }
-    if (liveTag) liveTag.remove();
-  } else if (statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_HALFTIME') {
-    card.classList.remove('past', 'future');
-    card.classList.add('live');
-    hasLiveGames = true;
-    var clock = (statusName === 'STATUS_HALFTIME')
-      ? 'HT'
-      : ((status.displayClock || (status.type && status.type.detail)) || '');
-    if (timeEl) timeEl.style.display = 'none';
-    if (etEl)   etEl.style.display = 'none';
-    if (scoreEl) { scoreEl.textContent = scoreText; scoreEl.style.display = ''; }
-    if (finEl)   finEl.style.display = 'none';
-    if (!liveTag) {
-      liveTag = document.createElement('div');
-      liveTag.className = 'live-tag';
-      card.insertBefore(liveTag, card.firstChild);
-    }
-    liveTag.textContent = '🔴 ' + clock;
-  } else if (statusName === 'STATUS_SCHEDULED') {
-    card.classList.remove('past', 'live');
-    card.classList.add('future');
-    if (timeEl) timeEl.style.display = '';
-    if (etEl)   etEl.style.display = '';
-    if (scoreEl) scoreEl.style.display = 'none';
-    if (finEl)   finEl.style.display = 'none';
-    if (liveTag) liveTag.remove();
+// The old code called this "ok" even when all four fetches had 404d and zero
+// events were applied. A timestamp the user can trust, or none at all.
+function reportSync(t) {
+  if (t.stale) {
+    setSyncBar('stale', curLang === 'he'
+      ? 'נתונים ישנים · לא הצלחנו להתעדכן'
+      : 'Stale data · could not refresh');
+    return;
   }
-}
-
-function processAPIEvents(events) {
-  events.forEach(applyEventToCard);
-  lastFetchTime = Date.now();
-  var timeStr = new Date().toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'});
-  if (hasLiveGames) {
+  var timeStr = t.updatedAt.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'});
+  if (t.hasLive) {
     setSyncBar('live', (curLang === 'he' ? '🔴 משחק חי · עדכון: ' : '🔴 Live now · Updated: ') + timeStr);
   } else {
     setSyncBar('ok', (curLang === 'he' ? 'עודכן: ' : 'Updated: ') + timeStr);
   }
-  clearTimeout(liveRefreshTimer);
-  liveRefreshTimer = setTimeout(fetchLiveData, hasLiveGames ? 60000 : 300000);
-  buildRecs();
 }
 
-function fetchLiveData() {
-  hasLiveGames = false;
-  setSyncBar('loading', curLang === 'he' ? 'מעדכן נתונים...' : 'Fetching live data...');
-  var dates = getUTCDateStrings();
-  var pending = dates.length;
-  var allEvents = [];
-  dates.forEach(function(dateStr) {
-    fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=' + dateStr)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.events) allEvents = allEvents.concat(data.events);
-        if (--pending === 0) processAPIEvents(allEvents);
-      })
-      .catch(function() {
-        if (--pending === 0) processAPIEvents(allEvents);
-      });
+function renderHardError(err) {
+  setSyncBar('error', curLang === 'he' ? 'שגיאה בטעינת נתונים' : 'Failed to load data');
+  var active = document.querySelector('.stage.active') || document.getElementById('stage-qf');
+  if (!active) return;
+  var box = active.querySelector('.day-block') || active;
+  box.innerHTML = '<div class="load-err">' +
+    '<p data-he="לא הצלחנו לטעון את נתוני המונדיאל." data-en="Could not load World Cup data.">' +
+    (curLang === 'he' ? 'לא הצלחנו לטעון את נתוני המונדיאל.' : 'Could not load World Cup data.') + '</p>' +
+    '<p class="load-err-detail">' + String(err && err.message || err) + '</p>' +
+    '<button class="load-retry" onclick="loadTournament(true)" data-he="נסה שוב" data-en="Retry">' +
+    (curLang === 'he' ? 'נסה שוב' : 'Retry') + '</button></div>';
+}
+
+function showSkeletons() {
+  var msg = curLang === 'he' ? 'טוען משחקים...' : 'Loading matches...';
+  ['group','r32','r16','qf','sf','final'].forEach(function(id) {
+    var st = document.getElementById('stage-' + id);
+    if (!st) return;
+    var db = st.querySelector('.day-block');
+    if (db && !db.innerHTML.trim()) db.innerHTML = '<div class="skeleton">' + msg + '</div>';
   });
+}
+
+// ── Match card (same markup the static cards used, so the CSS and the team
+//    search selector '.mc-team span[data-en]' keep working) ──
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function teamSpan(team, extraClass) {
+  var flag = WC.flagFor(team);
+  return '<span class="mc-team' + (extraClass ? ' ' + extraClass : '') + '">' +
+    (flag ? flag + ' ' : '') +
+    '<span data-he="' + esc(team.he) + '" data-en="' + esc(team.en) + '">' +
+    esc(curLang === 'en' ? team.en : team.he) + '</span></span>';
+}
+
+function buildCard(m) {
+  var cls = 'mc ' + m.status;
+  var rt;
+  if (m.status === 'past') {
+    var pen = m.pens ? (curLang === 'he' ? ' פנד׳' : ' PEN') : '';
+    rt = '<div class="score">' + scoreLine(m) + '</div>' +
+         '<div class="mc-fin" data-he="סיום' + pen + '" data-en="FT' + pen + '">' +
+         (curLang === 'he' ? 'סיום' : 'FT') + pen + '</div>';
+  } else if (m.status === 'live') {
+    rt = '<div class="score">' + scoreLine(m) + '</div>';
+  } else {
+    rt = '<div class="mc-time ' + m.strip + '">' + m.time + '</div>';
+  }
+  var label = m.group
+    ? '<span data-he="בית" data-en="Group">' + (curLang === 'he' ? 'בית' : 'Group') + '</span> ' + m.group
+    : esc(m.date);
+
+  var html = '<div class="' + cls + '">' +
+    (m.status === 'live' ? '<div class="live-tag">🔴 LIVE</div>' : '') +
+    '<div class="strip ' + m.strip + '"></div>' +
+    '<div class="mc-top"><span class="mc-grp">' + label + '</span><div class="mc-rt">' + rt + '</div></div>' +
+    '<div class="mc-teams">' + teamSpan(m.home) +
+      '<span class="mc-vs" data-he="נגד" data-en="vs">' + (curLang === 'he' ? 'נגד' : 'vs') + '</span>' +
+      teamSpan(m.away, 'b') + '</div>';
+  if (m.note) {
+    html += '<div class="mc-venue"><span class="mc-note" data-he="' + esc(m.note.he) + '" data-en="' + esc(m.note.en) + '">' +
+      esc(curLang === 'he' ? m.note.he : m.note.en) + '</span></div>';
+  } else if (m.venue) {
+    html += '<div class="mc-venue">📍 <span data-he="' + esc(m.venue) + '" data-en="' + esc(m.venue) + '">' + esc(m.venue) + '</span></div>';
+  }
+  return html + '</div>';
+}
+
+// Group matches into day blocks; knockout stages are short enough to show flat.
+function renderDayBlocks(matches) {
+  var days = [], byDay = {};
+  matches.forEach(function(m) {
+    if (!byDay[m.dayKey]) { byDay[m.dayKey] = []; days.push(m.dayKey); }
+    byDay[m.dayKey].push(m);
+  });
+  return days.map(function(k) {
+    var list = byDay[k], first = list[0];
+    return '<div class="day-hd"><div class="day-lbl" data-he="' + esc(first.dayLabelHe) + '" data-en="' + esc(first.dayLabelEn) + '">' +
+      esc(curLang === 'he' ? first.dayLabelHe : first.dayLabelEn) + '</div><div class="day-line"></div></div>' +
+      '<div class="mgrid">' + list.map(buildCard).join('') + '</div>';
+  }).join('');
+}
+
+function renderStage(stageKey, matches, grouped) {
+  var st = document.getElementById('stage-' + stageKey);
+  if (!st) return;
+  var db = st.querySelector('.day-block');
+  if (!db) return;
+  if (!matches.length) { db.innerHTML = ''; return; }
+  db.innerHTML = grouped ? renderDayBlocks(matches) : '<div class="mgrid">' + matches.map(buildCard).join('') + '</div>';
+  db.querySelectorAll('.mc').forEach(attachRipple);
+}
+
+// The bracket owns #bracketBox and nothing else touches it. It is moved to
+// whichever knockout stage is current, so it sits above that stage\'s cards.
+function placeBracket(stageKey) {
+  if (['r16','qf','sf','final'].indexOf(stageKey) === -1) return;
+  var st = document.getElementById('stage-' + stageKey);
+  if (!st) return;
+  var box = document.getElementById('bracketBox');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'bracketBox';
+  }
+  var anchor = st.querySelector('.stage-info') || st.querySelector('.sec-head');
+  if (anchor && anchor.nextSibling) st.insertBefore(box, anchor.nextSibling);
+  else st.appendChild(box);
+}
+
+function renderAll(t) {
+  renderStage('group', t.stages.group, true);
+  renderStage('r32',   t.stages.r32,   true);
+  renderStage('r16',   t.stages.r16,   true);
+  renderStage('qf',    t.stages.qf,    true);
+  renderStage('sf',    t.stages.sf,    true);
+  renderStage('final', t.stages.final.concat(t.stages.third), true);
+
+  var cur = WC.currentStage(t);
+  placeBracket(cur);
+  if (typeof window.renderBracket === 'function') window.renderBracket(t);
+
+  buildTeamSearch();
+  renderTodayBanner(t);
+  renderDataTab();
+
+  if (!stageWasChosen) { goStage(cur, document.querySelector('.drawer-item[data-stage="' + cur + '"]')); stageWasChosen = true; }
 }
 
 function manualRefresh() {
   clearTimeout(liveRefreshTimer);
   hideRefreshTip();
-  fetchLiveData();
+  loadTournament(true);
 }
 
-// ── TEAM SEARCH ──
-var allTeams = [];
-var teamMatchMap = {};
+// ── HEAD-TO-HEAD SEARCH ──────────────────────────────────────────────
+// Built from the model. The old version scraped .mc cards, so it could only
+// find fixtures that happened to be rendered, and offered all 48 teams as
+// opponents even for teams that never met.
+var TEAM_LIST = [];        // [{abbr, he, en, flag}] sorted
+var OPPONENTS = {};        // abbr -> { oppAbbr: match }
 
 function buildTeamSearch() {
+  TEAM_LIST = [];
+  OPPONENTS = {};
+  if (!TOURNAMENT) return;
+
   var seen = {};
-  allTeams = [];
-  teamMatchMap = {};
-  document.querySelectorAll('.mc').forEach(function(card) {
-    var spans = card.querySelectorAll('.mc-team span[data-en]');
-    if (spans.length < 2) return;
-    var t = [spans[0], spans[1]];
-    var norms = t.map(function(s){ return normTeam(s.getAttribute('data-en')); });
-    var isReal = norms.every(function(n){ return n && !/^(1st|2nd|3rd|winner|loser)/i.test(n) && !/group[a-z]/i.test(n); });
-    if (!isReal) return;
-    t.forEach(function(s, i) {
-      var enVal = s.getAttribute('data-en');
-      var heVal = s.getAttribute('data-he') || enVal;
-      var n = norms[i];
-      if (!seen[n]) {
-        seen[n] = true;
-        allTeams.push({ en: enVal, he: heVal, norm: n });
+  TOURNAMENT.all.forEach(function(m) {
+    if (m.home.placeholder || m.away.placeholder) return;
+    [m.home, m.away].forEach(function(t) {
+      if (!seen[t.abbr]) {
+        seen[t.abbr] = true;
+        TEAM_LIST.push({ abbr: t.abbr, he: t.he, en: t.en, flag: t.flag });
       }
+      if (!OPPONENTS[t.abbr]) OPPONENTS[t.abbr] = {};
     });
-    var key = norms[0] + '_' + norms[1];
-    teamMatchMap[key] = card;
-    teamMatchMap[norms[1] + '_' + norms[0]] = card;
+    OPPONENTS[m.home.abbr][m.away.abbr] = m;
+    OPPONENTS[m.away.abbr][m.home.abbr] = m;
   });
-  allTeams.sort(function(a,b){ return a.en.localeCompare(b.en); });
-  ['searchTeam1','searchTeam2'].forEach(function(id) {
-    var sel = document.getElementById(id);
-    if (!sel) return;
-    var placeholder = id === 'searchTeam1'
-      ? { he:'בחר קבוצה 1', en:'Team 1' }
-      : { he:'בחר קבוצה 2', en:'Team 2' };
-    sel.innerHTML = '<option value="" data-he="' + placeholder.he + '" data-en="' + placeholder.en + '">' +
-      (curLang === 'he' ? placeholder.he : placeholder.en) + '</option>';
-    allTeams.forEach(function(team) {
-      var opt = document.createElement('option');
-      opt.value = team.norm;
-      opt.setAttribute('data-en', team.en);
-      opt.setAttribute('data-he', team.he);
-      opt.textContent = (curLang === 'he') ? team.he : team.en;
-      sel.appendChild(opt);
-    });
+
+  TEAM_LIST.sort(function(a, b) {
+    return (curLang === 'he' ? a.he.localeCompare(b.he, 'he') : a.en.localeCompare(b.en));
   });
+
+  fillSelect('searchTeam1', TEAM_LIST, { he: 'בחר קבוצה 1', en: 'Team 1' });
+  fillSelect('searchTeam2', [], { he: 'בחר קודם קבוצה 1', en: 'Pick team 1 first' });
+}
+
+function fillSelect(id, teams, placeholder) {
+  var sel = document.getElementById(id);
+  if (!sel) return;
+  var keep = sel.value;
+  sel.innerHTML = '<option value="" data-he="' + placeholder.he + '" data-en="' + placeholder.en + '">' +
+    (curLang === 'he' ? placeholder.he : placeholder.en) + '</option>';
+  teams.forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t.abbr;
+    opt.setAttribute('data-he', t.he);
+    opt.setAttribute('data-en', t.en);
+    // <option> can hold text only, so no markup fallback here — use the raw code
+    var mark = WC.flagsSupported() ? t.flag : t.abbr;
+    opt.textContent = (mark ? mark + ' ' : '') + (curLang === 'he' ? t.he : t.en);
+    sel.appendChild(opt);
+  });
+  if (keep && sel.querySelector('option[value="' + keep + '"]')) sel.value = keep;
+  sel.disabled = teams.length === 0;
+}
+
+// Team A chosen -> team B may only be a side A actually played.
+function onTeam1Change() {
+  var a = document.getElementById('searchTeam1').value;
+  var sel2 = document.getElementById('searchTeam2');
+  if (!a) {
+    fillSelect('searchTeam2', [], { he: 'בחר קודם קבוצה 1', en: 'Pick team 1 first' });
+    hideSearchResult();
+    return;
+  }
+  var oppAbbrs = Object.keys(OPPONENTS[a] || {});
+  var opps = TEAM_LIST.filter(function(t) { return oppAbbrs.indexOf(t.abbr) !== -1; });
+  var prev = sel2.value;
+  fillSelect('searchTeam2', opps, { he: 'בחר יריבה', en: 'Pick opponent' });
+  if (prev && oppAbbrs.indexOf(prev) !== -1) { sel2.value = prev; runTeamSearch(); }
+  else hideSearchResult();
+}
+
+function resetTeamSearch() {
+  var s1 = document.getElementById('searchTeam1');
+  if (s1) s1.value = '';
+  fillSelect('searchTeam2', [], { he: 'בחר קודם קבוצה 1', en: 'Pick team 1 first' });
+  hideSearchResult();
+}
+
+function hideSearchResult() {
+  var res = document.getElementById('searchResult');
+  if (res) res.classList.remove('show');
 }
 
 function runTeamSearch() {
-  var n1 = document.getElementById('searchTeam1').value;
-  var n2 = document.getElementById('searchTeam2').value;
+  var a = document.getElementById('searchTeam1').value;
+  var b = document.getElementById('searchTeam2').value;
   var res = document.getElementById('searchResult');
-  if (!n1 || !n2) { res.classList.remove('show'); return; }
-  if (n1 === n2)  { res.classList.remove('show'); return; }
-  var card = teamMatchMap[n1 + '_' + n2] || teamMatchMap[n2 + '_' + n1];
-  if (!card) {
-    document.getElementById('srTeams').textContent = '';
-    document.getElementById('srScore').textContent = '';
-    document.getElementById('srMeta').textContent =
-      curLang === 'he' ? 'הקבוצות לא שיחקו אחת נגד השניה' : 'These teams did not face each other';
-    document.getElementById('srMeta').className = 'sr-meta sr-none';
+  if (!res) return;
+  if (!a || !b || a === b) { hideSearchResult(); return; }
+
+  var m = (OPPONENTS[a] || {})[b];
+  var srTeams = document.getElementById('srTeams');
+  var srScore = document.getElementById('srScore');
+  var srMeta  = document.getElementById('srMeta');
+  var he = curLang === 'he';
+
+  if (!m) {
+    srTeams.textContent = '';
+    srScore.textContent = '';
+    srMeta.textContent = he ? 'הקבוצות לא שיחקו אחת נגד השנייה' : 'These teams did not face each other';
+    srMeta.className = 'sr-meta sr-none';
     res.classList.add('show');
     return;
   }
-  var isPast  = card.classList.contains('past');
-  var isLive  = card.classList.contains('live');
-  if (!isPast && !isLive) {
-    var timeEl = card.querySelector('.mc-time');
-    var grpEl  = card.querySelector('.mc-grp');
-    var timeStr = timeEl ? timeEl.textContent.trim() : '';
-    var grpStr  = grpEl  ? grpEl.textContent.replace(/·/g,'').trim() : '';
-    document.getElementById('srTeams').textContent = '';
-    document.getElementById('srScore').textContent = '';
-    document.getElementById('srMeta').textContent =
-      (curLang === 'he'
-        ? 'המשחק טרם התרחש · ' + grpStr + ' · ' + timeStr
-        : 'Match not played yet · ' + grpStr + ' · ' + timeStr);
-    document.getElementById('srMeta').className = 'sr-meta sr-none';
-    res.classList.add('show');
-    return;
+
+  var nameH = he ? m.home.he : m.home.en;
+  var nameA = he ? m.away.he : m.away.en;
+  var stage = he ? WC.STAGE_HE[m.stage] : WC.STAGE_EN[m.stage];
+
+  srTeams.innerHTML = WC.flagFor(m.home) + ' ' + esc(nameH) + '  ·  ' +
+                      WC.flagFor(m.away) + ' ' + esc(nameA);
+
+  if (m.status === 'future') {
+    srScore.textContent = m.time;
+    srMeta.textContent = (he ? 'טרם התרחש · ' : 'Not played yet · ') + stage + ' · ' + m.date;
+    srMeta.className = 'sr-meta sr-none';
+  } else {
+    srScore.textContent = scoreLine(m);
+    // Only a knockout winner advances; a group win is just a win.
+    var extra = '';
+    if (m.winner) {
+      var w = m.winner === 'home' ? nameH : nameA;
+      if (m.stage === 'group') extra = ' · ' + (he ? w + ' ניצחה' : w + ' won');
+      else                     extra = ' · ' + (he ? w + ' עלתה' : w + ' advanced');
+    }
+    srMeta.textContent = stage + ' · ' + m.date + extra;
+    srMeta.className = m.status === 'live' ? 'sr-meta sr-live' : 'sr-meta';
   }
-  var spans = card.querySelectorAll('.mc-team span[data-en]');
-  var name1 = spans[0] ? (curLang==='he' ? spans[0].getAttribute('data-he') : spans[0].getAttribute('data-en')) : '';
-  var name2 = spans[1] ? (curLang==='he' ? spans[1].getAttribute('data-he') : spans[1].getAttribute('data-en')) : '';
-  var scoreEl = card.querySelector('.score');
-  var score   = scoreEl ? scoreEl.textContent.trim() : (curLang==='he' ? 'מתעדכן...' : 'Updating...');
-  var grpEl  = card.querySelector('.mc-grp');
-  var grpStr = grpEl ? grpEl.textContent.replace(/·/g,'').trim() : '';
-  document.getElementById('srTeams').textContent = name1 + '  ·  ' + name2;
-  document.getElementById('srScore').textContent = score;
-  document.getElementById('srMeta').textContent = grpStr;
-  document.getElementById('srMeta').className = isLive ? 'sr-meta sr-live' : 'sr-meta';
   res.classList.add('show');
 }
 
-// ── RECOMMENDATIONS ──
-var REC_MONTHS = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
 
-function parseDateENRec(str) {
-  var m = (str || '').match(/([A-Z][a-z]{2})\s+(\d+)/);
-  if (!m || !(m[1] in REC_MONTHS)) return null;
-  return { month: REC_MONTHS[m[1]], day: parseInt(m[2], 10) };
+
+// A shootout ended 0-0 in normal time. Printing "0 – 0" alone reads as a draw,
+// so the shootout score travels with the scoreline everywhere it is shown.
+function scoreLine(m) {
+  if (!m.score) return '';
+  var s = m.score.h + ' – ' + m.score.a;
+  if (m.pens) s += ' (' + m.pens.h + '–' + m.pens.a + ')';
+  return s;
 }
 
-function tagMatchDates() {
-  document.querySelectorAll('.day-block').forEach(function(block) {
-    var curDate = null;
-    Array.from(block.childNodes).forEach(function(node) {
-      if (!node.classList) return;
-      if (node.classList.contains('day-hd')) {
-        var lbl = node.querySelector('.day-lbl');
-        if (lbl) {
-          var d = parseDateENRec(lbl.getAttribute('data-en') || lbl.textContent);
-          if (d) curDate = d;
-        }
-      } else if (node.classList.contains('mgrid') && curDate) {
-        node.querySelectorAll('.mc').forEach(function(card) {
-          if (!card.dataset.dt) {
-            card.dataset.dt = '2026-' +
-              String(curDate.month + 1).padStart(2, '0') + '-' +
-              String(curDate.day).padStart(2, '0');
-          }
-        });
-      }
-    });
-  });
-  document.querySelectorAll('.mc:not([data-dt])').forEach(function(card) {
-    card.querySelectorAll('.mc-grp span[data-en]').forEach(function(s) {
-      if (card.dataset.dt) return;
-      var d = parseDateENRec(s.getAttribute('data-en'));
-      if (d) {
-        card.dataset.dt = '2026-' +
-          String(d.month + 1).padStart(2, '0') + '-' +
-          String(d.day).padStart(2, '0');
-      }
-    });
-  });
-}
+// ── TODAY'S MATCH BANNER ─────────────────────────────────────────────
+var bannerTimer = null;
 
-function buildRecs() {
-  var recCards = document.getElementById('recCards');
-  if (!recCards) return;
-  recCards.innerHTML = '';
-  var recSection = document.getElementById('stage-rec');
-  var picks = [];
-  var allCards = document.querySelectorAll('.mc');
-  for (var i = 0; i < allCards.length && picks.length < 8; i++) {
-    var card = allCards[i];
-    if (recSection && recSection.contains(card)) continue;
-    if (card.classList.contains('past') || card.classList.contains('live')) continue;
-    var timeEl = card.querySelector('.mc-time');
-    if (!timeEl) continue;
-    var timeText = timeEl.textContent.trim();
-    if (!/^\d{1,2}:\d{2}$/.test(timeText)) continue;
-    var hour = parseInt(timeText.split(':')[0], 10);
-    if (hour < 12 || hour > 22) continue;
-    picks.push(card);
-  }
-  if (picks.length === 0) {
-    var msg = document.createElement('p');
-    msg.style.cssText = 'color:var(--t3);font-size:13px;padding:20px;text-align:center;';
-    msg.setAttribute('data-he', 'אין משחקים בשעות נוחות בקרוב');
-    msg.setAttribute('data-en', 'No convenient matches coming up');
-    msg.textContent = curLang === 'en' ? 'No convenient matches coming up' : 'אין משחקים בשעות נוחות בקרוב';
-    recCards.appendChild(msg);
-    return;
-  }
-  var nowIsrael = new Date(Date.now() + 3 * 3600 * 1000);
-  var todayMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var todayEnStr = todayMonths[nowIsrael.getUTCMonth()] + ' ' + nowIsrael.getUTCDate();
-  picks.forEach(function(c) {
-    var clone = c.cloneNode(true);
-    clone.classList.remove('star');
-    var starTag = clone.querySelector('.star-tag');
-    if (starTag) starTag.remove();
-    var grp = clone.querySelector('.mc-grp');
-    if (grp) {
-      grp.querySelectorAll('span[data-en]').forEach(function(sp) {
-        if (sp.getAttribute('data-en') === todayEnStr) {
-          sp.setAttribute('data-he', 'היום');
-          sp.setAttribute('data-en', 'Today');
-          sp.textContent = curLang === 'en' ? 'Today' : 'היום';
-        }
-      });
+function renderTodayBanner(t) {
+  var box = document.getElementById('todayBanner');
+  if (!box) return;
+  var todayKey = WC.ilParts(new Date()).dayKey;
+  var todays = t.all.filter(function(m) { return m.dayKey === todayKey; });
+
+  if (!todays.length) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  box.style.display = '';
+
+  var he = curLang === 'he';
+  box.innerHTML = todays.map(function(m) {
+    var stage = he ? WC.STAGE_HE[m.stage] : WC.STAGE_EN[m.stage];
+    var right, cls;
+    if (m.status === 'live') {
+      cls = 'tb live';
+      right = '<div class="tb-score">' + scoreLine(m) + '</div><div class="tb-live">🔴 LIVE</div>';
+    } else if (m.status === 'past') {
+      cls = 'tb done';
+      right = '<div class="tb-score">' + scoreLine(m) + '</div>' +
+              '<div class="tb-sub" data-he="הסתיים" data-en="Full time">' + (he ? 'הסתיים' : 'Full time') + '</div>';
+    } else {
+      cls = 'tb up';
+      right = '<div class="tb-time">' + m.time + '</div>' +
+              '<div class="tb-sub tb-count" data-utc="' + m.utc.getTime() + '"></div>';
     }
-    recCards.appendChild(clone);
+    return '<div class="' + cls + '">' +
+      '<div class="tb-tag" data-he="' + (m.status === 'past' ? 'היום' : 'המשחק של היום') + '" data-en="' +
+        (m.status === 'past' ? 'Today' : "Today's match") + '">' +
+        (he ? (m.status === 'past' ? 'היום' : 'המשחק של היום') : (m.status === 'past' ? 'Today' : "Today's match")) + '</div>' +
+      '<div class="tb-main">' +
+        '<span class="tb-team">' + WC.flagFor(m.home) + ' ' + esc(he ? m.home.he : m.home.en) + '</span>' +
+        '<span class="tb-vs" data-he="נגד" data-en="vs">' + (he ? 'נגד' : 'vs') + '</span>' +
+        '<span class="tb-team">' + WC.flagFor(m.away) + ' ' + esc(he ? m.away.he : m.away.en) + '</span>' +
+      '</div>' +
+      '<div class="tb-right">' + right + '</div>' +
+      '<div class="tb-stage">' + esc(stage) + ' · ' + esc(m.venue) + '</div>' +
+    '</div>';
+  }).join('');
+
+  tickCountdown();
+  clearInterval(bannerTimer);
+  bannerTimer = setInterval(tickCountdown, 30000);
+}
+
+function tickCountdown() {
+  var he = curLang === 'he';
+  document.querySelectorAll('.tb-count').forEach(function(el) {
+    var ms = parseInt(el.getAttribute('data-utc'), 10) - Date.now();
+    if (ms <= 0) { el.textContent = he ? 'מתחיל עכשיו' : 'Starting now'; return; }
+    var h = Math.floor(ms / 3600000);
+    var mnt = Math.floor((ms % 3600000) / 60000);
+    el.textContent = he
+      ? 'בעוד ' + (h ? h + ' שע\' ' : '') + mnt + ' דק\''
+      : 'in ' + (h ? h + 'h ' : '') + mnt + 'm';
   });
-  recCards.querySelectorAll('[data-he]').forEach(function(el) {
-    var val = el.getAttribute('data-' + curLang);
-    if (val !== null) el.textContent = val;
+}
+
+// ── DATA TAB (was the watch guide) ───────────────────────────────────
+function renderDataTab() {
+  var box = document.getElementById('watchTable');
+  if (!box || !TOURNAMENT) return;
+  var t = TOURNAMENT;
+  var he = curLang === 'he';
+
+  var played = t.all.filter(function(m) { return m.status === 'past'; });
+  var goals = 0, biggest = null, shootouts = 0;
+  played.forEach(function(m) {
+    goals += m.score.h + m.score.a;
+    if (m.pens) shootouts++;
+    var diff = Math.abs(m.score.h - m.score.a);
+    if (!biggest || diff > biggest.diff) biggest = { diff: diff, m: m };
   });
+
+  // A team is still alive if it appears as a real side in any unplayed match.
+  var alive = {};
+  t.all.forEach(function(m) {
+    if (m.status === 'past') return;
+    if (!m.home.placeholder) alive[m.home.abbr] = m.home;
+    if (!m.away.placeholder) alive[m.away.abbr] = m.away;
+  });
+  var aliveList = Object.keys(alive).map(function(k) { return alive[k]; });
+
+  var counts = { safe: 0, warn: 0, danger: 0 };
+  t.all.forEach(function(m) { counts[m.strip]++; });
+  var left = { safe: 0, warn: 0, danger: 0 };
+  WC.upcoming(t).forEach(function(m) { left[m.strip]++; });
+
+  function stat(labelHe, labelEn, value) {
+    return '<div class="ds"><div class="ds-v">' + value + '</div>' +
+      '<div class="ds-l" data-he="' + labelHe + '" data-en="' + labelEn + '">' +
+      (he ? labelHe : labelEn) + '</div></div>';
+  }
+
+  var avg = played.length ? (goals / played.length).toFixed(2) : '—';
+  var html = '<div class="wt-wrap">';
+
+  html += '<div class="ds-grid">' +
+    stat('משחקים ששוחקו', 'Matches played', played.length + '/104') +
+    stat('שערים', 'Goals', goals) +
+    stat('ממוצע למשחק', 'Goals per match', avg) +
+    stat('הכרעות בפנדלים', 'Shootouts', shootouts) +
+    stat('קבוצות שנותרו', 'Teams left', aliveList.length) +
+    stat('משחקים שנותרו', 'Matches left', WC.upcoming(t).length) +
+    '</div>';
+
+  if (biggest) {
+    var bh = he ? biggest.m.home.he : biggest.m.home.en;
+    var ba = he ? biggest.m.away.he : biggest.m.away.en;
+    html += '<div class="wt-h" data-he="הניצחון הגדול ביותר" data-en="Biggest win">' +
+      (he ? 'הניצחון הגדול ביותר' : 'Biggest win') + '</div>' +
+      '<div class="ds-big">' + esc(bh) + ' <span class="wt-num">' + scoreLine(biggest.m) + '</span> ' + esc(ba) + '</div>';
+  }
+
+  if (aliveList.length && aliveList.length <= 12) {
+    html += '<div class="wt-h" data-he="עדיין בפנים" data-en="Still in it">' + (he ? 'עדיין בפנים' : 'Still in it') + '</div>' +
+      '<div class="ds-teams">' + aliveList.map(function(tm) {
+        return '<span class="ds-chip">' + WC.flagFor(tm) + ' ' + esc(he ? tm.he : tm.en) + '</span>';
+      }).join('') + '</div>';
+  }
+
+  var ROWS = [
+    { k: 'safe',   he: 'שעה נוחה', en: 'Good hour',  hours: '06:00–23:59' },
+    { k: 'warn',   he: 'מאוחר',     en: 'Late',       hours: '00:00–01:59' },
+    { k: 'danger', he: 'לילה עמוק', en: 'Deep night', hours: '02:00–05:59' }
+  ];
+  html += '<div class="wt-h" data-he="נוחות שעות · כל הטורניר" data-en="Hour comfort · whole tournament">' +
+    (he ? 'נוחות שעות · כל הטורניר' : 'Hour comfort · whole tournament') + '</div>' +
+    '<table class="wt"><thead><tr>' +
+    '<th data-he="קטגוריה" data-en="Category">' + (he ? 'קטגוריה' : 'Category') + '</th>' +
+    '<th data-he="שעות" data-en="Hours">' + (he ? 'שעות' : 'Hours') + '</th>' +
+    '<th data-he="סה״כ" data-en="Total">' + (he ? 'סה״כ' : 'Total') + '</th>' +
+    '<th data-he="נשארו" data-en="Left">' + (he ? 'נשארו' : 'Left') + '</th></tr></thead><tbody>';
+  ROWS.forEach(function(r) {
+    html += '<tr><td><span class="wt-dot ' + r.k + '"></span>' +
+      '<span data-he="' + r.he + '" data-en="' + r.en + '">' + (he ? r.he : r.en) + '</span></td>' +
+      '<td class="wt-num">' + r.hours + '</td>' +
+      '<td class="wt-num">' + counts[r.k] + '</td>' +
+      '<td class="wt-num wt-left">' + (left[r.k] || '—') + '</td></tr>';
+  });
+  html += '</tbody></table>';
+
+  var up = WC.upcoming(t);
+  if (up.length) {
+    html += '<div class="wt-h" data-he="נשארו לצפייה" data-en="Left to watch">' + (he ? 'נשארו לצפייה' : 'Left to watch') + '</div>' +
+      '<table class="wt"><tbody>' + up.map(function(m) {
+        var nh = he ? m.home.he : m.home.en;
+        var na = he ? m.away.he : m.away.en;
+        return '<tr><td class="wt-num">' + esc(m.date) + '</td><td class="wt-num">' + esc(m.time) + '</td>' +
+          '<td><span class="wt-dot ' + m.strip + '"></span>' + esc(nh + ' – ' + na) + '</td>' +
+          '<td class="wt-num">' + esc(he ? WC.STAGE_HE[m.stage] : WC.STAGE_EN[m.stage]) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  box.innerHTML = html + '</div>';
 }
 
 // ── LANGUAGE WRAPPER (rebuild dynamic content on switch) ──
 var _origSetLang = setLang;
 setLang = function(lang) {
   _origSetLang(lang);
-  buildTeamSearch();
-  buildRecs();
-  runTeamSearch();
+  if (TOURNAMENT) {
+    renderAll(TOURNAMENT);
+    if (typeof window.renderBracket === 'function') window.renderBracket(TOURNAMENT);
+  }
+  resetTeamSearch();
   chatUpdateDir();
 };
 
 // ── AUTO STAR MARKS (FIFA top 10) ──
-function autoMarkStars() {
-  var FIFA_TOP10 = [
-    'france','england','brazil','argentina','portugal','spain',
-    'netherlands','belgium','germany','italy'
-  ].map(normTeam);
-  document.querySelectorAll('.mc').forEach(function(card) {
-    var teams = card.querySelectorAll('.mc-team span[data-en]');
-    if (teams.length < 2) return;
-    var t1 = normTeam(teams[0].getAttribute('data-en'));
-    var t2 = normTeam(teams[1].getAttribute('data-en'));
-    var isTop = FIFA_TOP10.indexOf(t1) !== -1 || FIFA_TOP10.indexOf(t2) !== -1;
-    if (isTop) {
-      card.classList.add('star');
-      if (!card.querySelector('.star-tag')) {
-        var tag = document.createElement('div');
-        tag.className = 'star-tag';
-        tag.setAttribute('data-he', '⭐ מומלץ');
-        tag.setAttribute('data-en', '⭐ Pick');
-        tag.textContent = curLang === 'en' ? '⭐ Pick' : '⭐ מומלץ';
-        var strip = card.querySelector('.strip');
-        if (strip && strip.nextSibling) {
-          card.insertBefore(tag, strip.nextSibling);
-        } else {
-          card.insertBefore(tag, card.children[1] || card.firstChild);
-        }
-      }
-    } else {
-      card.classList.remove('star');
-      var st = card.querySelector('.star-tag');
-      if (st) st.remove();
-    }
-  });
-}
+
 
 // ── AI CHAT ──
 var CHAT_PROXY_URL = 'https://worldcup-ai.yoavstern1357.workers.dev';
@@ -592,46 +649,51 @@ var chatHistory = [];
 var chatOpen = false;
 
 function buildSystemPrompt() {
-  var results = [];
-  document.querySelectorAll('.mc.past').forEach(function(card) {
-    var teams = card.querySelectorAll('.mc-team span[data-en]');
-    var score = card.querySelector('.score');
-    if (teams.length >= 2 && score) {
-      results.push(teams[0].getAttribute('data-en') + ' ' + score.textContent.trim() + ' ' + teams[1].getAttribute('data-en'));
+  var t = TOURNAMENT;
+  if (!t) {
+    return 'You are a helpful assistant for a FIFA World Cup 2026 schedule page. ' +
+           'Match data has not loaded yet; say so rather than guessing.';
+  }
+
+  var nowIl = WC.ilParts(new Date());
+  function line(m) {
+    var s = m.home.en + ' vs ' + m.away.en;
+    if (m.status === 'past') {
+      s = m.home.en + ' ' + m.score.h + '-' + m.score.a + ' ' + m.away.en;
+      if (m.pens) s += ' (pens ' + m.pens.h + '-' + m.pens.a + ')';
+      var w = m.winner === 'home' ? m.home.en : (m.winner === 'away' ? m.away.en : null);
+      if (w) s += ' [' + w + ' advanced]';
+    } else if (m.status === 'live') {
+      s += ' [LIVE ' + m.score.h + '-' + m.score.a + ']';
+    } else {
+      s += ' at ' + m.time + ' IL on ' + m.date;
     }
+    return '  ' + WC.STAGE_EN[m.stage] + ': ' + s;
+  }
+
+  var live = WC.liveMatches(t);
+  var up = WC.upcoming(t).filter(function(m){ return m.status === 'future'; });
+  var ko = t.all.filter(function(m){ return m.stage !== 'group' && m.status === 'past'; });
+  var todays = t.all.filter(function(m){ return m.dayKey === nowIl.dayKey; });
+
+  var eliminated = [];
+  t.all.forEach(function(m) {
+    if (m.stage === 'group' || m.status !== 'past' || !m.winner) return;
+    var loser = m.winner === 'home' ? m.away : m.home;
+    if (!loser.placeholder) eliminated.push(loser.en);
   });
-  var live = [];
-  document.querySelectorAll('.mc.live').forEach(function(card) {
-    var teams = card.querySelectorAll('.mc-team span[data-en]');
-    var score = card.querySelector('.score');
-    var liveTag = card.querySelector('.live-tag');
-    if (teams.length >= 2) {
-      live.push(teams[0].getAttribute('data-en') + ' ' + (score ? score.textContent.trim() : '?') +
-        ' ' + teams[1].getAttribute('data-en') + (liveTag ? ' [' + liveTag.textContent + ']' : ''));
-    }
-  });
-  var upcoming = [];
-  document.querySelectorAll('.mc.future').forEach(function(card) {
-    var teams = card.querySelectorAll('.mc-team span[data-en]');
-    var time = card.querySelector('.mc-time');
-    var grp = card.querySelector('.mc-grp');
-    if (teams.length >= 2) {
-      upcoming.push(
-        (grp ? grp.textContent.trim() + ' ' : '') +
-        teams[0].getAttribute('data-en') + ' vs ' + teams[1].getAttribute('data-en') +
-        (time ? ' at ' + time.textContent.trim() + ' IL' : '')
-      );
-    }
-  });
+
   return 'You are a helpful assistant for a FIFA World Cup 2026 live schedule page.\n' +
-    'Answer questions concisely. Reply in the same language the user writes (Hebrew or English).\n' +
-    'Today\'s date: ' + new Date().toLocaleDateString('en-GB') + '. All times are Israel time (UTC+3).\n\n' +
-    (live.length ? 'LIVE NOW:\n' + live.join('\n') + '\n\n' : '') +
-    'COMPLETED RESULTS (' + results.length + ' matches):\n' +
-    (results.length ? results.join('\n') : 'None yet') + '\n\n' +
-    'UPCOMING (next matches):\n' +
-    (upcoming.slice(0, 15).join('\n') || 'None') + '\n\n' +
-    'Tournament: Jun 11 – Jul 19 2026 · USA / Canada / Mexico · 48 teams · 104 matches.';
+    'Answer concisely. Reply in the language the user writes (Hebrew or English).\n' +
+    'Right now it is ' + nowIl.time + ' Israel time on ' + nowIl.dayLabelEn + ' (' + nowIl.dayKey + ').\n' +
+    'All times below are Israel time (UTC+3).\n\n' +
+    'TODAY\'S MATCHES:\n' + (todays.length ? todays.map(line).join('\n') : '  None') + '\n\n' +
+    (live.length ? 'LIVE NOW:\n' + live.map(line).join('\n') + '\n\n' : '') +
+    'UPCOMING (' + up.length + '):\n' + (up.length ? up.map(line).join('\n') : '  None — tournament over') + '\n\n' +
+    'KNOCKOUT RESULTS SO FAR:\n' + (ko.length ? ko.map(line).join('\n') : '  None yet') + '\n\n' +
+    'ELIMINATED IN KNOCKOUTS: ' + (eliminated.length ? eliminated.join(', ') : 'none') + '\n\n' +
+    'Tournament: Jun 11 - Jul 19 2026 · USA / Canada / Mexico · 48 teams · 104 matches.\n' +
+    'If asked about a team not listed as eliminated and not in an upcoming match, check the results above before answering.';
 }
 
 function toggleChat() {
@@ -644,10 +706,15 @@ function openChat() {
   if (panel) panel.classList.add('open');
   var btn = document.getElementById('chatFloatBtn');
   if (btn) btn.classList.add('active');
-  if (chatHistory.length === 0) {
-    addChatBubble('assistant', curLang === 'he'
-      ? 'שלום! אני יכול לענות על שאלות לגבי המונדיאל 2026 — תוצאות, לוח משחקים, קבוצות ועוד. שאל אותי!'
-      : 'Hi! Ask me anything about the 2026 World Cup — results, schedule, groups, and more.');
+  // guard on the messages container: the welcome bubble isn't tracked in
+  // chatHistory, so a second open would otherwise stack a duplicate greeting
+  var msgs = document.getElementById('chatMessages');
+  if (chatHistory.length === 0 && msgs && !msgs.children.length) {
+    var heMsg = 'שלום! אני יכול לענות על שאלות לגבי המונדיאל 2026 — תוצאות, לוח משחקים, קבוצות ועוד. שאל אותי!';
+    var enMsg = 'Hi! Ask me anything about the 2026 World Cup — results, schedule, groups, and more.';
+    var welcome = addChatBubble('assistant', curLang === 'he' ? heMsg : enMsg);
+    // tag it so setLang retranslates the boilerplate greeting (real messages stay put)
+    if (welcome) { welcome.setAttribute('data-he', heMsg); welcome.setAttribute('data-en', enMsg); }
   }
   setTimeout(function(){
     var inp = document.getElementById('chatInputField');
@@ -670,12 +737,13 @@ function chatUpdateDir() {
 
 function addChatBubble(role, text) {
   var msgs = document.getElementById('chatMessages');
-  if (!msgs) return;
+  if (!msgs) return null;
   var bubble = document.createElement('div');
   bubble.className = 'chat-bubble chat-' + role;
   bubble.textContent = text;
   msgs.appendChild(bubble);
   msgs.scrollTop = msgs.scrollHeight;
+  return bubble;
 }
 
 function setChatTyping(show) {
@@ -753,76 +821,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── INIT ──
-buildMatchIndex();
-buildTeamSearch();
-autoMarkStars();
-buildRecs();
-fetchLiveData();
+// stageWasChosen: the first render jumps to whatever stage is in play today.
+// Once the user picks a tab themselves, refreshes must not yank them back.
+var stageWasChosen = false;
 
-// ══════════════════════════════════════════════════════
-// KNOCKOUT STAGE DATA — updated for QF 9–12/7
-// ══════════════════════════════════════════════════════
-var KO_DATA = {
-  r16: [
-    { home:'🇦🇷 ארגנטינה', away:'🇨🇻 קייפ ורד',      score:'3 – 2', time:'20:00', strip:'safe',   date:'4/7',  status:'past' },
-    { home:'🇲🇦 מרוקו',    away:'🇨🇦 קנדה',           score:'3 – 0', time:'20:00', strip:'safe',   date:'4/7',  status:'past' },
-    { home:'🇫🇷 צרפת',     away:'🇵🇾 פרגוואי',        score:'1 – 0', time:'00:00', strip:'warn',   date:'5/7',  status:'past' },
-    { home:'🇧🇷 ברזיל',    away:'🇳🇴 נורווגיה',       score:'1 – 2', time:'23:00', strip:'safe',   date:'5/7',  status:'past', note:'הפתעה! נורווגיה עוקרת את ברזיל' },
-    { home:'🇵🇹 פורטוגל',  away:'🇭🇷 קרואטיה',        score:'2 – 1', time:'22:00', strip:'safe',   date:'6/7',  status:'past' },
-    { home:'🇧🇪 בלגיה',    away:'🇺🇸 ארה"ב',           score:'4 – 1', time:'00:00', strip:'warn',   date:'7/7',  status:'past' },
-    { home:'🇦🇷 ארגנטינה', away:'🇪🇬 מצרים',           score:'3 – 2', time:'19:00', strip:'safe',   date:'7/7',  status:'past' },
-    { home:'🇨🇭 שוויץ',    away:'🇨🇴 קולומביה',        score:'0 – 0', time:'23:00', strip:'safe',   date:'7/7',  status:'past', note:"קולומביה עלתה בפנדלים" },
-  ],
-  qf: [
-    { home:'🇫🇷 צרפת',     away:'🇲🇦 מרוקו',           time:'23:00', strip:'safe',   date:'9/7',  status:'future' },
-    { home:'🇵🇹 פורטוגל',  away:'🇪🇸 ספרד',            time:'22:00', strip:'safe',   date:'10/7', status:'future' },
-    { home:'🇳🇴 נורווגיה', away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה',   time:'00:00', strip:'warn',   date:'12/7', status:'future' },
-    { home:'🇦🇷 ארגנטינה', away:'🇧🇪 בלגיה',           time:'04:00', strip:'danger', date:'12/7', status:'future' },
-  ],
-  sf: [
-    { home:'מנצחת צרפת/מרוקו',    away:'מנצחת פורטוגל/ספרד',     time:'22:00', strip:'safe', date:'14/7', status:'future' },
-    { home:'מנצחת נורווגיה/אנגליה', away:'מנצחת ארגנטינה/בלגיה', time:'22:00', strip:'safe', date:'15/7', status:'future' },
-  ],
-  final: [
-    { home:'מנצחת חצי 1', away:'מנצחת חצי 2', time:'22:00', strip:'safe', date:'19/7', status:'future' },
-  ]
-};
-
-function buildKOCard(m) {
-  var isPast = m.status === 'past';
-  var cls = 'mc ' + (isPast ? 'past' : 'future');
-  var scoreOrTime = isPast
-    ? '<div class="score">' + m.score + '</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div>'
-    : '<div class="mc-time ' + m.strip + '">' + m.time + '</div>';
-  return '<div class="' + cls + '">' +
-    '<div class="strip ' + m.strip + '"></div>' +
-    '<div class="mc-top">' +
-      '<span class="mc-grp">' + m.date + '</span>' +
-      '<div class="mc-rt">' + scoreOrTime + '</div>' +
-    '</div>' +
-    '<div class="mc-teams">' +
-      '<span class="mc-team">' + m.home + '</span>' +
-      '<span class="mc-vs" data-he="נגד" data-en="vs">נגד</span>' +
-      '<span class="mc-team b">' + m.away + '</span>' +
-    '</div>' +
-    (m.note ? '<div class="mc-venue"><span class="mc-note">⚡ ' + m.note + '</span></div>' : '') +
-    '</div>';
-}
-
-function updateKnockoutStages() {
-  var map = { 'stage-r16':'r16', 'stage-qf':'qf', 'stage-sf':'sf', 'stage-final':'final' };
-  Object.keys(map).forEach(function(id) {
-    var stage = document.getElementById(id);
-    if (!stage || !KO_DATA[map[id]]) return;
-    var db = stage.querySelector('.day-block');
-    if (!db) return;
-    db.innerHTML = '<div class="mgrid">' + KO_DATA[map[id]].map(buildKOCard).join('') + '</div>';
-    db.querySelectorAll('.mc').forEach(attachRipple);
-  });
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', updateKnockoutStages);
-} else {
-  updateKnockoutStages();
-}
+showSkeletons();
+loadTournament(false);

@@ -1,0 +1,11 @@
+# Secrets — never commit these
+.dev.vars
+.env
+*.local
+
+# Cloudflare / node
+.wrangler/
+node_modules/
+
+# Build output for Cloudflare Pages direct upload (generated from source)
+dist/

@@ -2,53 +2,65 @@
 <html lang="he" dir="rtl" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- viewport-fit=cover is required for env(safe-area-inset-*) to report non-zero on notched iPhones -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>מונדיאל 2026 — לוח שידורים</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#15401d; --bg2:#1d5429;
-  --stripe-a:#163f1e; --stripe-b:#1f5829;
+  /* Deep emerald + champagne — the football green raised to a premium register */
+  --bg:#0a1f16; --bg2:#102c20;
+  --stripe-tint:rgba(255,255,255,.015);
+  --vignette:rgba(0,0,0,.36);
   --line:rgba(255,255,255,.05);
-  --usa-red:#e11d48; --gold:#ffd700;
-  --t1:#ffffff; --t2:#d8efdc; --t3:#a6cfac;
-  --card:rgba(0,0,0,.55); --card-future:rgba(0,30,12,.82);
-  --card-border:rgba(255,255,255,.14);
-  --hi:rgba(0,25,70,.85); --hi-border:rgba(255,215,0,.5);
-  --sidebar:rgba(0,15,6,.92); --drawer:rgba(10,28,15,.98);
+  --usa-red:#e11d48; --gold:#d9b866;
+  --t1:#eef3ee; --t2:#c4d3c6; --t3:#8fa595;
+  --card:rgba(255,255,255,.045); --card-future:rgba(16,44,32,.86);
+  --card-border:rgba(255,255,255,.12);
+  --hi:rgba(217,184,102,.10); --hi-border:rgba(217,184,102,.5);
+  --sidebar:rgba(6,18,13,.92); --drawer:rgba(9,26,19,.98);
   --safe:#4ade80; --warn:#fbbf24; --danger:#fb7185;
-  --shadow:rgba(0,0,0,.4);
+  --shadow:rgba(0,0,0,.45);
   --radius:18px; --radius-sm:12px;
 }
 [data-theme="light"] {
-  --bg:#e8f3ea; --bg2:#d6ebd9;
-  --stripe-a:#e3f1e6; --stripe-b:#d4ead7;
+  /* Warm ivory + champagne + emerald ink — the light-mode counterpart */
+  --bg:#f4f0e6; --bg2:#ebe5d5;
+  --stripe-tint:rgba(60,50,20,.02);
+  --vignette:rgba(60,50,20,.08);
   --line:rgba(0,0,0,.04);
-  --usa-red:#be123c; --gold:#b8860b;
-  --t1:#0f2417; --t2:#1f3d28; --t3:#4a6b51;
-  --card:rgba(255,255,255,.82); --card-future:rgba(255,255,255,.96);
-  --card-border:rgba(0,40,15,.14);
-  --hi:rgba(255,247,214,.95); --hi-border:rgba(184,134,11,.5);
-  --sidebar:rgba(255,255,255,.95); --drawer:rgba(248,252,249,.99);
-  --safe:#16a34a; --warn:#d97706; --danger:#e11d48;
-  --shadow:rgba(0,40,15,.14);
+  --usa-red:#be123c; --gold:#a8842f;
+  --t1:#132b1f; --t2:#38493d; --t3:#6b7d70;
+  --card:rgba(255,255,255,.7); --card-future:rgba(255,255,255,.92);
+  --card-border:rgba(30,50,35,.14);
+  --hi:rgba(168,132,47,.12); --hi-border:rgba(168,132,47,.5);
+  --sidebar:rgba(252,250,244,.95); --drawer:rgba(250,247,240,.99);
+  --safe:#16a34a; --warn:#c77d0a; --danger:#dc2626;
+  --shadow:rgba(40,30,10,.14);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
 body {
   background:var(--bg); color:var(--t1);
-  font-family:'Inter',sans-serif; min-height:100vh;
+  font-family:'Sora','Assistant',sans-serif; min-height:100vh;
   overflow-x:hidden;
   transition:background .5s ease, color .5s ease;
 }
+/* Wide, soft bands — a suggestion of a pitch, not a drawing of one.
+   Feathered edges (no hard stop) so no seam is visible. */
 body::before {
   content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
-  background:repeating-linear-gradient(180deg,var(--stripe-a) 0,var(--stripe-a) 80px,var(--stripe-b) 80px,var(--stripe-b) 160px);
+  background:repeating-linear-gradient(180deg,
+    transparent 0, transparent 60px,
+    var(--stripe-tint) 130px, var(--stripe-tint) 190px,
+    transparent 260px, transparent 320px);
   transition:background .5s ease;
 }
+/* Vignette instead of a 110px grid. Draws the eye to the centre column. */
 body::after {
   content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
-  background-image:repeating-linear-gradient(90deg,var(--line) 0,var(--line) 1px,transparent 1px,transparent 110px);
+  background:radial-gradient(130% 90% at 50% 0%, transparent 45%, var(--vignette) 100%);
 }
 .sidebar {
   position:fixed; top:0; bottom:0; right:0; width:64px; z-index:50;
@@ -108,7 +120,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 }
 [dir="ltr"] .drawer { right:auto; left:64px; border-left:none; border-right:1px solid var(--card-border); border-radius:0 var(--radius) var(--radius) 0; transform:translateX(-110%); box-shadow:8px 0 40px var(--shadow); }
 .drawer.open { transform:translateX(0); visibility:visible; transition:transform .42s cubic-bezier(.22,1,.36,1), background .5s ease, visibility 0s 0s; }
-.drawer-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px; color:var(--gold); margin-bottom:16px; }
+.drawer-title { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:22px; letter-spacing:1px; color:var(--gold); margin-bottom:16px; }
 .drawer-item { display:flex; align-items:center; gap:10px; padding:13px 16px; margin-bottom:7px; border-radius:14px; background:var(--card); border:1px solid var(--card-border); color:var(--t1); font-size:14px; font-weight:600; cursor:pointer; position:relative; overflow:hidden; transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .25s, border-color .25s; }
 .drawer-item:hover { background:var(--hi); border-color:var(--hi-border); }
 .drawer-item:active { transform:scale(.96); }
@@ -119,7 +131,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 [data-theme="light"] .ripple-ink { background:rgba(0,0,0,.12); }
 @keyframes ripple { to { transform:scale(2.6); opacity:0; } }
 .hero { text-align:center; padding:46px 20px 26px; }
-.hero-title { font-family:'Bebas Neue',sans-serif; font-size:clamp(48px,11vw,96px); line-height:.88; letter-spacing:2px; text-shadow:0 2px 18px var(--shadow); }
+.hero-title { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:clamp(48px,11vw,96px); line-height:.88; letter-spacing:2px; text-shadow:0 2px 18px var(--shadow); }
 .hero-title span { color:var(--gold); display:block; }
 .hero-sub { margin-top:12px; font-size:14px; color:var(--t2); font-weight:500; }
 .hero-badge { display:inline-flex; align-items:center; gap:7px; margin-top:18px; background:var(--hi); border:1px solid var(--hi-border); border-radius:999px; padding:7px 18px; font-size:12px; color:var(--gold); font-weight:700; }
@@ -130,13 +142,17 @@ main { position:relative; z-index:1; margin-right:64px; }
 .stage.active { display:block; }
 @keyframes fadein { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 .sec-head { max-width:1080px; margin:24px auto 0; padding:0 20px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
-.sec-label { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; color:var(--t1); }
+.sec-label { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:26px; letter-spacing:1px; color:var(--t1); }
 .sec-sub { font-size:12px; color:var(--t2); font-weight:600; }
 .day-block { max-width:1080px; margin:0 auto; padding:0 20px; }
 .day-hd { display:flex; align-items:center; gap:10px; padding:18px 0 10px; }
-.day-lbl { font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:1px; color:var(--gold); white-space:nowrap; }
+.day-lbl { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:17px; letter-spacing:1px; color:var(--gold); white-space:nowrap; }
 .day-line { flex:1; height:1px; background:var(--card-border); }
-.mgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; padding-bottom:6px; }
+/* Flex, not grid: a grid puts a trailing odd card in a column (offset under the
+   left card); flex-wrap + justify-center centres each row, so an orphan 3rd card
+   sits centred beneath the two above it. */
+.mgrid { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; padding-bottom:6px; }
+.mgrid > .mc { flex:1 1 300px; max-width:340px; }
 .mc { border-radius:var(--radius); padding:13px 15px; position:relative; overflow:hidden; border:1px solid var(--card-border); transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s, border-color .3s, box-shadow .3s; }
 .mc.past { background:var(--card); opacity:.62; }
 .mc.past:hover { opacity:.9; }
@@ -157,22 +173,23 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mc-grp { font-size:10px; font-weight:700; letter-spacing:.8px; color:var(--t3); text-transform:uppercase; padding-top:3px; }
 .mc-rt { display:flex; flex-direction:column; align-items:flex-end; gap:1px; flex-shrink:0; }
 [dir="ltr"] .mc-rt { align-items:flex-start; }
-.mc-time { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px; line-height:1; }
+.mc-time { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:22px; letter-spacing:1px; line-height:1; }
 .mc-time.safe { color:var(--safe); } .mc-time.warn { color:var(--warn); } .mc-time.danger { color:var(--danger); }
 .mc-et { font-size:10px; color:var(--t3); font-weight:600; }
-.score { font-family:'Bebas Neue',sans-serif; font-size:21px; letter-spacing:2px; line-height:1.1; color:var(--gold); background:var(--card); padding:2px 9px; border-radius:9px; border:1px solid var(--hi-border); white-space:nowrap; }
+/* home–away must read left-to-right even in RTL, or "2 – 0" renders as "0 – 2" */
+.score { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:21px; letter-spacing:2px; line-height:1.1; color:var(--gold); background:var(--card); padding:2px 9px; border-radius:9px; border:1px solid var(--hi-border); white-space:nowrap; direction:ltr; unicode-bidi:isolate; }
 .mc-fin { font-size:9px; color:var(--t3); font-weight:600; }
 .mc-teams { display:flex; align-items:center; justify-content:space-between; gap:6px; }
 .mc-team { font-size:13px; font-weight:700; color:var(--t1); flex:1; line-height:1.3; }
 .mc-team.b { text-align:end; }
-.mc-vs { font-family:'Bebas Neue',sans-serif; font-size:13px; color:var(--t2); flex-shrink:0; }
+.mc-vs { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:13px; color:var(--t2); flex-shrink:0; }
 .mc-venue { margin-top:8px; font-size:10px; color:var(--t3); font-weight:500; line-height:1.4; }
 .mc-note { color:var(--gold); }
 .rec-wrap { max-width:1080px; margin:16px auto 0; padding:0 20px 60px; }
 .stand-wrap { max-width:1080px; margin:16px auto 0; padding:0 20px 60px; }
 .gs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:16px; }
 .gs-card { border-radius:var(--radius); overflow:hidden; background:var(--card-future); border:1px solid var(--card-border); box-shadow:0 2px 12px var(--shadow); }
-.gs-title { font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--gold); padding:10px 15px 8px; letter-spacing:1px; border-bottom:1px solid var(--card-border); }
+.gs-title { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:16px; color:var(--gold); padding:10px 15px 8px; letter-spacing:1px; border-bottom:1px solid var(--card-border); }
 .gs-tbl { width:100%; border-collapse:collapse; font-size:12px; }
 .gs-tbl th { text-align:start; padding:6px 9px; color:var(--t3); font-weight:700; font-size:10px; letter-spacing:.5px; background:var(--card); }
 .gs-tbl th.n, .gs-tbl td.n { text-align:center; }
@@ -189,14 +206,22 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mc.thefinal .mc-time { color:var(--gold); font-size:30px; }
 .search-box { padding:14px 16px 12px; border-bottom:1px solid var(--card-border); background:var(--bg); position:sticky; top:0; z-index:10; }
 .search-title { font-size:10px; font-weight:700; letter-spacing:.8px; color:var(--t3); text-transform:uppercase; margin-bottom:10px; }
-.search-selects { display:flex; align-items:center; gap:8px; }
-.search-selects select { flex:1; padding:7px 10px; border-radius:10px; border:1px solid var(--card-border); background:var(--card); color:var(--t1); font-size:13px; font-weight:600; appearance:none; -webkit-appearance:none; cursor:pointer; outline:none; }
-.search-selects select:focus { border-color:var(--safe); }
+.search-selects { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+/* min-width:0 — a flex item defaults to min-width:auto, so the widest <option>
+   ("ARG Argentina") would force the select past its container and shove the
+   reset button off-screen. */
+.search-selects select { flex:1 1 38%; min-width:0; max-width:100%; text-overflow:ellipsis; padding:7px 10px; border-radius:10px; border:1px solid var(--card-border); background:var(--card); color:var(--t1); font-size:13px; font-weight:600; appearance:none; -webkit-appearance:none; cursor:pointer; outline:none; }
+.search-selects select:focus { border-color:var(--gold); }
+/* Native dropdown list — set solid option colours so team names stay legible
+   (translucent --card would render unreadable in the OS popup). */
+.search-selects select option { background:#102c20; color:#eef3ee; }
+[data-theme="light"] .search-selects select option { background:#ffffff; color:#132b1f; }
 .search-vs { font-size:11px; font-weight:700; color:var(--t3); white-space:nowrap; }
 .search-result { margin-top:10px; border-radius:12px; padding:12px 14px; background:var(--card); border:1px solid var(--card-border); display:none; }
 .search-result.show { display:block; }
 .sr-teams { font-size:14px; font-weight:700; color:var(--t1); margin-bottom:6px; }
-.sr-score { font-size:26px; font-family:'Bebas Neue',sans-serif; color:var(--safe); letter-spacing:1px; line-height:1; }
+.sr-score { font-size:26px; font-family:'Sora','Assistant',sans-serif; font-weight:800; color:var(--safe); letter-spacing:1px; line-height:1; direction:ltr; unicode-bidi:isolate; }
+.sr-teams { direction:inherit; unicode-bidi:isolate; }
 .sr-meta { font-size:11px; color:var(--t3); margin-top:4px; }
 .sr-live { color:var(--danger); }
 .sr-none { font-size:13px; color:var(--t3); font-style:italic; }
@@ -223,32 +248,109 @@ main { position:relative; z-index:1; margin-right:64px; }
   [dir="ltr"] .overlay { left:54px; right:0; }
   .drawer { right:54px; max-width:calc(100vw - 54px); }
   [dir="ltr"] .drawer { left:54px; right:auto; }
-  .mgrid { grid-template-columns:1fr; }
+  .mgrid > .mc { flex-basis:100%; max-width:none; }
 }
 #chatFloatBtn { position:fixed; bottom:24px; left:20px; z-index:200; width:52px; height:52px; border-radius:50%; background:var(--acc,#1a73e8); color:#fff; border:none; font-size:22px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.35); transition:transform .2s, box-shadow .2s; display:flex; align-items:center; justify-content:center; }
 #chatFloatBtn:hover { transform:scale(1.08); box-shadow:0 6px 20px rgba(0,0,0,.4); }
 #chatFloatBtn.active { background:#c62828; }
-#chatPanel { position:fixed; bottom:86px; left:16px; z-index:199; width:340px; max-width:calc(100vw - 32px); background:var(--card,#1e1e2e); border:1px solid var(--border,rgba(255,255,255,.1)); border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,.5); display:flex; flex-direction:column; overflow:hidden; opacity:0; transform:translateY(12px) scale(.97); pointer-events:none; transition:opacity .22s, transform .22s; max-height:70vh; }
+/* Chat follows the app palette via theme vars (emerald + champagne),
+   the same in both themes — no inversion, no hardcoded green/blue. */
+/* Height caps to whatever fits above the floating button (100px + a margin),
+   using dvh so mobile browser bars don't clip it. Prevents a long answer's
+   last lines from hiding behind the input row. */
+#chatPanel { position:fixed; bottom:86px; left:16px; z-index:199; width:340px; max-width:calc(100vw - 32px); background:var(--drawer); border:1px solid var(--card-border); border-radius:16px; box-shadow:0 8px 32px var(--shadow); display:flex; flex-direction:column; overflow:hidden; opacity:0; transform:translateY(12px) scale(.97); pointer-events:none; transition:opacity .22s, transform .22s; max-height:min(72vh, calc(100vh - 120px)); max-height:min(72dvh, calc(100dvh - 120px)); }
 #chatPanel.open { opacity:1; transform:none; pointer-events:auto; }
-#chatHeader { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--acc,#1a73e8); font-weight:600; font-size:14px; color:#fff; flex-shrink:0; }
-#chatClose { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; }
-#chatMessages { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; min-height:120px; }
+#chatHeader { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--bg2); font-weight:700; font-size:14px; color:var(--gold); flex-shrink:0; border-bottom:1px solid var(--card-border); }
+#chatClose { background:none; border:none; color:var(--t3); font-size:14px; cursor:pointer; padding:0 4px; line-height:1; }
+#chatClose:hover { color:var(--t1); }
+#chatMessages { flex:1; overflow-y:auto; padding:12px 12px 14px; display:flex; flex-direction:column; gap:8px; min-height:100px; background:var(--bg); overscroll-behavior:contain; scroll-padding-bottom:14px; }
 .chat-bubble { max-width:82%; padding:8px 12px; border-radius:12px; font-size:13.5px; line-height:1.5; word-break:break-word; }
-.chat-user { align-self:flex-end; background:var(--acc,#1a73e8); color:#fff; border-bottom-right-radius:4px; }
-.chat-assistant { align-self:flex-start; background:var(--bg2,rgba(255,255,255,.08)); color:var(--t1,#f0f0f0); border-bottom-left-radius:4px; }
-.chat-typing span { display:inline-block; width:6px; height:6px; background:var(--t3,#888); border-radius:50%; margin:0 2px; animation:chatDot .9s infinite; }
+.chat-user { align-self:flex-end; background:var(--gold); color:#1a1405; font-weight:600; border-bottom-right-radius:4px; }
+.chat-assistant { align-self:flex-start; background:var(--card-future); color:var(--t1); border:1px solid var(--card-border); border-bottom-left-radius:4px; }
+.chat-typing span { display:inline-block; width:6px; height:6px; background:var(--t3); border-radius:50%; margin:0 2px; animation:chatDot .9s infinite; }
 .chat-typing span:nth-child(2){ animation-delay:.2s; }
 .chat-typing span:nth-child(3){ animation-delay:.4s; }
 @keyframes chatDot { 0%,80%,100%{ transform:scale(.7); opacity:.5; } 40%{ transform:scale(1); opacity:1; } }
-#chatInputRow { display:flex; gap:6px; padding:10px 12px; border-top:1px solid var(--border,rgba(255,255,255,.08)); flex-shrink:0; }
-#chatInputField { flex:1; padding:8px 10px; border-radius:8px; font-size:13px; background:var(--bg2,rgba(255,255,255,.08)); border:1px solid var(--border,rgba(255,255,255,.12)); color:var(--t1,#f0f0f0); outline:none; }
-#chatInputField:focus { border-color:var(--acc,#1a73e8); }
-#chatSendBtn { padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; background:var(--acc,#1a73e8); color:#fff; border:none; cursor:pointer; transition:opacity .15s; }
+#chatInputRow { display:flex; gap:6px; padding:10px 12px; border-top:1px solid var(--card-border); flex-shrink:0; background:var(--bg2); }
+#chatInputField { flex:1; padding:8px 10px; border-radius:8px; font-size:13px; background:var(--card-future); border:1px solid var(--card-border); color:var(--t1); outline:none; }
+#chatInputField::placeholder { color:var(--t3); }
+#chatInputField:focus { border-color:var(--gold); }
+#chatSendBtn { padding:8px 14px; border-radius:8px; font-size:13px; font-weight:700; background:var(--gold); color:#1a1405; border:none; cursor:pointer; transition:opacity .15s; }
 #chatSendBtn:hover { opacity:.85; }
-@media(max-width:520px){ #chatPanel { left:8px; right:8px; width:auto; max-width:100%; bottom:80px; } #chatFloatBtn { left:12px; bottom:16px; } }
+@media(max-width:520px){ #chatPanel { left:8px; right:8px; width:auto; max-width:100%; bottom:80px; } }
+
+/* ── loading / error states ── */
+.skeleton { padding:28px 20px; text-align:center; color:var(--t3); font-size:13px; }
+.load-err { padding:28px 20px; text-align:center; }
+.load-err p { color:var(--t2); font-size:14px; margin-bottom:6px; }
+.load-err-detail { color:var(--t3); font-size:11px; font-family:monospace; margin-bottom:14px; }
+.load-retry { padding:8px 20px; border-radius:8px; border:1px solid var(--card-border); background:var(--card); color:var(--t1); font-size:13px; font-weight:600; cursor:pointer; }
+.load-retry:hover { border-color:var(--gold); }
+
+/* Flag substitute on platforms with no flag-emoji font (Windows).
+   Shown for every team, so England is not the only odd one out. */
+.fabbr { display:inline-block; min-width:30px; padding:1px 4px; border-radius:4px; background:var(--card-border); color:var(--t1); font-size:9px; font-weight:800; letter-spacing:.5px; text-align:center; vertical-align:middle; direction:ltr; unicode-bidi:isolate; font-family:'Sora','Assistant',sans-serif; }
+.bk-team .fabbr { min-width:26px; font-size:8px; padding:1px 3px; }
+.tb-team .fabbr { min-width:34px; font-size:10px; }
+
+/* ── today's match banner ── */
+#todayBanner:empty { display:none; }
+.tb { max-width:760px; margin:0 auto 18px; padding:14px 18px 12px; border-radius:var(--radius); background:var(--hi); border:1px solid var(--hi-border); position:relative; display:grid; grid-template-columns:1fr auto; grid-template-areas:"tag tag" "main right" "stage stage"; gap:4px 14px; align-items:center; }
+.tb.live { border-color:var(--danger); }
+.tb.done { opacity:.75; }
+.tb-tag { grid-area:tag; font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--gold); }
+.tb-main { grid-area:main; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:clamp(15px,4vw,21px); font-weight:800; color:var(--t1); }
+.tb-vs { font-size:11px; font-weight:600; color:var(--t3); }
+.tb-right { grid-area:right; text-align:center; }
+.tb-time, .tb-score { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:30px; line-height:1; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
+.tb-sub { font-size:10px; color:var(--t3); margin-top:2px; white-space:nowrap; }
+.tb-live { font-size:10px; font-weight:800; color:var(--danger); margin-top:2px; }
+.tb-stage { grid-area:stage; font-size:10px; color:var(--t3); margin-top:4px; }
+@media(max-width:520px){ .tb { margin-inline:12px; padding:12px 14px; } .tb-time,.tb-score { font-size:24px; } }
+
+/* ── search reset ── */
+.search-reset { flex-shrink:0; width:34px; height:34px; border-radius:8px; border:1px solid var(--card-border); background:var(--card); color:var(--t2); font-size:13px; cursor:pointer; line-height:1; }
+.search-reset:hover { border-color:var(--danger); color:var(--danger); }
+select:disabled { opacity:.45; cursor:not-allowed; }
+
+/* iOS Safari zooms the whole page when a focused control's font is under 16px */
+@media(max-width:520px){
+  #chatInputField, #searchTeam1, #searchTeam2 { font-size:16px; }
+}
+
+/* ── data tab ── */
+.ds-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; margin-bottom:6px; }
+.ds { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px 8px; text-align:center; }
+.ds-v { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:26px; line-height:1; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
+.ds-l { font-size:10px; color:var(--t3); margin-top:4px; line-height:1.3; }
+.ds-big { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px; text-align:center; font-size:14px; font-weight:700; color:var(--t2); }
+.ds-teams { display:flex; flex-wrap:wrap; gap:6px; }
+.ds-chip { background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; color:var(--t2); }
+
+/* ── watch guide table ── */
+.wt-wrap { max-width:760px; margin:16px auto 0; }
+.wt-h { font-size:13px; font-weight:800; color:var(--t2); margin:16px 0 8px; text-align:start; }
+.wt { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); overflow:hidden; }
+.wt th { font-size:11px; font-weight:700; color:var(--t3); text-align:start; padding:8px 10px; border-bottom:1px solid var(--card-border); }
+.wt td { font-size:12px; color:var(--t2); padding:8px 10px; border-bottom:1px solid var(--line); }
+.wt tbody tr:last-child td { border-bottom:none; }
+.wt-num { color:var(--t1); font-weight:600; white-space:nowrap; direction:ltr; unicode-bidi:isolate; }
+.wt-left { color:var(--gold); }
+.wt-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-inline-end:7px; vertical-align:middle; }
+.wt-dot.safe { background:var(--safe); }
+.wt-dot.warn { background:var(--warn); }
+.wt-dot.danger { background:var(--danger); }
+
+/* Reserve room for the floating chat button, plus the iPhone home indicator */
+main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bottom)); }
+/* Critical: the WebGL splash module is deferred, so paint a black cover the
+   instant the page shows — no flash of content before the intro runs. */
+#splashScreen{position:fixed;inset:0;z-index:9999;background:radial-gradient(120% 90% at 50% 38%,#0a1830 0%,#060a14 55%,#03060c 100%);}
 </style>
 </head>
 <body>
+
+<div id="splashScreen"></div>
 
 <div class="sidebar">
   <div class="side-item">
@@ -290,9 +392,10 @@ main { position:relative; z-index:1; margin-right:64px; }
   <div class="search-box" id="teamSearchBox">
     <div class="search-title" data-he="חיפוש תוצאת משחק" data-en="Match Result Lookup">חיפוש תוצאת משחק</div>
     <div class="search-selects">
-      <select id="searchTeam1" onchange="runTeamSearch()"><option value="" data-he="בחר קבוצה 1" data-en="Team 1">בחר קבוצה 1</option></select>
+      <select id="searchTeam1" onchange="onTeam1Change()"><option value="" data-he="בחר קבוצה 1" data-en="Team 1">בחר קבוצה 1</option></select>
       <span class="search-vs" data-he="נגד" data-en="vs">נגד</span>
-      <select id="searchTeam2" onchange="runTeamSearch()"><option value="" data-he="בחר קבוצה 2" data-en="Team 2">בחר קבוצה 2</option></select>
+      <select id="searchTeam2" onchange="runTeamSearch()" disabled><option value="" data-he="בחר קודם קבוצה 1" data-en="Pick team 1 first">בחר קודם קבוצה 1</option></select>
+      <button id="searchReset" class="search-reset" onclick="resetTeamSearch()" title="איפוס" aria-label="Reset">✕</button>
     </div>
     <div class="search-result" id="searchResult">
       <div class="sr-teams" id="srTeams"></div>
@@ -300,9 +403,8 @@ main { position:relative; z-index:1; margin-right:64px; }
       <div class="sr-meta" id="srMeta"></div>
     </div>
   </div>
-  <div class="drawer-item active" data-stage="rec" onclick="goStage('rec',this)"><span data-he="⭐ המלצות" data-en="⭐ Top Picks">⭐ המלצות</span></div>
+  <div class="drawer-item" data-stage="rec" onclick="goStage('rec',this)"><span data-he="📈 נתונים" data-en="📈 Data">📈 נתונים</span></div>
   <div class="drawer-item" data-stage="group" onclick="goStage('group',this)"><span data-he="שלב הבתים" data-en="Group Stage">שלב הבתים</span></div>
-  <div class="drawer-item" data-stage="standings" onclick="goStage('standings',this)"><span data-he="📊 טבלאות" data-en="📊 Standings">📊 טבלאות</span></div>
   <div class="drawer-item" data-stage="r32" onclick="goStage('r32',this)"><span data-he="סיבוב 32" data-en="Round of 32">סיבוב 32</span></div>
   <div class="drawer-item" data-stage="r16" onclick="goStage('r16',this)"><span data-he="שמינית גמר" data-en="Round of 16">שמינית גמר</span></div>
   <div class="drawer-item" data-stage="qf" onclick="goStage('qf',this)"><span data-he="רבע גמר" data-en="Quarter-finals">רבע גמר</span></div>
@@ -317,86 +419,32 @@ main { position:relative; z-index:1; margin-right:64px; }
     <div class="hero-badge">🕐 <span data-he="11 יוני – 19 יולי 2026 · ארה&quot;ב · קנדה · מקסיקו" data-en="Jun 11 – Jul 19, 2026 · USA · Canada · Mexico">11 יוני – 19 יולי 2026 · ארה"ב · קנדה · מקסיקו</span></div>
   </section>
 
+  <!-- today's match — hidden by main.js when there is none -->
+  <div id="todayBanner"></div>
+
   <div class="legend">
     <div class="leg-item"><div class="leg-dot" style="background:var(--safe)"></div><span data-he="שעה נוחה" data-en="Good time">שעה נוחה</span></div>
     <div class="leg-item"><div class="leg-dot" style="background:var(--warn)"></div><span data-he="מאוחר" data-en="Late">מאוחר</span></div>
     <div class="leg-item"><div class="leg-dot" style="background:var(--danger)"></div><span data-he="לילה עמוק" data-en="Deep night">לילה עמוק</span></div>
-    <div class="leg-item"><div class="leg-dot" style="background:var(--gold)"></div><span data-he="⭐ קבוצת טופ-10 FIFA" data-en="⭐ FIFA Top-10 team">⭐ קבוצת טופ-10 FIFA</span></div>
   </div>
 
-  <!-- ── STAGE: REC ── -->
-  <div id="stage-rec" class="stage active">
-    <div class="sec-head"><div class="sec-label">⭐</div><div class="sec-sub"><span data-he="12:00–22:00 שעון ישראל · מתעדכן אוטומטית" data-en="12:00–22:00 Israel time · auto-refreshed">12:00–22:00 שעון ישראל · מתעדכן אוטומטית</span></div></div>
-    <div id="recGrid" class="day-block"><div class="mgrid" id="recCards"></div></div>
+  <!-- ── STAGE: DATA ── -->
+  <div id="stage-rec" class="stage">
+    <div class="sec-head"><div class="sec-label">📈 <span data-he="נתונים" data-en="Data">נתונים</span></div><div class="sec-sub"><span data-he="סטטיסטיקות הטורניר · שעון ישראל" data-en="Tournament stats · Israel time">סטטיסטיקות הטורניר · שעון ישראל</span></div></div>
+    <div id="watchTable"></div>
   </div>
 
   <!-- ── STAGE: GROUP ── -->
   <div id="stage-group" class="stage">
     <div class="sec-head"><div class="sec-label"><span data-he="שלב הבתים" data-en="Group Stage">שלב הבתים</span></div><div class="sec-sub"><span data-he="11–27 יוני · 72 משחקים" data-en="Jun 11–27 · 72 matches">11–27 יוני · 72 משחקים</span></div></div>
-    <div class="day-block">
-      <div class="day-hd"><div class="day-lbl" data-he="יום ה׳, 11 יוני" data-en="Thu, Jun 11">יום ה׳, 11 יוני</div><div class="day-line"></div></div>
-      <div class="mgrid">
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> A</span><div class="mc-rt"><div class="score">2 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇲🇽 <span data-he="מקסיקו" data-en="Mexico">מקסיקו</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇿🇦 <span data-he="דרום אפריקה" data-en="South Africa">דרום אפריקה</span></span></div><div class="mc-venue">📍 <span data-he="אצטדיון אזטקה, מקסיקו סיטי" data-en="Estadio Azteca, Mexico City">אצטדיון אזטקה, מקסיקו סיטי</span></div></div>
-        <div class="mc past"><div class="strip danger"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> A</span><div class="mc-rt"><div class="score">2 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇰🇷 <span data-he="קוריאה" data-en="South Korea">קוריאה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇿 <span data-he="צ'כיה" data-en="Czechia">צ'כיה</span></span></div></div>
-      </div>
-      <div class="day-hd"><div class="day-lbl" data-he="שישי, 12 יוני" data-en="Fri, Jun 12">שישי, 12 יוני</div><div class="day-line"></div></div>
-      <div class="mgrid">
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> B</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇨🇦 <span data-he="קנדה" data-en="Canada">קנדה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇧🇦 <span data-he="בוסניה" data-en="Bosnia">בוסניה</span></span></div></div>
-        <div class="mc past"><div class="strip warn"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> D</span><div class="mc-rt"><div class="score">4 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇺🇸 <span data-he="ארה&quot;ב" data-en="USA">ארה"ב</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇵🇾 <span data-he="פרגוואי" data-en="Paraguay">פרגוואי</span></span></div><div class="mc-venue"><span class="mc-note" data-he="בלוגון ×2" data-en="Balogun ×2">בלוגון ×2</span></div></div>
-      </div>
-      <div class="day-hd"><div class="day-lbl" data-he="שבת, 13 יוני" data-en="Sat, Jun 13">שבת, 13 יוני</div><div class="day-line"></div></div>
-      <div class="mgrid">
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> B</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇨🇭 <span data-he="שוויץ" data-en="Switzerland">שוויץ</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇶🇦 <span data-he="קטאר" data-en="Qatar">קטאר</span></span></div></div>
-        <div class="mc past"><div class="strip warn"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> C</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇧🇷 <span data-he="ברזיל" data-en="Brazil">ברזיל</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇲🇦 <span data-he="מרוקו" data-en="Morocco">מרוקו</span></span></div></div>
-        <div class="mc past"><div class="strip danger"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> C</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🏴󠁧󠁢󠁳󠁣󠁴󠁿 <span data-he="סקוטלנד" data-en="Scotland">סקוטלנד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇭🇹 <span data-he="האיטי" data-en="Haiti">האיטי</span></span></div></div>
-      </div>
-      <div class="day-hd"><div class="day-lbl" data-he="ראשון, 14 יוני" data-en="Sun, Jun 14">ראשון, 14 יוני</div><div class="day-line"></div></div>
-      <div class="mgrid">
-        <div class="mc past"><div class="strip danger"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> D</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇦🇺 <span data-he="אוסטרליה" data-en="Australia">אוסטרליה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇹🇷 <span data-he="טורקיה" data-en="Türkiye">טורקיה</span></span></div></div>
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">7 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇩🇪 <span data-he="גרמניה" data-en="Germany">גרמניה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇼 <span data-he="קוראסאו" data-en="Curaçao">קוראסאו</span></span></div></div>
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> F</span><div class="mc-rt"><div class="score">2 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇳🇱 <span data-he="הולנד" data-en="Netherlands">הולנד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇯🇵 <span data-he="יפן" data-en="Japan">יפן</span></span></div></div>
-        <div class="mc past"><div class="strip warn"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> E</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇨🇮 <span data-he="חוף השנהב" data-en="Ivory Coast">חוף השנהב</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇪🇨 <span data-he="אקוודור" data-en="Ecuador">אקוודור</span></span></div></div>
-        <div class="mc past"><div class="strip danger"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> F</span><div class="mc-rt"><div class="score">5 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇸🇪 <span data-he="שוודיה" data-en="Sweden">שוודיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇹🇳 <span data-he="תוניסיה" data-en="Tunisia">תוניסיה</span></span></div></div>
-      </div>
-      <div class="day-hd"><div class="day-lbl" data-he="שני, 15 יוני" data-en="Mon, Jun 15">שני, 15 יוני</div><div class="day-line"></div></div>
-      <div class="mgrid">
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> H</span><div class="mc-rt"><div class="score">0 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇪🇸 <span data-he="ספרד" data-en="Spain">ספרד</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇻 <span data-he="קייפ ורד" data-en="Cape Verde">קייפ ורד</span></span></div></div>
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> G</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇧🇪 <span data-he="בלגיה" data-en="Belgium">בלגיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇪🇬 <span data-he="מצרים" data-en="Egypt">מצרים</span></span></div></div>
-        <div class="mc past"><div class="strip warn"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> H</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇸🇦 <span data-he="סעודיה" data-en="Saudi Arabia">סעודיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇺🇾 <span data-he="אורוגוואי" data-en="Uruguay">אורוגוואי</span></span></div></div>
-        <div class="mc past"><div class="strip danger"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> G</span><div class="mc-rt"><div class="score">2 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇮🇷 <span data-he="איראן" data-en="Iran">איראן</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇳🇿 <span data-he="ניו זילנד" data-en="New Zealand">ניו זילנד</span></span></div></div>
-      </div>
-      <div class="day-hd"><div class="day-lbl" data-he="שלישי, 16 יוני" data-en="Tue, Jun 16">שלישי, 16 יוני</div><div class="day-line"></div></div>
-      <div class="mgrid">
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇫🇷 <span data-he="צרפת" data-en="France">צרפת</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇸🇳 <span data-he="סנגל" data-en="Senegal">סנגל</span></span></div><div class="mc-venue"><span class="mc-note" data-he="מבפה שיא!" data-en="Mbappé record!">מבפה שיא!</span></div></div>
-        <div class="mc past"><div class="strip warn"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> I</span><div class="mc-rt"><div class="score">4 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇳🇴 <span data-he="נורווגיה" data-en="Norway">נורווגיה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇮🇶 <span data-he="עיראק" data-en="Iraq">עיראק</span></span></div><div class="mc-venue"><span class="mc-note" data-he="הולנד ×2" data-en="Haaland ×2">הולנד ×2</span></div></div>
-        <div class="mc past"><div class="strip danger"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> J</span><div class="mc-rt"><div class="score">3 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇦🇷 <span data-he="ארגנטינה" data-en="Argentina">ארגנטינה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇩🇿 <span data-he="אלג'יריה" data-en="Algeria">אלג'יריה</span></span></div><div class="mc-venue"><span class="mc-note" data-he="מסי האטריק! 🐐" data-en="Messi hat-trick! 🐐">מסי האטריק! 🐐</span></div></div>
-      </div>
-      <div class="day-hd"><div class="day-lbl" data-he="רביעי, 17 יוני" data-en="Wed, Jun 17">רביעי, 17 יוני</div><div class="day-line"></div></div>
-      <div class="mgrid">
-        <div class="mc past"><div class="strip danger"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> J</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇦🇹 <span data-he="אוסטריה" data-en="Austria">אוסטריה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇯🇴 <span data-he="ירדן" data-en="Jordan">ירדן</span></span></div></div>
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> K</span><div class="mc-rt"><div class="score">1 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇵🇹 <span data-he="פורטוגל" data-en="Portugal">פורטוגל</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇨🇩 <span data-he="קונגו DR" data-en="DR Congo">קונגו DR</span></span></div></div>
-        <div class="mc past"><div class="strip safe"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> L</span><div class="mc-rt"><div class="score">4 – 2</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🏴󠁧󠁢󠁥󠁮󠁧󠁿 <span data-he="אנגליה" data-en="England">אנגליה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇭🇷 <span data-he="קרואטיה" data-en="Croatia">קרואטיה</span></span></div></div>
-        <div class="mc past"><div class="strip warn"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> L</span><div class="mc-rt"><div class="score">1 – 0</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇬🇭 <span data-he="גאנה" data-en="Ghana">גאנה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇵🇦 <span data-he="פנמה" data-en="Panama">פנמה</span></span></div></div>
-        <div class="mc past"><div class="strip danger"></div><div class="mc-top"><span class="mc-grp"><span data-he="בית" data-en="Group">בית</span> K</span><div class="mc-rt"><div class="score">3 – 1</div><div class="mc-fin" data-he="סיום" data-en="FT">סיום</div></div></div><div class="mc-teams"><span class="mc-team">🇨🇴 <span data-he="קולומביה" data-en="Colombia">קולומביה</span></span><span class="mc-vs" data-he="נגד" data-en="vs">נגד</span><span class="mc-team b">🇺🇿 <span data-he="אוזבקיסטן" data-en="Uzbekistan">אוזבקיסטן</span></span></div></div>
-      </div>
-      <!-- שבוע 2+ — כל המשחקים הנשארים בשלב הבתים — מ-18 יוני ועד 27 יוני -->
-      <!-- הושמטו לקיצור — ESPN API ימלא תוצאות אוטומטית -->
-    </div>
+      <div class="day-block" id="group-days"></div>
   </div>
 
-  <!-- ── STAGE: STANDINGS ── -->
-  <div id="stage-standings" class="stage">
-    <div class="sec-head"><div class="sec-label">📊 <span data-he="טבלאות" data-en="Standings">טבלאות</span></div><div class="sec-sub"><span data-he="✅ מתקדמים אוטומטית" data-en="✅ = qualifying spots">✅ מתקדמים אוטומטית</span></div></div>
-    <div class="stand-wrap"><p style="color:var(--t3);padding:20px;font-size:13px;" data-he="הטבלאות מתעדכנות דרך ESPN API" data-en="Standings update via ESPN API">הטבלאות מתעדכנות דרך ESPN API</p></div>
-  </div>
 
   <!-- ── STAGE: R32 ── -->
   <div id="stage-r32" class="stage">
     <div class="sec-head"><div class="sec-label"><span data-he="סיבוב 32" data-en="Round of 32">סיבוב 32</span></div><div class="sec-sub"><span data-he="✅ הסתיים · 28 יוני – 3 יולי" data-en="✅ Completed · Jun 28 – Jul 3">✅ הסתיים · 28 יוני – 3 יולי</span></div></div>
-    <div class="day-block"><div class="mgrid" id="r32-grid">
-      <!-- מתמלא על ידי main.js אם יש data, אחרת placeholder -->
-      <p style="color:var(--t3);padding:20px;font-size:13px;grid-column:1/-1" data-he="שלב זה הסתיים · ראה שמינית גמר לתוצאות" data-en="This round is complete · See Round of 16 for results">שלב זה הסתיים · ראה שמינית גמר לתוצאות</p>
-    </div></div>
+    <div class="day-block"></div>
   </div>
 
   <!-- ── STAGE: R16 ── -->
@@ -468,13 +516,17 @@ main { position:relative; z-index:1; margin-right:64px; }
   </div>
   <div id="chatMessages"></div>
   <div id="chatInputRow">
-    <input type="text" id="chatInputField" placeholder="שאל שאלה...">
+    <input type="text" id="chatInputField" data-ph-he="שאל שאלה..." data-ph-en="Ask a question..." placeholder="שאל שאלה...">
     <button id="chatSendBtn" onclick="sendChat()" data-he="שלח" data-en="Send">שלח</button>
   </div>
 </div>
 
-<!-- ✅ רק שני script tags — ללא JS כפול -->
+<!-- data.js must load before anything that reads window.WC -->
+<script src="data.js"></script>
+<script src="bracket.js"></script>
 <script src="main.js"></script>
 <script src="visual_upgrade.js"></script>
+<!-- WebGL intro; falls back to a flat splash where WebGL/motion is unavailable -->
+<script type="module" src="splash3d.js"></script>
 </body>
 </html>

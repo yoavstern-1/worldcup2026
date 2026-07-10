@@ -1,0 +1,5 @@
+# Cloudflare Worker config for the chat proxy (worker.js).
+# Secrets are NOT stored here — set them with `wrangler secret put ...`.
+name = "worldcup-ai"
+main = "worker.js"
+compatibility_date = "2026-01-01"

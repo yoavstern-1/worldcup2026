@@ -1,369 +1,124 @@
 (function() {
 
-// 1. Load Exo 2 font
-var link = document.createElement('link');
-link.rel = 'stylesheet';
-link.href = 'https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,600;0,700;0,800;0,900;1,900&display=swap';
-document.head.appendChild(link);
+// 1. Fonts (Sora + Assistant) are loaded in index.html <head>.
 
 // 2. Inject CSS
 var style = document.createElement('style');
 style.textContent = `
-body,button,input,select,.panel-opt,.drawer-item,.set-opt,.mc-team,.mc-venue,.mc-et,.leg-item,.sync-bar,.hero-sub,.hero-badge,.side-label,.set-label,.day-lbl,.mc-grp,.mc-fin,.mc-note,.mc-vs,.search-vs,.sr-teams,.sr-score,.sr-meta,.panel-title,.search-title,.info-box,.gs-tbl{font-family:'Exo 2','Inter',sans-serif !important;}
-#chatFloatBtn{background:transparent !important;border:none !important;box-shadow:none !important;width:68px !important;height:90px !important;padding:0 !important;font-size:0 !important;animation:chatFloat 3s ease-in-out infinite;bottom:16px !important;left:16px !important;display:flex !important;flex-direction:column !important;align-items:center !important;gap:2px !important;}
-#chat-ask-label{font-family:'Exo 2',sans-serif;font-size:10px;font-weight:900;letter-spacing:1.5px;color:#ffd700;text-shadow:0 1px 8px rgba(0,0,0,.8);pointer-events:none;line-height:1;margin-bottom:2px;}
-#chatFloatBtn svg{width:68px;height:68px;filter:drop-shadow(0 4px 16px rgba(0,0,0,.5));transition:transform .22s cubic-bezier(.34,1.56,.64,1);}
+body,button,input,select,.panel-opt,.drawer-item,.set-opt,.mc-team,.mc-venue,.mc-et,.leg-item,.sync-bar,.hero-sub,.hero-badge,.side-label,.set-label,.day-lbl,.mc-grp,.mc-fin,.mc-note,.mc-vs,.search-vs,.sr-teams,.sr-score,.sr-meta,.panel-title,.search-title,.info-box,.gs-tbl{font-family:'Sora','Assistant',sans-serif !important;}
+#chatFloatBtn{background:transparent !important;border:none !important;box-shadow:none !important;width:56px !important;height:74px !important;padding:0 !important;font-size:0 !important;animation:chatFloat 3s ease-in-out infinite;bottom:calc(14px + env(safe-area-inset-bottom)) !important;left:calc(14px + env(safe-area-inset-left)) !important;display:flex !important;flex-direction:column !important;align-items:center !important;gap:2px !important;transition:opacity .25s ease,transform .25s ease;}
+/* A fixed button always sits on top of content. Fade it out while the user is
+   scrolling so it never blocks the card they are reading; bring it back at rest. */
+#chatFloatBtn.scrolling{opacity:.18 !important;transform:translateY(6px) scale(.9) !important;pointer-events:none;}
+#chat-ask-label{font-family:'Sora','Assistant',sans-serif;font-size:9px;font-weight:900;letter-spacing:1.2px;color:#d9b866;text-shadow:0 1px 8px rgba(0,0,0,.8);pointer-events:none;line-height:1;margin-bottom:2px;}
+#chatFloatBtn svg{width:56px;height:56px;filter:drop-shadow(0 4px 16px rgba(0,0,0,.5));transition:transform .22s cubic-bezier(.34,1.56,.64,1);}
 #chatFloatBtn:hover{transform:scale(1) !important;}
 #chatFloatBtn:hover svg{transform:scale(1.1) rotate(-4deg);}
-#chatPanel{bottom:116px !important;}
+#chatPanel{bottom:calc(100px + env(safe-area-inset-bottom)) !important;}
 @keyframes chatFloat{0%,100%{transform:translateY(0px);}50%{transform:translateY(-8px);}}
-[data-theme="dark"] #chatPanel{background:#f0f4f1 !important;border-color:rgba(0,0,0,.15) !important;}
-[data-theme="dark"] #chatHeader{background:#1b5e20 !important;color:#fff !important;}
-[data-theme="dark"] #chatMessages{background:#f0f4f1 !important;}
-[data-theme="dark"] .chat-assistant{background:#dceee0 !important;color:#0f2417 !important;}
-[data-theme="dark"] .chat-user{background:#1b5e20 !important;color:#fff !important;}
-[data-theme="dark"] #chatInputField{background:#fff !important;border-color:#bbb !important;color:#0f2417 !important;}
-[data-theme="dark"] #chatInputRow{background:#e4ede6 !important;border-top-color:rgba(0,0,0,.12) !important;}
-[data-theme="dark"] #chatSendBtn{background:#1b5e20 !important;color:#fff !important;}
-[data-theme="dark"] #chatTitle{color:#fff !important;}
-[data-theme="dark"] #chatClose{color:#fff !important;}
-[data-theme="light"] #chatPanel{background:#15401d !important;border-color:rgba(255,255,255,.18) !important;}
-[data-theme="light"] #chatHeader{background:#0a2410 !important;color:#ffd700 !important;}
-[data-theme="light"] #chatMessages{background:#15401d !important;}
-[data-theme="light"] .chat-assistant{background:#1d5429 !important;color:#d8efdc !important;}
-[data-theme="light"] .chat-user{background:#4ade80 !important;color:#0a1a0e !important;}
-[data-theme="light"] #chatInputField{background:#1d5429 !important;border-color:rgba(255,255,255,.25) !important;color:#e8f3ea !important;}
-[data-theme="light"] #chatInputRow{background:#0a2410 !important;border-top-color:rgba(255,255,255,.1) !important;}
-[data-theme="light"] #chatSendBtn{background:#ffd700 !important;color:#0a1a0e !important;}
-[data-theme="light"] #chatTitle{color:#ffd700 !important;}
-[data-theme="light"] #chatClose{color:#aaa !important;}
-.mascot-roo,.mascot-striker{position:fixed;bottom:86px;width:56px;height:76px;pointer-events:none;opacity:0;transition:opacity .4s ease,transform .4s cubic-bezier(.34,1.56,.64,1);transform:translateY(24px);z-index:198;}
-.mascot-roo{left:16px;}.mascot-striker{left:88px;}
-.mascot-roo.visible,.mascot-striker.visible{opacity:1;transform:translateY(0);}
-#splashScreen{position:fixed;inset:0;z-index:9999;background:#06120a;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
-#splashScreen.done{animation:splashOut .65s cubic-bezier(.4,0,.2,1) forwards;pointer-events:none;}
+/* Chat colours now come from index.html theme vars — no overrides needed. */
+
+#splashScreen{position:fixed;inset:0;z-index:9999;background:radial-gradient(120% 90% at 50% 38%, #0a1830 0%, #060a14 55%, #03060c 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+#splashScreen.done{animation:splashOut .6s cubic-bezier(.4,0,.2,1) forwards;pointer-events:none;}
 @keyframes splashOut{to{opacity:0;visibility:hidden;}}
-#splashBalls{position:absolute;inset:0;pointer-events:none;}
-.sball{position:absolute;border-radius:50%;background:radial-gradient(circle at 32% 32%, #fff 6%, #ddd 28%, #999 58%, #444 100%);box-shadow:inset -2px -2px 5px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.6);}
-#splashTitle{position:relative;z-index:2;text-align:center;opacity:0;display:flex;flex-direction:column;align-items:center;user-select:none;}
-#splashLine1{font-family:'Exo 2',sans-serif;font-size:clamp(44px,12vw,110px);font-weight:900;font-style:italic;color:#fff;letter-spacing:6px;text-transform:uppercase;line-height:1;}
-#splashLine2{font-family:'Exo 2',sans-serif;font-size:clamp(52px,15vw,140px);font-weight:900;color:#ffd700;letter-spacing:10px;line-height:1;display:block;margin-top:4px;transform-origin:center center;}
+#splashStage{position:relative;width:min(92vw,460px);aspect-ratio:1;display:flex;align-items:center;justify-content:center;}
+#splashCanvas{position:absolute;inset:0;width:100%;height:100%;transition:opacity .4s ease;}
+
+/* Sits below the goal so it never overlaps the ball in the net. */
+#splashTitle{position:absolute;left:0;right:0;bottom:9%;z-index:3;text-align:center;display:flex;flex-direction:column;align-items:center;user-select:none;opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .6s cubic-bezier(.2,.8,.2,1);}
+#splashTitle.in{opacity:1;transform:translateY(0);}
+#splashLine1{font-family:'Sora','Assistant',sans-serif;font-size:clamp(26px,7.2vw,52px);font-weight:800;color:#fff;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;line-height:1;}
+#splashRule{display:block;width:0;height:1px;background:linear-gradient(90deg,transparent,#d9b866,transparent);margin:14px 0 12px;transition:width .7s cubic-bezier(.2,.8,.2,1) .15s;}
+#splashTitle.in #splashRule{width:min(64vw,320px);}
+#splashLine2{font-family:'Sora','Assistant',sans-serif;font-size:clamp(30px,8.6vw,64px);font-weight:300;color:#d9b866;letter-spacing:.42em;text-indent:.42em;line-height:1;}
+@media(max-width:520px){#splashRule{margin:10px 0 8px;}}
 `;
 document.head.appendChild(style);
 
-// 3. Pique SVG — jaguar mascot
-var piqueSVG = '<svg viewBox="0 0 68 68" xmlns="http://www.w3.org/2000/svg"><ellipse cx="34" cy="48" rx="14" ry="16" fill="#1b7e3c"/><text x="34" y="52" text-anchor="middle" font-size="8" font-weight="bold" fill="#ffd700">11</text><rect x="25" y="60" width="7" height="8" rx="3" fill="#e67e22"/><rect x="36" y="60" width="7" height="8" rx="3" fill="#e67e22"/><ellipse cx="28.5" cy="68" rx="5" ry="2.5" fill="#222"/><ellipse cx="39.5" cy="68" rx="5" ry="2.5" fill="#222"/><ellipse cx="18" cy="46" rx="5" ry="7" fill="#e67e22" transform="rotate(-20 18 46)"/><ellipse cx="50" cy="46" rx="5" ry="7" fill="#e67e22" transform="rotate(20 50 46)"/><rect x="30" y="30" width="8" height="7" rx="3" fill="#d4894a"/><ellipse cx="34" cy="24" rx="15" ry="14" fill="#d4894a"/><ellipse cx="26" cy="22" rx="3" ry="2" fill="#8B4513" opacity=".7"/><ellipse cx="42" cy="22" rx="3" ry="2" fill="#8B4513" opacity=".7"/><ellipse cx="34" cy="18" rx="2.5" ry="2" fill="#8B4513" opacity=".7"/><ellipse cx="22" cy="13" rx="5" ry="6" fill="#d4894a"/><ellipse cx="22" cy="13" rx="3" ry="4" fill="#e8a060"/><ellipse cx="46" cy="13" rx="5" ry="6" fill="#d4894a"/><ellipse cx="46" cy="13" rx="3" ry="4" fill="#e8a060"/><ellipse cx="34" cy="27" rx="8" ry="6" fill="#f5deb3"/><ellipse cx="34" cy="24" rx="3" ry="2" fill="#c0392b"/><ellipse cx="28" cy="20" rx="3" ry="3.5" fill="#fff"/><ellipse cx="40" cy="20" rx="3" ry="3.5" fill="#fff"/><circle cx="28.8" cy="20.5" r="2" fill="#1a6b2a"/><circle cx="40.8" cy="20.5" r="2" fill="#1a6b2a"/><circle cx="29.3" cy="19.8" r=".8" fill="#111"/><circle cx="41.3" cy="19.8" r=".8" fill="#111"/><path d="M29 29 Q34 33 39 29" stroke="#a0522d" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M20 17 Q34 10 48 17" stroke="#ffd700" stroke-width="3" fill="none" stroke-linecap="round"/></svg>';
+// 3. Match-ball icon — an original drawing, not a traced product photo.
+// Four-panel construction, three "la ola" wave panels in the host nations'
+// colours, debossed line motifs inside each wave, white seams between.
+// ids are prefixed so the icon and the splash can both live in one document.
+function ballMarkup(p) {
+  return [
+    '<defs>',
+      '<radialGradient id="' + p + '-surf" cx="36%" cy="28%" r="80%">',
+        '<stop offset="0%" stop-color="#ffffff"/>',
+        '<stop offset="62%" stop-color="#f6f8f9"/>',
+        '<stop offset="90%" stop-color="#d2d8dc"/>',
+        '<stop offset="100%" stop-color="#a7aeb3"/>',
+      '</radialGradient>',
+      '<radialGradient id="' + p + '-gloss" cx="32%" cy="24%" r="34%">',
+        '<stop offset="0%" stop-color="#fff" stop-opacity=".9"/>',
+        '<stop offset="100%" stop-color="#fff" stop-opacity="0"/>',
+      '</radialGradient>',
+      '<clipPath id="' + p + '-clip"><circle cx="32" cy="32" r="29"/></clipPath>',
+    '</defs>',
 
-// 4. Replace chat button with Pique
+    '<circle cx="32" cy="32" r="29" fill="url(#' + p + '-surf)"/>',
+
+    '<g clip-path="url(#' + p + '-clip)">',
+      // ── RED wave, upper left
+      '<path d="M4 6 C16 10 24 18 27 28 C22 33 14 34 3 31 C1 22 1 13 4 6 Z" fill="#d81e34"/>',
+      '<path d="M7 12 C15 16 21 22 24 28" stroke="#8f1524" stroke-width="1" fill="none" opacity=".55"/>',
+      '<path d="M5 19 C12 21 18 25 21 30" stroke="#8f1524" stroke-width="1" fill="none" opacity=".45"/>',
+      '<path d="M10 8 C17 12 22 17 25 23" stroke="#f2647a" stroke-width=".7" fill="none" opacity=".5"/>',
+
+      // ── BLUE wave, right
+      '<path d="M36 27 C44 18 52 12 62 9 C66 18 66 30 62 40 C52 36 42 32 36 30 Z" fill="#1c86d6"/>',
+      '<path d="M42 27 C49 21 55 17 61 15" stroke="#0d4f85" stroke-width="1" fill="none" opacity=".55"/>',
+      '<path d="M44 31 C51 28 57 27 63 27" stroke="#0d4f85" stroke-width="1" fill="none" opacity=".45"/>',
+      '<path d="M46 23 C52 19 57 16 62 14" stroke="#7cc6f2" stroke-width=".7" fill="none" opacity=".5"/>',
+
+      // ── GREEN wave, bottom
+      '<path d="M28 36 C30 46 30 55 26 64 L54 64 C58 54 56 44 50 38 C42 40 34 39 28 36 Z" fill="#1f9d4d"/>',
+      '<path d="M32 41 C35 49 35 56 33 62" stroke="#0e5d2c" stroke-width="1" fill="none" opacity=".55"/>',
+      '<path d="M40 41 C45 46 48 53 48 60" stroke="#0e5d2c" stroke-width="1" fill="none" opacity=".45"/>',
+      '<path d="M36 43 C40 49 42 55 42 61" stroke="#74d69a" stroke-width=".7" fill="none" opacity=".5"/>',
+
+      // ── white seams separating the panels, meeting at the centre
+      '<path d="M32 32 C31 22 26 12 18 2"  stroke="#fff" stroke-width="4.6" fill="none" stroke-linecap="round"/>',
+      '<path d="M32 32 C42 33 52 30 64 22" stroke="#fff" stroke-width="4.6" fill="none" stroke-linecap="round"/>',
+      '<path d="M32 32 C28 40 27 52 30 64" stroke="#fff" stroke-width="4.6" fill="none" stroke-linecap="round"/>',
+
+      // gold trophy accent where the three panels converge
+      '<circle cx="32" cy="32" r="2.6" fill="none" stroke="#d9b23f" stroke-width="1.1"/>',
+    '</g>',
+
+    '<circle cx="32" cy="32" r="29" fill="url(#' + p + '-gloss)"/>',
+    '<circle cx="32" cy="32" r="28.4" fill="none" stroke="rgba(0,0,0,.2)" stroke-width="1.1"/>'
+  ].join('');
+}
+
+var ballSVG = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' + ballMarkup('tb') + '</svg>';
+
+// 4. Chat button becomes the ball, with ASK above it
 var btn = document.getElementById('chatFloatBtn');
 if (btn) {
   var label = document.createElement('span');
   label.id = 'chat-ask-label';
-  label.textContent = 'ASK ME';
-  btn.innerHTML = piqueSVG;
+  label.textContent = 'ASK';
+  btn.innerHTML = ballSVG;
   btn.insertBefore(label, btn.firstChild);
 }
 
-// 5. Roo mascot (left)
-var rooSVG = '<svg viewBox="0 0 52 72" xmlns="http://www.w3.org/2000/svg"><ellipse cx="26" cy="50" rx="12" ry="14" fill="#c0392b"/><rect x="18" y="60" width="6" height="10" rx="3" fill="#8B4513"/><rect x="28" y="60" width="6" height="10" rx="3" fill="#8B4513"/><ellipse cx="21" cy="70" rx="4" ry="2.5" fill="#333"/><ellipse cx="31" cy="70" rx="4" ry="2.5" fill="#333"/><ellipse cx="12" cy="48" rx="4" ry="7" fill="#8B4513" transform="rotate(-15 12 48)"/><circle cx="10" cy="56" r="7" fill="#f5f5f5" stroke="#222" stroke-width="1"/><polygon points="10,50 12,54 8,54" fill="#222" opacity=".7"/><ellipse cx="40" cy="48" rx="4" ry="7" fill="#8B4513" transform="rotate(15 40 48)"/><rect x="22" y="33" width="8" height="7" rx="3" fill="#8B4513"/><ellipse cx="26" cy="26" rx="13" ry="13" fill="#8B4513"/><ellipse cx="26" cy="31" rx="8" ry="6" fill="#a0652a"/><ellipse cx="26" cy="28" rx="4" ry="3" fill="#5a2d0c"/><ellipse cx="20" cy="22" rx="3" ry="3.5" fill="#fff"/><ellipse cx="32" cy="22" rx="3" ry="3.5" fill="#fff"/><circle cx="20.8" cy="22.5" r="2" fill="#3d2b1f"/><circle cx="32.8" cy="22.5" r="2" fill="#3d2b1f"/><path d="M14 14 L8 4 M8 4 L4 2 M8 4 L10 1" stroke="#6b3a1f" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M38 14 L44 4 M44 4 L48 2 M44 4 L42 1" stroke="#6b3a1f" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M14 19 Q26 13 38 19" stroke="#4ade80" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>';
+// Mascots removed — the ball is the only character now.
 
-// 6. Striker mascot (right)
-var strikerSVG = '<svg viewBox="0 0 52 72" xmlns="http://www.w3.org/2000/svg"><ellipse cx="26" cy="50" rx="12" ry="14" fill="#1a56db"/><ellipse cx="11" cy="47" rx="8" ry="5" fill="#8B7355" transform="rotate(-20 11 47)"/><ellipse cx="41" cy="47" rx="8" ry="5" fill="#8B7355" transform="rotate(20 41 47)"/><rect x="18" y="60" width="6" height="10" rx="2" fill="#e8a020"/><rect x="28" y="60" width="6" height="10" rx="2" fill="#e8a020"/><rect x="22" y="33" width="8" height="7" rx="3" fill="#fff"/><ellipse cx="26" cy="36" rx="8" ry="4" fill="#fff"/><ellipse cx="26" cy="24" rx="13" ry="13" fill="#8B7355"/><ellipse cx="26" cy="20" rx="11" ry="9" fill="#fff"/><path d="M26 28 L32 30 L26 32 Z" fill="#e8a020"/><ellipse cx="19" cy="22" rx="4" ry="4" fill="#fff"/><ellipse cx="33" cy="22" rx="4" ry="4" fill="#fff"/><circle cx="19.5" cy="22.5" r="2.5" fill="#3a2800"/><circle cx="33.5" cy="22.5" r="2.5" fill="#3a2800"/><circle cx="20.2" cy="21.5" r=".9" fill="#fff"/><circle cx="34.2" cy="21.5" r=".9" fill="#fff"/><text x="26" y="53" text-anchor="middle" font-size="7" font-weight="bold" fill="#fff">1</text></svg>';
+// 7b. Fade the chat button while scrolling — it is fixed, so it would otherwise
+// sit on top of whatever card is under it.
+var scrollIdle = null;
+window.addEventListener('scroll', function() {
+  var b = document.getElementById('chatFloatBtn');
+  if (!b || document.getElementById('chatPanel').classList.contains('open')) return;
+  b.classList.add('scrolling');
+  clearTimeout(scrollIdle);
+  scrollIdle = setTimeout(function() { b.classList.remove('scrolling'); }, 400);
+}, { passive: true });
 
-var rooEl = document.createElement('div');
-rooEl.className = 'mascot-roo';
-rooEl.innerHTML = rooSVG;
-document.body.appendChild(rooEl);
-
-var strikerEl = document.createElement('div');
-strikerEl.className = 'mascot-striker';
-strikerEl.innerHTML = strikerSVG;
-document.body.appendChild(strikerEl);
-
-// 7. Toggle mascots with chat
-var origToggle = window.toggleChat;
-window.toggleChat = function() {
-  if (origToggle) origToggle.apply(this, arguments);
-  setTimeout(function() {
-    var panel = document.getElementById('chatPanel');
-    var isOpen = panel && panel.classList.contains('open');
-    rooEl.classList.toggle('visible', isOpen);
-    strikerEl.classList.toggle('visible', isOpen);
-  }, 50);
-};
-var origClose = window.closeChat;
-window.closeChat = function() {
-  if (origClose) origClose.apply(this, arguments);
-  rooEl.classList.remove('visible');
-  strikerEl.classList.remove('visible');
-};
-
-// 8. Splash screen
-var splash = document.createElement('div');
-splash.id = 'splashScreen';
-splash.innerHTML = '<div id="splashBalls"></div><div id="splashTitle"><span id="splashLine1">WORLD CUP</span><span id="splashLine2">2026</span></div>';
-document.body.insertBefore(splash, document.body.firstChild);
-
-var ballsEl = document.getElementById('splashBalls');
-var titleEl = document.getElementById('splashTitle');
-
-for (var i = 0; i < 100; i++) {
-  (function() {
-    var ball = document.createElement('div');
-    ball.className = 'sball';
-    var sz = (8 + Math.random() * 16) + 'px';
-    ball.style.width = sz; ball.style.height = sz;
-    ball.style.left = (44 + Math.random() * 12) + '%';
-    ball.style.top  = (44 + Math.random() * 12) + '%';
-    ball.style.opacity = '0';
-    var tx = (Math.random() * 96) + '%';
-    var ty = (Math.random() * 96) + '%';
-    var delay = Math.random() * 500;
-    var dur   = 350 + Math.random() * 500;
-    ballsEl.appendChild(ball);
-    setTimeout(function() {
-      ball.style.transition = 'left '+dur+'ms cubic-bezier(.2,1.6,.4,1),top '+dur+'ms cubic-bezier(.2,1.6,.4,1),opacity 200ms';
-      ball.style.opacity = '1';
-      ball.style.left = tx; ball.style.top = ty;
-      setTimeout(function() {
-        ball.style.transition += ',opacity 300ms';
-        ball.style.opacity = '0';
-      }, delay + dur + 100 + Math.random() * 200);
-    }, delay);
-  })();
-}
-
-setTimeout(function() {
-  titleEl.style.transition = 'opacity 400ms ease';
-  titleEl.style.opacity = '1';
-  var line2 = document.getElementById('splashLine2');
-  if (line2) {
-    line2.style.transition = 'none';
-    line2.style.transform = 'scale(3) rotate(-180deg)';
-    line2.style.opacity = '0';
-    setTimeout(function() {
-      line2.style.transition = 'transform 900ms cubic-bezier(.2,1.4,.4,1),opacity 600ms ease';
-      line2.style.opacity = '1';
-      line2.style.transform = 'scale(1) rotate(0deg)';
-    }, 50);
-  }
-}, 400);
-
-setTimeout(function() {
-  splash.classList.add('done');
-  setTimeout(function() { splash.style.display = 'none'; }, 700);
-}, 2200);
+// Splash is now WebGL — see splash3d.js (module). The 3D intro replaced the
+// inline SVG version here.
 
 })();
 
-// ── BRACKET — injected into #recCards, runs AFTER main.js (updateKnockoutStages already ran)
-function buildBracket() {
-  var recCards = document.getElementById('recCards');
-  if (!recCards) return;
-
-  // KO_DATA is defined in main.js — use it directly
-  var R16 = (typeof KO_DATA !== 'undefined') ? KO_DATA.r16 : [];
-  var QF  = (typeof KO_DATA !== 'undefined') ? KO_DATA.qf  : [];
-
-  // Split R16 into left/right halves
-  var R16L = R16.slice(0, 4);
-  var R16R = R16.slice(4, 8);
-
-  var bracketCSS = `<style>
-.bk-wrap{width:100%;overflow-x:auto;padding:.5rem 0;direction:rtl;background:rgba(0,0,0,.35);border-radius:12px;margin-bottom:12px}
-.bk{display:flex;align-items:stretch;min-width:680px;gap:0;padding:12px 8px}
-.bk-round{display:flex;flex-direction:column;justify-content:space-around;flex:1;min-width:0}
-.bk-title{font-size:13px;font-weight:800;color:rgba(255,255,255,.9);text-align:center;padding:2px 0 8px;letter-spacing:.5px;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.5)}
-.bk-matches{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:3px;padding:0 3px}
-.bk-match{background:rgba(255,255,255,.07);border:.5px solid rgba(255,255,255,.12);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)}
-.bk-match.done{background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.08)}
-.bk-match.up{border-color:rgba(99,200,255,.5);background:rgba(99,200,255,.06)}
-.bk-team{display:flex;align-items:center;gap:4px;padding:4px 7px;font-size:11px;font-weight:600;color:rgba(255,255,255,.8);min-height:22px}
-.bk-team.w{background:rgba(72,199,116,.18);color:#6ee7a0}
-.bk-team .bf{font-size:13px;flex-shrink:0}
-.bk-team .bn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bk-team .bs{font-size:12px;font-weight:800;margin-left:auto;padding-left:4px;color:#fff}
-.bk-div{height:.5px;background:rgba(255,255,255,.08)}
-.bk-ph .bk-team{opacity:.3}
-.bk-conn{display:flex;flex-direction:column;justify-content:space-around;width:10px;flex-shrink:0}
-.bk-cx{position:relative;flex:1}
-.bk-cx.top{border-right:.5px solid rgba(255,255,255,.18)}
-.bk-cx.top::after{content:'';position:absolute;right:0;bottom:0;width:10px;height:.5px;background:rgba(255,255,255,.18)}
-.bk-cx.bot{border-right:.5px solid rgba(255,255,255,.18)}
-.bk-cx.bot::before{content:'';position:absolute;right:0;top:0;width:10px;height:.5px;background:rgba(255,255,255,.18)}
-.bk-trophy-col{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;width:80px;padding:0 4px}
-.bk-trophy-lbl{font-size:11px;font-weight:700;color:rgba(255,215,0,.8);text-align:center;margin-top:6px;line-height:1.4;text-shadow:0 0 8px rgba(255,215,0,.4)}
-.bk-ct{display:flex;flex-direction:column;justify-content:center;width:10px;flex-shrink:0;align-self:stretch}
-.bk-ct-line{position:relative;flex:1;border-right:.5px solid rgba(255,255,255,.18)}
-.bk-ct-line::after{content:'';position:absolute;right:0;top:50%;width:10px;height:.5px;background:rgba(255,255,255,.18)}
-.bk-sched{margin-top:.75rem;border-top:.5px solid rgba(255,255,255,.1);padding-top:.75rem}
-.bk-sched-h{font-size:12px;font-weight:800;color:rgba(255,255,255,.7);margin-bottom:8px;letter-spacing:.3px}
-.bk-sched-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:5px}
-.bk-si{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,.05);border-radius:6px;font-size:11px;border:.5px solid rgba(255,255,255,.08)}
-.bk-si-date{color:rgba(255,255,255,.4);min-width:34px;font-weight:600}
-.bk-si-time{font-weight:700;color:#fff;min-width:42px}
-.bk-si-match{flex:1;color:rgba(255,255,255,.85)}
-.bk-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap}
-.bk-badge.good{background:rgba(72,199,116,.2);color:#48c774}
-.bk-badge.ok{background:rgba(255,189,0,.2);color:#ffbd00}
-.bk-badge.bad{background:rgba(255,86,86,.2);color:#ff5656}
-@media(max-width:600px){.bk{min-width:520px}.bk-trophy-col{width:60px}.bk-title{font-size:11px}}
-</style>`;
-
-  function parseScore(m) {
-    // returns {s1, s2, w} from score string like "3 – 2" + note for pens
-    if (!m.score) return { s1: null, s2: null, w: 0 };
-    var parts = m.score.split('–');
-    var s1 = parseInt((parts[0] || '').trim(), 10);
-    var s2 = parseInt((parts[1] || '').trim(), 10);
-    var w = s1 > s2 ? 1 : (s2 > s1 ? 2 : (m.note && m.note.indexOf('פנד') !== -1 ? 2 : 0));
-    return { s1: s1, s2: s2, w: w };
-  }
-
-  function tm(flag, name, score, win) {
-    return '<div class="bk-team' + (win ? ' w' : '') + '">' +
-      '<span class="bf">' + flag + '</span>' +
-      '<span class="bn">' + name + '</span>' +
-      (score != null ? '<span class="bs">' + score + '</span>' : '') +
-      '</div>';
-  }
-
-  function extractFlag(str) {
-    // "🇫🇷 צרפת" -> { flag: "🇫🇷", name: "צרפת" }
-    var m = str.match(/^(\S+)\s+(.*)/);
-    return m ? { flag: m[1], name: m[2] } : { flag: '', name: str };
-  }
-
-  function mcCard(m, done) {
-    var h = extractFlag(m.home);
-    var a = extractFlag(m.away);
-    var sc = done ? parseScore(m) : null;
-    var w1 = done && sc && sc.w === 1;
-    var w2 = done && sc && sc.w === 2;
-    var note = m.note ? '<div style="font-size:9px;color:rgba(255,255,255,.4);padding:1px 6px">⚡ ' + m.note + '</div>' : '';
-    return '<div class="bk-match' + (done ? ' done' : ' up') + '">' +
-      tm(h.flag, h.name, done && sc ? sc.s1 : null, w1) +
-      '<div class="bk-div"></div>' +
-      tm(a.flag, a.name, done && sc ? sc.s2 : null, w2) +
-      note + '</div>';
-  }
-
-  function ph() {
-    return '<div class="bk-match bk-ph">' +
-      '<div class="bk-team"><span class="bn" style="color:rgba(255,255,255,.3)">?</span></div>' +
-      '<div class="bk-div"></div>' +
-      '<div class="bk-team"><span class="bn" style="color:rgba(255,255,255,.3)">?</span></div>' +
-      '</div>';
-  }
-
-  function qfCard(m) {
-    var h = extractFlag(m.home);
-    var a = extractFlag(m.away);
-    var done = m.status === 'past';
-    var sc = done ? parseScore(m) : null;
-    return '<div class="bk-match' + (done ? ' done' : ' up') + '">' +
-      tm(h.flag, h.name, done && sc ? sc.s1 : null, done && sc && sc.w === 1) +
-      '<div class="bk-div"></div>' +
-      tm(a.flag, a.name, done && sc ? sc.s2 : null, done && sc && sc.w === 2) +
-      '</div>';
-  }
-
-  function conn(n) {
-    var h = '';
-    for (var i = 0; i < n; i++) h += '<div class="bk-cx ' + (i % 2 === 0 ? 'top' : 'bot') + '"></div>';
-    return '<div class="bk-conn">' + h + '</div>';
-  }
-
-  function connT() {
-    return '<div class="bk-ct"><div class="bk-ct-line"></div></div>';
-  }
-
-  var trophySVG = '<svg width="52" height="52" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
-    '<defs>' +
-    '<linearGradient id="tg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFE55C"/><stop offset="50%" stop-color="#FFA500"/><stop offset="100%" stop-color="#FFE55C"/></linearGradient>' +
-    '<filter id="glow2"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
-    '</defs>' +
-    '<ellipse cx="32" cy="60" rx="16" ry="3.5" fill="rgba(255,200,0,.15)"/>' +
-    '<rect x="21" y="51" width="22" height="4" rx="2" fill="url(#tg2)" filter="url(#glow2)"/>' +
-    '<rect x="25" y="44" width="14" height="9" rx="1.5" fill="url(#tg2)"/>' +
-    '<path d="M17 7 Q15 28 26 37 Q29 39 32 39 Q35 39 38 37 Q49 28 47 7 Z" fill="url(#tg2)" filter="url(#glow2)"/>' +
-    '<path d="M17 7 Q8 7 8 18 Q8 27 17 30" stroke="#FFD700" stroke-width="3" fill="none" stroke-linecap="round"/>' +
-    '<path d="M47 7 Q56 7 56 18 Q56 27 47 30" stroke="#FFD700" stroke-width="3" fill="none" stroke-linecap="round"/>' +
-    '<ellipse cx="32" cy="22" rx="9" ry="3.5" fill="rgba(255,255,255,.2)"/>' +
-    '<path d="M26 13 L28 20 L22 16 L30 16 L24 20 Z" fill="rgba(255,255,255,.25)"/>' +
-    '</svg>';
-
-  // Split QF into left/right (first 2 vs last 2)
-  var QFL = QF.slice(0, 2);
-  var QFR = QF.slice(2, 4);
-
-  // Upcoming schedule (future only)
-  var now = new Date();
-  var allSched = [
-    { date:'9/7',  ts: new Date('2026-07-09T20:00Z'), time:'23:00', match:'🇫🇷 צרפת vs 🇲🇦 מרוקו',          c:'good', cl:'שעה נוחה' },
-    { date:'10/7', ts: new Date('2026-07-10T19:00Z'), time:'22:00', match:'🇵🇹 פורטוגל vs 🇪🇸 ספרד',         c:'good', cl:'שעה נוחה' },
-    { date:'12/7', ts: new Date('2026-07-11T21:00Z'), time:'00:00', match:'🇳🇴 נורווגיה vs 🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה', c:'ok',   cl:'מאוחר' },
-    { date:'12/7', ts: new Date('2026-07-12T01:00Z'), time:'04:00', match:'🇦🇷 ארגנטינה vs 🇧🇪 בלגיה',       c:'bad',  cl:'לילה עמוק' },
-    { date:'14/7', ts: new Date('2026-07-14T19:00Z'), time:'22:00', match:'חצי גמר 1',                        c:'good', cl:'שעה נוחה' },
-    { date:'15/7', ts: new Date('2026-07-15T19:00Z'), time:'22:00', match:'חצי גמר 2',                        c:'good', cl:'שעה נוחה' },
-    { date:'19/7', ts: new Date('2026-07-19T19:00Z'), time:'22:00', match:'🏆 גמר המונדיאל',                  c:'good', cl:'שעה נוחה' },
-  ];
-  var sched = allSched.filter(function(s) { return s.ts > now; });
-
-  var bracketHTML = bracketCSS +
-    '<div class="bk-wrap"><div class="bk">' +
-      '<div class="bk-round"><div class="bk-title">שמינית</div><div class="bk-matches">' +
-        R16L.map(function(m){ return mcCard(m, true); }).join('') +
-      '</div></div>' +
-      conn(4) +
-      '<div class="bk-round"><div class="bk-title">רבע גמר</div><div class="bk-matches">' +
-        QFL.map(qfCard).join('') +
-      '</div></div>' +
-      conn(2) +
-      '<div class="bk-round"><div class="bk-title">חצי גמר</div><div class="bk-matches">' + ph() + ph() + '</div></div>' +
-      connT() +
-      '<div class="bk-trophy-col">' +
-        '<div style="position:relative;display:flex;align-items:center;justify-content:center">' +
-          '<span style="position:absolute;top:-10px;left:4px;font-size:10px;animation:twinkle 1.8s ease-in-out infinite">✦</span>' +
-          '<span style="position:absolute;top:-6px;right:2px;font-size:10px;animation:twinkle 1.8s ease-in-out infinite .6s">✦</span>' +
-          trophySVG +
-        '</div>' +
-        '<div class="bk-trophy-lbl">גמר<br>19 יולי</div>' +
-      '</div>' +
-      connT() +
-      '<div class="bk-round"><div class="bk-title">חצי גמר</div><div class="bk-matches">' + ph() + ph() + '</div></div>' +
-      conn(2) +
-      '<div class="bk-round"><div class="bk-title">רבע גמר</div><div class="bk-matches">' +
-        QFR.map(qfCard).join('') +
-      '</div></div>' +
-      conn(4) +
-      '<div class="bk-round"><div class="bk-title">שמינית</div><div class="bk-matches">' +
-        R16R.map(function(m){ return mcCard(m, true); }).join('') +
-      '</div></div>' +
-    '</div></div>' +
-    '<style>@keyframes twinkle{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}</style>' +
-    '<div class="bk-sched"><div class="bk-sched-h">לוח משחקים קרובים</div>' +
-    '<div class="bk-sched-grid">' +
-    sched.map(function(s) {
-      return '<div class="bk-si">' +
-        '<span class="bk-si-date">' + s.date + '</span>' +
-        '<span class="bk-si-time">' + s.time + '</span>' +
-        '<span class="bk-si-match">' + s.match + '</span>' +
-        '<span class="bk-badge ' + s.c + '">' + s.cl + '</span>' +
-        '</div>';
-    }).join('') +
-    '</div></div>';
-
-  recCards.innerHTML = bracketHTML;
-}
-
-// Run after DOM + main.js are both ready
-// main.js finishes synchronously, visual_upgrade.js loads after it
-// so DOMContentLoaded is already fired — use setTimeout to let updateKnockoutStages run first
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(buildBracket, 50);
-  });
-} else {
-  setTimeout(buildBracket, 50);
-}
+// Bracket moved to bracket.js — it now owns #bracketBox instead of fighting
+// buildRecs() for #recCards, which silently destroyed it on every refresh.
