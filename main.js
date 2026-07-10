@@ -150,6 +150,18 @@ var TEAM_NORM_MAP = {
   'antiguaandbarbuda':'antigua',
   'trinidadtobago':'trinidad',
   'papuanewguinea':'png',
+  'norway':'norway',
+  'england':'england',
+  'morocco':'morocco',
+  'france':'france',
+  'spain':'spain',
+  'belgium':'belgium',
+  'argentina':'argentina',
+  'switzerland':'switzerland','schweiz':'switzerland',
+  'colombia':'colombia',
+  'portugal':'portugal',
+  'croatia':'croatia',
+  'egypt':'egypt',
 };
 
 function normTeam(name) {
@@ -171,12 +183,15 @@ function buildMatchIndex() {
   });
 }
 
+// ── Get date strings for ESPN: today + 2 days back (for Israeli timezone offset)
+// Also adds tomorrow to catch upcoming matches
 function getUTCDateStrings() {
   var now = new Date();
   var results = [];
-  for (var i = 0; i <= 2; i++) {
+  // yesterday, today, tomorrow — covers all Israeli timezone edge cases
+  for (var i = -1; i <= 2; i++) {
     var d = new Date(now);
-    d.setUTCDate(d.getUTCDate() - i);
+    d.setUTCDate(d.getUTCDate() + i);
     var y = d.getUTCFullYear();
     var m = String(d.getUTCMonth() + 1).padStart(2, '0');
     var day = String(d.getUTCDate()).padStart(2, '0');
@@ -571,18 +586,9 @@ function autoMarkStars() {
   });
 }
 
-// ────────────────────────────────────────────
-// ── AI CHAT (Google Gemini via Cloudflare Worker proxy) ──
-// ────────────────────────────────────────────
-// The Gemini API key is NOT stored here. It lives as a secret inside a free
-// Cloudflare Worker that proxies requests to Gemini. This keeps the key private
-// and lets any visitor use the chat with zero setup.
-//
-// After you deploy the worker (see worker.js), paste its URL below, e.g.:
-//   var CHAT_PROXY_URL = 'https://worldcup-ai.<your-subdomain>.workers.dev';
+// ── AI CHAT ──
 var CHAT_PROXY_URL = 'https://worldcup-ai.yoavstern1357.workers.dev';
-
-var chatHistory = [];   // [{role, content}]
+var chatHistory = [];
 var chatOpen = false;
 
 function buildSystemPrompt() {
@@ -594,7 +600,6 @@ function buildSystemPrompt() {
       results.push(teams[0].getAttribute('data-en') + ' ' + score.textContent.trim() + ' ' + teams[1].getAttribute('data-en'));
     }
   });
-
   var live = [];
   document.querySelectorAll('.mc.live').forEach(function(card) {
     var teams = card.querySelectorAll('.mc-team span[data-en]');
@@ -605,7 +610,6 @@ function buildSystemPrompt() {
         ' ' + teams[1].getAttribute('data-en') + (liveTag ? ' [' + liveTag.textContent + ']' : ''));
     }
   });
-
   var upcoming = [];
   document.querySelectorAll('.mc.future').forEach(function(card) {
     var teams = card.querySelectorAll('.mc-team span[data-en]');
@@ -619,7 +623,6 @@ function buildSystemPrompt() {
       );
     }
   });
-
   return 'You are a helpful assistant for a FIFA World Cup 2026 live schedule page.\n' +
     'Answer questions concisely. Reply in the same language the user writes (Hebrew or English).\n' +
     'Today\'s date: ' + new Date().toLocaleDateString('en-GB') + '. All times are Israel time (UTC+3).\n\n' +
@@ -695,24 +698,19 @@ function sendChat() {
   if (!inp) return;
   var text = inp.value.trim();
   if (!text) return;
-
   if (!CHAT_PROXY_URL) {
     addChatBubble('assistant', curLang === 'he'
-      ? '⚠️ הצ\'אט עדיין לא מחובר. יש להגדיר את כתובת ה-Worker ב-CHAT_PROXY_URL בקובץ main.js.'
-      : '⚠️ Chat not connected yet. Set the Worker URL in CHAT_PROXY_URL in main.js.');
+      ? '⚠️ הצ\'אט עדיין לא מחובר.'
+      : '⚠️ Chat not connected yet.');
     return;
   }
-
   inp.value = '';
   addChatBubble('user', text);
   chatHistory.push({ role: 'user', parts: [{ text: text }] });
   setChatTyping(true);
-
-  // Gemini uses "model" role (not "assistant") and parts array format
   var contents = chatHistory.slice(-10).map(function(m) {
     return { role: m.role, parts: m.parts || [{ text: m.content || '' }] };
   });
-
   fetch(CHAT_PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -731,8 +729,8 @@ function sendChat() {
     if (!reply) {
       var errMsg = data.error && data.error.message ? data.error.message : '';
       reply = curLang === 'he'
-        ? ('⚠️ שגיאה מה-API' + (errMsg ? ': ' + errMsg : '.'))
-        : ('⚠️ API error' + (errMsg ? ': ' + errMsg : '.'));
+        ? ('⚠️ שגיאה' + (errMsg ? ': ' + errMsg : '.'))
+        : ('⚠️ Error' + (errMsg ? ': ' + errMsg : '.'));
     }
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
     addChatBubble('assistant', reply);
@@ -740,12 +738,11 @@ function sendChat() {
   .catch(function() {
     setChatTyping(false);
     addChatBubble('assistant', curLang === 'he'
-      ? '⚠️ שגיאת חיבור. בדוק שהמפתח תקין ושיש חיבור אינטרנט.'
-      : '⚠️ Connection error. Check your API key and internet connection.');
+      ? '⚠️ שגיאת חיבור.'
+      : '⚠️ Connection error.');
   });
 }
 
-// Allow Enter key in chat input
 document.addEventListener('DOMContentLoaded', function() {
   var inp = document.getElementById('chatInputField');
   if (inp) {
@@ -763,31 +760,28 @@ buildRecs();
 fetchLiveData();
 
 // ══════════════════════════════════════════════════════
-// KNOCKOUT STAGE UPDATER
+// KNOCKOUT STAGE DATA — updated for QF 9–12/7
 // ══════════════════════════════════════════════════════
-
 var KO_DATA = {
   r16: [
-    { home:'🇦🇷 ארגנטינה', away:'🇨🇻 קייפ ורד', score:'3 – 2', time:'22:00', strip:'safe', date:'4/7', status:'past' },
-    { home:'🇨🇴 קולומביה', away:'🇬🇭 גאנה', score:'1 – 0', time:'04:30', strip:'danger', date:'4/7', status:'past' },
-    { home:'🇲🇦 מרוקו', away:'🇨🇦 קנדה', score:'3 – 0', time:'20:00', strip:'safe', date:'4/7', status:'past' },
-    { home:'🇫🇷 צרפת', away:'🇵🇾 פרגוואי', score:'1 – 0', time:'00:00', strip:'warn', date:'5/7', status:'past' },
-    { home:'🇧🇷 ברזיל', away:'🇳🇴 נורווגיה', score:'1 – 2', time:'23:00', strip:'safe', date:'5/7', status:'past', note:'הפתעה! נורווגיה עוקרת את ברזיל' },
-    { home:'🇲🇽 מקסיקו', away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה', score:'2 – 3', time:'04:00', strip:'danger', date:'6/7', status:'past' },
-    { home:'🇵🇹 פורטוגל', away:'🇪🇸 ספרד', score:'0 – 1', time:'22:00', strip:'safe', date:'6/7', status:'past' },
-    { home:'🇺🇸 ארה"ב', away:'🇧🇪 בלגיה', score:'1 – 4', time:'03:00', strip:'danger', date:'7/7', status:'past' },
-    { home:'🇦🇷 ארגנטינה', away:'🇪🇬 מצרים', score:'3 – 2', time:'19:00', strip:'safe', date:'7/7', status:'past' },
-    { home:'🇨🇭 שוויץ', away:'🇨🇴 קולומביה', score:'0 – 0', time:'23:00', strip:'safe', date:'7/7', status:'past', note:'קולומביה עלתה בפנדלים' },
+    { home:'🇦🇷 ארגנטינה', away:'🇨🇻 קייפ ורד',      score:'3 – 2', time:'20:00', strip:'safe',   date:'4/7',  status:'past' },
+    { home:'🇲🇦 מרוקו',    away:'🇨🇦 קנדה',           score:'3 – 0', time:'20:00', strip:'safe',   date:'4/7',  status:'past' },
+    { home:'🇫🇷 צרפת',     away:'🇵🇾 פרגוואי',        score:'1 – 0', time:'00:00', strip:'warn',   date:'5/7',  status:'past' },
+    { home:'🇧🇷 ברזיל',    away:'🇳🇴 נורווגיה',       score:'1 – 2', time:'23:00', strip:'safe',   date:'5/7',  status:'past', note:'הפתעה! נורווגיה עוקרת את ברזיל' },
+    { home:'🇵🇹 פורטוגל',  away:'🇭🇷 קרואטיה',        score:'2 – 1', time:'22:00', strip:'safe',   date:'6/7',  status:'past' },
+    { home:'🇧🇪 בלגיה',    away:'🇺🇸 ארה"ב',           score:'4 – 1', time:'00:00', strip:'warn',   date:'7/7',  status:'past' },
+    { home:'🇦🇷 ארגנטינה', away:'🇪🇬 מצרים',           score:'3 – 2', time:'19:00', strip:'safe',   date:'7/7',  status:'past' },
+    { home:'🇨🇭 שוויץ',    away:'🇨🇴 קולומביה',        score:'0 – 0', time:'23:00', strip:'safe',   date:'7/7',  status:'past', note:"קולומביה עלתה בפנדלים" },
   ],
   qf: [
-    { home:'🇫🇷 צרפת', away:'🇲🇦 מרוקו', time:'23:00', strip:'safe', date:'9/7', status:'future' },
-    { home:'🇪🇸 ספרד', away:'🇧🇪 בלגיה', time:'22:00', strip:'safe', date:'10/7', status:'future' },
-    { home:'🇳🇴 נורווגיה', away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה', time:'00:00', strip:'warn', date:'12/7', status:'future' },
-    { home:'🇦🇷 ארגנטינה', away:'🇨🇭 שוויץ', time:'04:00', strip:'danger', date:'12/7', status:'future' },
+    { home:'🇫🇷 צרפת',     away:'🇲🇦 מרוקו',           time:'23:00', strip:'safe',   date:'9/7',  status:'future' },
+    { home:'🇵🇹 פורטוגל',  away:'🇪🇸 ספרד',            time:'22:00', strip:'safe',   date:'10/7', status:'future' },
+    { home:'🇳🇴 נורווגיה', away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה',   time:'00:00', strip:'warn',   date:'12/7', status:'future' },
+    { home:'🇦🇷 ארגנטינה', away:'🇧🇪 בלגיה',           time:'04:00', strip:'danger', date:'12/7', status:'future' },
   ],
   sf: [
-    { home:'מנצחת צרפת/מרוקו', away:'מנצחת ספרד/בלגיה', time:'22:00', strip:'safe', date:'14/7', status:'future' },
-    { home:'מנצחת נורווגיה/אנגליה', away:'מנצחת ארגנטינה/שוויץ', time:'22:00', strip:'safe', date:'15/7', status:'future' },
+    { home:'מנצחת צרפת/מרוקו',    away:'מנצחת פורטוגל/ספרד',     time:'22:00', strip:'safe', date:'14/7', status:'future' },
+    { home:'מנצחת נורווגיה/אנגליה', away:'מנצחת ארגנטינה/בלגיה', time:'22:00', strip:'safe', date:'15/7', status:'future' },
   ],
   final: [
     { home:'מנצחת חצי 1', away:'מנצחת חצי 2', time:'22:00', strip:'safe', date:'19/7', status:'future' },
