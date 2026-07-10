@@ -156,14 +156,20 @@ setTimeout(function() {
 
 })();
 
-// 9. Build bracket in recommendations section
+// ── BRACKET — injected into #recCards, runs AFTER main.js (updateKnockoutStages already ran)
 function buildBracket() {
-  var recSection = document.getElementById('stage-rec');
-  if (!recSection) recSection = document.querySelector('.rec-wrap') || document.querySelector('[id*="rec"]');
-  if (!recSection) return;
+  var recCards = document.getElementById('recCards');
+  if (!recCards) return;
 
-  var bracketCSS = `
-<style>
+  // KO_DATA is defined in main.js — use it directly
+  var R16 = (typeof KO_DATA !== 'undefined') ? KO_DATA.r16 : [];
+  var QF  = (typeof KO_DATA !== 'undefined') ? KO_DATA.qf  : [];
+
+  // Split R16 into left/right halves
+  var R16L = R16.slice(0, 4);
+  var R16R = R16.slice(4, 8);
+
+  var bracketCSS = `<style>
 .bk-wrap{width:100%;overflow-x:auto;padding:.5rem 0;direction:rtl;background:rgba(0,0,0,.35);border-radius:12px;margin-bottom:12px}
 .bk{display:flex;align-items:stretch;min-width:680px;gap:0;padding:12px 8px}
 .bk-round{display:flex;flex-direction:column;justify-content:space-around;flex:1;min-width:0}
@@ -204,149 +210,160 @@ function buildBracket() {
 @media(max-width:600px){.bk{min-width:520px}.bk-trophy-col{width:60px}.bk-title{font-size:11px}}
 </style>`;
 
-  // Updated data — including Portugal vs Croatia result
-  var R16L = [
-    {f1:'🇦🇷',n1:'ארגנטינה',s1:3,f2:'🇨🇻',n2:'קייפ ורד',s2:2,w:1},
-    {f1:'🇲🇦',n1:'מרוקו',s1:3,f2:'🇨🇦',n2:'קנדה',s2:0,w:1},
-    {f1:'🇫🇷',n1:'צרפת',s1:1,f2:'🇵🇾',n2:'פרגוואי',s2:0,w:1},
-    {f1:'🇧🇷',n1:'ברזיל',s1:1,f2:'🇳🇴',n2:'נורווגיה',s2:2,w:2},
-  ];
-  var R16R = [
-    {f1:'🇵🇹',n1:'פורטוגל',s1:2,f2:'🇭🇷',n2:'קרואטיה',s2:1,w:1},
-    {f1:'🇧🇪',n1:'בלגיה',s1:4,f2:'🇺🇸',n2:'ארה"ב',s2:1,w:1},
-    {f1:'🇦🇷',n1:'ארגנטינה',s1:3,f2:'🇪🇬',n2:'מצרים',s2:2,w:1},
-    {f1:'🇨🇭',n1:'שוויץ',s1:0,f2:'🇨🇴',n2:'קולומביה',s2:0,w:2,note:"פנד'"},
-  ];
-  var QFL = [
-    {f1:'🇫🇷',n1:'צרפת',f2:'🇲🇦',n2:'מרוקו',up:true},
-    {f1:'🇳🇴',n1:'נורווגיה',f2:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n2:'אנגליה',up:true},
-  ];
-  var QFR = [
-    {f1:'🇵🇹',n1:'פורטוגל',f2:'🇪🇸',n2:'ספרד',up:true},
-    {f1:'🇦🇷',n1:'ארגנטינה',f2:'🇨🇴',n2:'קולומביה',up:true},
-  ];
+  function parseScore(m) {
+    // returns {s1, s2, w} from score string like "3 – 2" + note for pens
+    if (!m.score) return { s1: null, s2: null, w: 0 };
+    var parts = m.score.split('–');
+    var s1 = parseInt((parts[0] || '').trim(), 10);
+    var s2 = parseInt((parts[1] || '').trim(), 10);
+    var w = s1 > s2 ? 1 : (s2 > s1 ? 2 : (m.note && m.note.indexOf('פנד') !== -1 ? 2 : 0));
+    return { s1: s1, s2: s2, w: w };
+  }
 
-  function tm(f,n,s,win) {
-    return '<div class="bk-team'+(win?' w':'')+'"><span class="bf">'+f+'</span><span class="bn">'+n+'</span>'+(s!=null?'<span class="bs">'+s+'</span>':'')+'</div>';
+  function tm(flag, name, score, win) {
+    return '<div class="bk-team' + (win ? ' w' : '') + '">' +
+      '<span class="bf">' + flag + '</span>' +
+      '<span class="bn">' + name + '</span>' +
+      (score != null ? '<span class="bs">' + score + '</span>' : '') +
+      '</div>';
   }
-  function mc(m,done) {
-    var w1=done&&m.w===1, w2=done&&m.w===2;
-    var note = m.note ? '<div style="font-size:9px;color:rgba(255,255,255,.4);padding:1px 6px">'+m.note+'</div>' : '';
-    return '<div class="bk-match'+(done?' done':' up')+'">'
-      +tm(m.f1,m.n1,done?m.s1:null,w1)
-      +'<div class="bk-div"></div>'
-      +tm(m.f2,m.n2,done?m.s2:null,w2)
-      +note+'</div>';
+
+  function extractFlag(str) {
+    // "🇫🇷 צרפת" -> { flag: "🇫🇷", name: "צרפת" }
+    var m = str.match(/^(\S+)\s+(.*)/);
+    return m ? { flag: m[1], name: m[2] } : { flag: '', name: str };
   }
+
+  function mcCard(m, done) {
+    var h = extractFlag(m.home);
+    var a = extractFlag(m.away);
+    var sc = done ? parseScore(m) : null;
+    var w1 = done && sc && sc.w === 1;
+    var w2 = done && sc && sc.w === 2;
+    var note = m.note ? '<div style="font-size:9px;color:rgba(255,255,255,.4);padding:1px 6px">⚡ ' + m.note + '</div>' : '';
+    return '<div class="bk-match' + (done ? ' done' : ' up') + '">' +
+      tm(h.flag, h.name, done && sc ? sc.s1 : null, w1) +
+      '<div class="bk-div"></div>' +
+      tm(a.flag, a.name, done && sc ? sc.s2 : null, w2) +
+      note + '</div>';
+  }
+
   function ph() {
-    return '<div class="bk-match bk-ph">'
-      +'<div class="bk-team"><span class="bn" style="color:rgba(255,255,255,.3)">?</span></div>'
-      +'<div class="bk-div"></div>'
-      +'<div class="bk-team"><span class="bn" style="color:rgba(255,255,255,.3)">?</span></div>'
-      +'</div>';
+    return '<div class="bk-match bk-ph">' +
+      '<div class="bk-team"><span class="bn" style="color:rgba(255,255,255,.3)">?</span></div>' +
+      '<div class="bk-div"></div>' +
+      '<div class="bk-team"><span class="bn" style="color:rgba(255,255,255,.3)">?</span></div>' +
+      '</div>';
   }
+
+  function qfCard(m) {
+    var h = extractFlag(m.home);
+    var a = extractFlag(m.away);
+    var done = m.status === 'past';
+    var sc = done ? parseScore(m) : null;
+    return '<div class="bk-match' + (done ? ' done' : ' up') + '">' +
+      tm(h.flag, h.name, done && sc ? sc.s1 : null, done && sc && sc.w === 1) +
+      '<div class="bk-div"></div>' +
+      tm(a.flag, a.name, done && sc ? sc.s2 : null, done && sc && sc.w === 2) +
+      '</div>';
+  }
+
   function conn(n) {
-    var h='';
-    for(var i=0;i<n;i++) h+='<div class="bk-cx '+(i%2===0?'top':'bot')+'"></div>';
-    return '<div class="bk-conn">'+h+'</div>';
+    var h = '';
+    for (var i = 0; i < n; i++) h += '<div class="bk-cx ' + (i % 2 === 0 ? 'top' : 'bot') + '"></div>';
+    return '<div class="bk-conn">' + h + '</div>';
   }
+
   function connT() {
     return '<div class="bk-ct"><div class="bk-ct-line"></div></div>';
   }
 
-  var trophySVG = '<svg width="52" height="52" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">'
-    +'<defs>'
-    +'<linearGradient id="tg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFE55C"/><stop offset="50%" stop-color="#FFA500"/><stop offset="100%" stop-color="#FFE55C"/></linearGradient>'
-    +'<filter id="glow2"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
-    +'</defs>'
-    +'<ellipse cx="32" cy="60" rx="16" ry="3.5" fill="rgba(255,200,0,.15)"/>'
-    +'<rect x="21" y="51" width="22" height="4" rx="2" fill="url(#tg2)" filter="url(#glow2)"/>'
-    +'<rect x="25" y="44" width="14" height="9" rx="1.5" fill="url(#tg2)"/>'
-    +'<path d="M17 7 Q15 28 26 37 Q29 39 32 39 Q35 39 38 37 Q49 28 47 7 Z" fill="url(#tg2)" filter="url(#glow2)"/>'
-    +'<path d="M17 7 Q8 7 8 18 Q8 27 17 30" stroke="#FFD700" stroke-width="3" fill="none" stroke-linecap="round"/>'
-    +'<path d="M47 7 Q56 7 56 18 Q56 27 47 30" stroke="#FFD700" stroke-width="3" fill="none" stroke-linecap="round"/>'
-    +'<ellipse cx="32" cy="22" rx="9" ry="3.5" fill="rgba(255,255,255,.2)"/>'
-    +'<path d="M26 13 L28 20 L22 16 L30 16 L24 20 Z" fill="rgba(255,255,255,.25)"/>'
-    +'</svg>';
+  var trophySVG = '<svg width="52" height="52" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+    '<linearGradient id="tg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFE55C"/><stop offset="50%" stop-color="#FFA500"/><stop offset="100%" stop-color="#FFE55C"/></linearGradient>' +
+    '<filter id="glow2"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
+    '</defs>' +
+    '<ellipse cx="32" cy="60" rx="16" ry="3.5" fill="rgba(255,200,0,.15)"/>' +
+    '<rect x="21" y="51" width="22" height="4" rx="2" fill="url(#tg2)" filter="url(#glow2)"/>' +
+    '<rect x="25" y="44" width="14" height="9" rx="1.5" fill="url(#tg2)"/>' +
+    '<path d="M17 7 Q15 28 26 37 Q29 39 32 39 Q35 39 38 37 Q49 28 47 7 Z" fill="url(#tg2)" filter="url(#glow2)"/>' +
+    '<path d="M17 7 Q8 7 8 18 Q8 27 17 30" stroke="#FFD700" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+    '<path d="M47 7 Q56 7 56 18 Q56 27 47 30" stroke="#FFD700" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="32" cy="22" rx="9" ry="3.5" fill="rgba(255,255,255,.2)"/>' +
+    '<path d="M26 13 L28 20 L22 16 L30 16 L24 20 Z" fill="rgba(255,255,255,.25)"/>' +
+    '</svg>';
 
-  // Only future matches in schedule
+  // Split QF into left/right (first 2 vs last 2)
+  var QFL = QF.slice(0, 2);
+  var QFR = QF.slice(2, 4);
+
+  // Upcoming schedule (future only)
   var now = new Date();
   var allSched = [
-    {date:'9/7', ts:new Date('2026-07-09T20:00Z'), time:'23:00',match:'🇫🇷 צרפת vs 🇲🇦 מרוקו',c:'good',cl:'שעה נוחה'},
-    {date:'10/7',ts:new Date('2026-07-10T19:00Z'), time:'22:00',match:'🇵🇹 פורטוגל vs 🇪🇸 ספרד',c:'good',cl:'שעה נוחה'},
-    {date:'12/7',ts:new Date('2026-07-11T21:00Z'), time:'00:00',match:'🇳🇴 נורווגיה vs 🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה',c:'ok',cl:'מאוחר'},
-    {date:'12/7',ts:new Date('2026-07-12T01:00Z'), time:'04:00',match:'🇦🇷 ארגנטינה vs 🇨🇴 קולומביה',c:'bad',cl:'לילה עמוק'},
-    {date:'14/7',ts:new Date('2026-07-14T19:00Z'), time:'22:00',match:'חצי גמר 1',c:'good',cl:'שעה נוחה'},
-    {date:'15/7',ts:new Date('2026-07-15T19:00Z'), time:'22:00',match:'חצי גמר 2',c:'good',cl:'שעה נוחה'},
-    {date:'19/7',ts:new Date('2026-07-19T19:00Z'), time:'22:00',match:'🏆 גמר המונדיאל',c:'good',cl:'שעה נוחה'},
+    { date:'9/7',  ts: new Date('2026-07-09T20:00Z'), time:'23:00', match:'🇫🇷 צרפת vs 🇲🇦 מרוקו',          c:'good', cl:'שעה נוחה' },
+    { date:'10/7', ts: new Date('2026-07-10T19:00Z'), time:'22:00', match:'🇵🇹 פורטוגל vs 🇪🇸 ספרד',         c:'good', cl:'שעה נוחה' },
+    { date:'12/7', ts: new Date('2026-07-11T21:00Z'), time:'00:00', match:'🇳🇴 נורווגיה vs 🏴󠁧󠁢󠁥󠁮󠁧󠁿 אנגליה', c:'ok',   cl:'מאוחר' },
+    { date:'12/7', ts: new Date('2026-07-12T01:00Z'), time:'04:00', match:'🇦🇷 ארגנטינה vs 🇧🇪 בלגיה',       c:'bad',  cl:'לילה עמוק' },
+    { date:'14/7', ts: new Date('2026-07-14T19:00Z'), time:'22:00', match:'חצי גמר 1',                        c:'good', cl:'שעה נוחה' },
+    { date:'15/7', ts: new Date('2026-07-15T19:00Z'), time:'22:00', match:'חצי גמר 2',                        c:'good', cl:'שעה נוחה' },
+    { date:'19/7', ts: new Date('2026-07-19T19:00Z'), time:'22:00', match:'🏆 גמר המונדיאל',                  c:'good', cl:'שעה נוחה' },
   ];
-  var sched = allSched.filter(function(s){ return s.ts > now; });
+  var sched = allSched.filter(function(s) { return s.ts > now; });
 
-  var bracketHTML = bracketCSS + '<div class="bk-wrap"><div class="bk">'
-    +'<div class="bk-round"><div class="bk-title">שמינית</div><div class="bk-matches">'+R16L.map(function(m){return mc(m,true);}).join('')+'</div></div>'
-    +conn(4)
-    +'<div class="bk-round"><div class="bk-title">רבע גמר</div><div class="bk-matches">'+QFL.map(function(m){return mc(m,false);}).join('')+'</div></div>'
-    +conn(2)
-    +'<div class="bk-round"><div class="bk-title">חצי גמר</div><div class="bk-matches">'+ph()+ph()+'</div></div>'
-    +connT()
-    +'<div class="bk-trophy-col">'
-      +'<div style="position:relative;display:flex;align-items:center;justify-content:center">'
-        +'<span style="position:absolute;top:-10px;left:4px;font-size:10px;animation:twinkle 1.8s ease-in-out infinite">✦</span>'
-        +'<span style="position:absolute;top:-6px;right:2px;font-size:10px;animation:twinkle 1.8s ease-in-out infinite .6s">✦</span>'
-        +trophySVG
-      +'</div>'
-      +'<div class="bk-trophy-lbl">גמר<br>19 יולי</div>'
-    +'</div>'
-    +connT()
-    +'<div class="bk-round"><div class="bk-title">חצי גמר</div><div class="bk-matches">'+ph()+ph()+'</div></div>'
-    +conn(2)
-    +'<div class="bk-round"><div class="bk-title">רבע גמר</div><div class="bk-matches">'+QFR.map(function(m){return mc(m,false);}).join('')+'</div></div>'
-    +conn(4)
-    +'<div class="bk-round"><div class="bk-title">שמינית</div><div class="bk-matches">'+R16R.map(function(m){return mc(m,true);}).join('')+'</div></div>'
-    +'</div></div>'
-    +'<style>@keyframes twinkle{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}</style>'
-    +'<div class="bk-sched"><div class="bk-sched-h">לוח משחקים קרובים</div>'
-    +'<div class="bk-sched-grid">'
-    +sched.map(function(s){
-      return '<div class="bk-si"><span class="bk-si-date">'+s.date+'</span><span class="bk-si-time">'+s.time+'</span><span class="bk-si-match">'+s.match+'</span><span class="bk-badge '+s.c+'">'+s.cl+'</span></div>';
-    }).join('')
-    +'</div></div>';
+  var bracketHTML = bracketCSS +
+    '<div class="bk-wrap"><div class="bk">' +
+      '<div class="bk-round"><div class="bk-title">שמינית</div><div class="bk-matches">' +
+        R16L.map(function(m){ return mcCard(m, true); }).join('') +
+      '</div></div>' +
+      conn(4) +
+      '<div class="bk-round"><div class="bk-title">רבע גמר</div><div class="bk-matches">' +
+        QFL.map(qfCard).join('') +
+      '</div></div>' +
+      conn(2) +
+      '<div class="bk-round"><div class="bk-title">חצי גמר</div><div class="bk-matches">' + ph() + ph() + '</div></div>' +
+      connT() +
+      '<div class="bk-trophy-col">' +
+        '<div style="position:relative;display:flex;align-items:center;justify-content:center">' +
+          '<span style="position:absolute;top:-10px;left:4px;font-size:10px;animation:twinkle 1.8s ease-in-out infinite">✦</span>' +
+          '<span style="position:absolute;top:-6px;right:2px;font-size:10px;animation:twinkle 1.8s ease-in-out infinite .6s">✦</span>' +
+          trophySVG +
+        '</div>' +
+        '<div class="bk-trophy-lbl">גמר<br>19 יולי</div>' +
+      '</div>' +
+      connT() +
+      '<div class="bk-round"><div class="bk-title">חצי גמר</div><div class="bk-matches">' + ph() + ph() + '</div></div>' +
+      conn(2) +
+      '<div class="bk-round"><div class="bk-title">רבע גמר</div><div class="bk-matches">' +
+        QFR.map(qfCard).join('') +
+      '</div></div>' +
+      conn(4) +
+      '<div class="bk-round"><div class="bk-title">שמינית</div><div class="bk-matches">' +
+        R16R.map(function(m){ return mcCard(m, true); }).join('') +
+      '</div></div>' +
+    '</div></div>' +
+    '<style>@keyframes twinkle{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}</style>' +
+    '<div class="bk-sched"><div class="bk-sched-h">לוח משחקים קרובים</div>' +
+    '<div class="bk-sched-grid">' +
+    sched.map(function(s) {
+      return '<div class="bk-si">' +
+        '<span class="bk-si-date">' + s.date + '</span>' +
+        '<span class="bk-si-time">' + s.time + '</span>' +
+        '<span class="bk-si-match">' + s.match + '</span>' +
+        '<span class="bk-badge ' + s.c + '">' + s.cl + '</span>' +
+        '</div>';
+    }).join('') +
+    '</div></div>';
 
-  // Insert INSIDE hero so it survives hero rebuilds
-  var hero = document.querySelector('.hero, .hero-block, [class*="hero"]');
-  var existing = document.getElementById('bracketSection');
-  if (existing) existing.remove();
-
-  var container = document.createElement('div');
-  container.id = 'bracketSection';
-  container.style.cssText = 'padding:12px 16px;';
-  container.innerHTML = bracketHTML;
-
-  if (hero) {
-    hero.appendChild(container);
-  } else {
-    var recCards = document.getElementById('recCards');
-    if (recCards) recCards.innerHTML = bracketHTML;
-  }
-
-  // Re-insert every 3 seconds if removed
-  setInterval(function() {
-    if (!document.getElementById('bracketSection')) {
-      var h = document.querySelector('.hero, .hero-block, [class*="hero"]');
-      if (h) {
-        var c = document.createElement('div');
-        c.id = 'bracketSection';
-        c.style.cssText = 'padding:12px 16px;';
-        c.innerHTML = bracketHTML;
-        h.appendChild(c);
-      }
-    }
-  }, 3000);
+  recCards.innerHTML = bracketHTML;
 }
 
-// Run after DOM ready
+// Run after DOM + main.js are both ready
+// main.js finishes synchronously, visual_upgrade.js loads after it
+// so DOMContentLoaded is already fired — use setTimeout to let updateKnockoutStages run first
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', buildBracket);
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(buildBracket, 50);
+  });
 } else {
-  setTimeout(buildBracket, 100);
+  setTimeout(buildBracket, 50);
 }
