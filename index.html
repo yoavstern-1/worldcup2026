@@ -21,23 +21,29 @@
   --hi:rgba(217,184,102,.10); --hi-border:rgba(217,184,102,.5);
   --sidebar:rgba(6,18,13,.92); --drawer:rgba(9,26,19,.98);
   --safe:#4ade80; --warn:#fbbf24; --danger:#fb7185;
+  /* A live match pulses amber, not red: red is already the "deep night" strip
+     colour, and a slow amber blink reads as "in progress" rather than "alert". */
+  --live:#facc15; --live-soft:rgba(250,204,21,.16);
   --shadow:rgba(0,0,0,.45);
   --radius:18px; --radius-sm:12px;
 }
 [data-theme="light"] {
-  /* Warm ivory + champagne + emerald ink — the light-mode counterpart */
-  --bg:#f4f0e6; --bg2:#ebe5d5;
-  --stripe-tint:rgba(60,50,20,.02);
-  --vignette:rgba(60,50,20,.08);
-  --line:rgba(0,0,0,.04);
-  --usa-red:#be123c; --gold:#a8842f;
-  --t1:#132b1f; --t2:#38493d; --t3:#6b7d70;
-  --card:rgba(255,255,255,.7); --card-future:rgba(255,255,255,.92);
-  --card-border:rgba(30,50,35,.14);
-  --hi:rgba(168,132,47,.12); --hi-border:rgba(168,132,47,.5);
-  --sidebar:rgba(252,250,244,.95); --drawer:rgba(250,247,240,.99);
-  --safe:#16a34a; --warn:#c77d0a; --danger:#dc2626;
-  --shadow:rgba(40,30,10,.14);
+  /* Soft beige + champagne + emerald ink. The old ivory (#f4f0e6) was close to
+     paper white and glared; this is a warmer, dimmer sand with the text
+     contrast kept above 7:1. */
+  --bg:#e9e2d2; --bg2:#ded5c1;
+  --stripe-tint:rgba(70,58,26,.025);
+  --vignette:rgba(70,58,26,.10);
+  --line:rgba(0,0,0,.05);
+  --usa-red:#b01238; --gold:#8f6f22;
+  --t1:#1a2f24; --t2:#3d4d41; --t3:#6f7f73;
+  --card:rgba(255,253,246,.62); --card-future:rgba(252,249,240,.9);
+  --card-border:rgba(40,55,40,.16);
+  --hi:rgba(143,111,34,.13); --hi-border:rgba(143,111,34,.45);
+  --sidebar:rgba(238,231,217,.95); --drawer:rgba(240,234,221,.99);
+  --safe:#14803c; --warn:#a8650a; --danger:#c1272d;
+  --live:#a8650a; --live-soft:rgba(168,101,10,.15);
+  --shadow:rgba(60,45,15,.16);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
@@ -157,7 +163,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mc.past { background:var(--card); opacity:.62; }
 .mc.past:hover { opacity:.9; }
 .mc.future { background:var(--card-future); box-shadow:0 3px 16px var(--shadow); }
-.mc.live { background:var(--card-future); border-color:var(--danger); box-shadow:0 0 0 1px var(--danger); }
+.mc.live { background:var(--card-future); border-color:var(--live); box-shadow:0 0 0 1px var(--live); }
 .mc.star { border-color:var(--hi-border); }
 .mc.star.future, .mc.star.live { background:var(--hi); }
 .mc:hover { transform:translateY(-3px); }
@@ -167,22 +173,43 @@ main { position:relative; z-index:1; margin-right:64px; }
 .strip.warn { background:var(--warn); }
 .strip.danger { background:var(--danger); }
 .star-tag { position:absolute; top:9px; inset-inline-start:13px; font-size:9px; font-weight:700; color:var(--gold); letter-spacing:.5px; line-height:1; pointer-events:none; }
-.live-tag { position:absolute; top:9px; inset-inline-start:13px; font-size:9px; font-weight:700; color:var(--danger); letter-spacing:.5px; line-height:1; pointer-events:none; }
-.mc.star .mc-top, .mc.live .mc-top { margin-top:14px; }
+.mc.star .mc-top { margin-top:14px; }
 .mc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:9px; min-height:30px; }
 .mc-grp { font-size:10px; font-weight:700; letter-spacing:.8px; color:var(--t3); text-transform:uppercase; padding-top:3px; }
-.mc-rt { display:flex; flex-direction:column; align-items:flex-end; gap:1px; flex-shrink:0; }
+.mc-rt { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
 [dir="ltr"] .mc-rt { align-items:flex-start; }
 .mc-time { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:22px; letter-spacing:1px; line-height:1; }
 .mc-time.safe { color:var(--safe); } .mc-time.warn { color:var(--warn); } .mc-time.danger { color:var(--danger); }
-.mc-et { font-size:10px; color:var(--t3); font-weight:600; }
-/* home–away must read left-to-right even in RTL, or "2 – 0" renders as "0 – 2" */
-.score { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:21px; letter-spacing:2px; line-height:1.1; color:var(--gold); background:var(--card); padding:2px 9px; border-radius:9px; border:1px solid var(--hi-border); white-space:nowrap; direction:ltr; unicode-bidi:isolate; }
 .mc-fin { font-size:9px; color:var(--t3); font-weight:600; }
-.mc-teams { display:flex; align-items:center; justify-content:space-between; gap:6px; }
-.mc-team { font-size:13px; font-weight:700; color:var(--t1); flex:1; line-height:1.3; }
-.mc-team.b { text-align:end; }
-.mc-vs { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:13px; color:var(--t2); flex-shrink:0; }
+
+/* ── live pulse ──
+   A slow amber blink, not a static red dot: the eye reads a pulse as "still
+   running". 1.8s is deliberately unhurried — a fast blink reads as an error. */
+@keyframes livePulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.28; transform:scale(.78); } }
+.live-dot { width:9px; height:9px; border-radius:50%; background:var(--live); flex-shrink:0; animation:livePulse 1.8s ease-in-out infinite; }
+.mc-live { display:flex; align-items:center; gap:6px; background:var(--live-soft); border:1px solid var(--live); border-radius:9px; padding:3px 9px; }
+.mc-min { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:17px; line-height:1; color:var(--live); direction:ltr; unicode-bidi:isolate; min-width:34px; text-align:center; }
+/* half-time / shootout: the phase word takes the slot instead of a frozen clock */
+.mc-min.txt { font-size:11px; letter-spacing:.3px; direction:inherit; white-space:nowrap; }
+.mc-phase { font-size:9px; font-weight:700; color:var(--live); letter-spacing:.4px; }
+
+/* ── scoreline ──
+   One row per team, each team's goals on its own line. The old layout put the
+   two names in a flex row (home first, so home sat on the RIGHT under RTL) and
+   the score in an LTR-isolated box (home's goal on the LEFT) — the two halves
+   disagreed and every result read backwards in Hebrew. A per-team row cannot
+   disagree with itself. It also gives each name a full line, so long English
+   names no longer wrap to two lines where the Hebrew fits on one. */
+.mc-rows { display:flex; flex-direction:column; gap:3px; }
+.mc-row { display:flex; align-items:center; gap:7px; padding:4px 7px; border-radius:9px; background:var(--card); min-height:28px; }
+.mc-row .mc-fl { flex-shrink:0; font-size:15px; line-height:1; }
+.mc-row .mc-nm { flex:1; min-width:0; font-size:13.5px; font-weight:700; color:var(--t1); line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mc-row .mc-sc { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:19px; line-height:1; color:var(--t1); flex-shrink:0; min-width:16px; text-align:center; direction:ltr; unicode-bidi:isolate; }
+.mc-row .mc-pen { font-size:11px; font-weight:800; color:var(--gold); flex-shrink:0; direction:ltr; unicode-bidi:isolate; }
+.mc-row.w { background:var(--hi); }
+.mc-row.w .mc-nm, .mc-row.w .mc-sc { color:var(--gold); }
+.mc-row.ph .mc-nm { color:var(--t3); font-weight:600; }
+.mc.live .mc-row .mc-sc { color:var(--live); }
 .mc-venue { margin-top:8px; font-size:10px; color:var(--t3); font-weight:500; line-height:1.4; }
 .mc-note { color:var(--gold); }
 .rec-wrap { max-width:1080px; margin:16px auto 0; padding:0 20px 60px; }
@@ -219,11 +246,11 @@ main { position:relative; z-index:1; margin-right:64px; }
 .search-vs { font-size:11px; font-weight:700; color:var(--t3); white-space:nowrap; }
 .search-result { margin-top:10px; border-radius:12px; padding:12px 14px; background:var(--card); border:1px solid var(--card-border); display:none; }
 .search-result.show { display:block; }
-.sr-teams { font-size:14px; font-weight:700; color:var(--t1); margin-bottom:6px; }
+.sr-teams:empty { display:none; }
 .sr-score { font-size:26px; font-family:'Sora','Assistant',sans-serif; font-weight:800; color:var(--safe); letter-spacing:1px; line-height:1; direction:ltr; unicode-bidi:isolate; }
-.sr-teams { direction:inherit; unicode-bidi:isolate; }
-.sr-meta { font-size:11px; color:var(--t3); margin-top:4px; }
-.sr-live { color:var(--danger); }
+.sr-score:empty { display:none; }
+.sr-meta { font-size:11px; color:var(--t3); margin-top:6px; }
+.sr-live { color:var(--live); }
 .sr-none { font-size:13px; color:var(--t3); font-style:italic; }
 .stage-info { max-width:1080px; margin:6px auto 0; padding:0 20px; }
 .info-box { border-radius:var(--radius-sm); padding:12px 16px; font-size:12px; background:rgba(100,200,255,.07); border:1px solid rgba(100,200,255,.22); color:var(--t2); line-height:1.75; margin-bottom:4px; }
@@ -267,6 +294,9 @@ main { position:relative; z-index:1; margin-right:64px; }
 .chat-bubble { max-width:82%; padding:8px 12px; border-radius:12px; font-size:13.5px; line-height:1.5; word-break:break-word; }
 .chat-user { align-self:flex-end; background:var(--gold); color:#1a1405; font-weight:600; border-bottom-right-radius:4px; }
 .chat-assistant { align-self:flex-start; background:var(--card-future); color:var(--t1); border:1px solid var(--card-border); border-bottom-left-radius:4px; }
+.chat-retry { margin-inline-start:6px; padding:3px 10px; border-radius:7px; border:1px solid var(--gold); background:transparent; color:var(--gold); font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+.chat-retry:hover { background:var(--hi); }
+#chatSendBtn:disabled, #chatInputField:disabled { opacity:.5; cursor:not-allowed; }
 .chat-typing span { display:inline-block; width:6px; height:6px; background:var(--t3); border-radius:50%; margin:0 2px; animation:chatDot .9s infinite; }
 .chat-typing span:nth-child(2){ animation-delay:.2s; }
 .chat-typing span:nth-child(3){ animation-delay:.4s; }
@@ -287,26 +317,26 @@ main { position:relative; z-index:1; margin-right:64px; }
 .load-retry { padding:8px 20px; border-radius:8px; border:1px solid var(--card-border); background:var(--card); color:var(--t1); font-size:13px; font-weight:600; cursor:pointer; }
 .load-retry:hover { border-color:var(--gold); }
 
-/* Flag substitute on platforms with no flag-emoji font (Windows).
-   Shown for every team, so England is not the only odd one out. */
-.fabbr { display:inline-block; min-width:30px; padding:1px 4px; border-radius:4px; background:var(--card-border); color:var(--t1); font-size:9px; font-weight:800; letter-spacing:.5px; text-align:center; vertical-align:middle; direction:ltr; unicode-bidi:isolate; font-family:'Sora','Assistant',sans-serif; }
-.bk-team .fabbr { min-width:26px; font-size:8px; padding:1px 3px; }
-.tb-team .fabbr { min-width:34px; font-size:10px; }
+/* The 3-letter chip that used to stand in for a flag on Windows is gone: in
+   Hebrew it printed a Latin code beside every Hebrew name, and the name on its
+   own already identifies the team. Platforms with no flag font simply show no
+   flag. */
 
 /* ── today's match banner ── */
 #todayBanner:empty { display:none; }
 .tb { max-width:760px; margin:0 auto 18px; padding:14px 18px 12px; border-radius:var(--radius); background:var(--hi); border:1px solid var(--hi-border); position:relative; display:grid; grid-template-columns:1fr auto; grid-template-areas:"tag tag" "main right" "stage stage"; gap:4px 14px; align-items:center; }
-.tb.live { border-color:var(--danger); }
+.tb.live { border-color:var(--live); }
 .tb.done { opacity:.75; }
 .tb-tag { grid-area:tag; font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--gold); }
-.tb-main { grid-area:main; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:clamp(15px,4vw,21px); font-weight:800; color:var(--t1); }
-.tb-vs { font-size:11px; font-weight:600; color:var(--t3); }
-.tb-right { grid-area:right; text-align:center; }
-.tb-time, .tb-score { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:30px; line-height:1; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
-.tb-sub { font-size:10px; color:var(--t3); margin-top:2px; white-space:nowrap; }
-.tb-live { font-size:10px; font-weight:800; color:var(--danger); margin-top:2px; }
+.tb-rows { grid-area:main; min-width:0; }
+.tb-rows .mc-nm { font-size:clamp(14px,3.6vw,18px); }
+.tb-rows .mc-sc { font-size:clamp(18px,4.4vw,24px); min-width:22px; }
+.tb-rows .mc-fl { font-size:18px; }
+.tb-right { grid-area:right; text-align:center; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.tb-time { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:30px; line-height:1; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
+.tb-sub { font-size:10px; color:var(--t3); white-space:nowrap; }
 .tb-stage { grid-area:stage; font-size:10px; color:var(--t3); margin-top:4px; }
-@media(max-width:520px){ .tb { margin-inline:12px; padding:12px 14px; } .tb-time,.tb-score { font-size:24px; } }
+@media(max-width:520px){ .tb { margin-inline:12px; padding:12px 14px; } .tb-time { font-size:24px; } }
 
 /* ── search reset ── */
 .search-reset { flex-shrink:0; width:34px; height:34px; border-radius:8px; border:1px solid var(--card-border); background:var(--card); color:var(--t2); font-size:13px; cursor:pointer; line-height:1; }
@@ -318,14 +348,58 @@ select:disabled { opacity:.45; cursor:not-allowed; }
   #chatInputField, #searchTeam1, #searchTeam2 { font-size:16px; }
 }
 
-/* ── data tab ── */
-.ds-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; margin-bottom:6px; }
-.ds { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px 8px; text-align:center; }
-.ds-v { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:26px; line-height:1; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
-.ds-l { font-size:10px; color:var(--t3); margin-top:4px; line-height:1.3; }
-.ds-big { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px; text-align:center; font-size:14px; font-weight:700; color:var(--t2); }
+/* ── data tab ──
+   Four hero tiles carry the headline; everything else is either a compact panel
+   or folded away behind a toggle. Every stats site worth copying (SofaScore's
+   "facts" strip, FotMob's top-3-then-see-all cards) leads with a small number of
+   big numbers rather than one flat wall of equal-weight rows. */
+.ds-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.ds { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:14px 8px; text-align:center; }
+.ds.hero { border-color:var(--hi-border); background:var(--hi); }
+.ds-v { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:clamp(22px,6vw,30px); line-height:1; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
+.ds-l { font-size:10px; color:var(--t3); margin-top:5px; line-height:1.3; }
+@media(max-width:520px){ .ds-grid { grid-template-columns:repeat(2,1fr); } }
+
+/* one-line narrative under the tiles — the Opta move: a sentence, not a table */
+.ds-lede { margin-top:10px; padding:10px 14px; border-radius:var(--radius-sm); background:var(--card); border:1px solid var(--card-border); font-size:12.5px; line-height:1.6; color:var(--t2); }
+.ds-lede b { color:var(--gold); font-weight:800; direction:ltr; unicode-bidi:isolate; display:inline-block; }
+
+/* leaderboard: rank, name, bar, value */
+.lb { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); overflow:hidden; }
+.lb-row { display:flex; align-items:center; gap:9px; padding:9px 12px; border-bottom:1px solid var(--line); }
+.lb-row:last-child { border-bottom:none; }
+.lb-rk { width:18px; flex-shrink:0; font-size:11px; font-weight:800; color:var(--t3); text-align:center; direction:ltr; unicode-bidi:isolate; }
+.lb-row.top .lb-rk { color:var(--gold); }
+.lb-nm { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--t1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lb-sub { font-size:10px; font-weight:600; color:var(--t3); flex-shrink:0; }
+.lb-bar { flex:0 0 74px; height:5px; border-radius:3px; background:var(--card-border); overflow:hidden; }
+.lb-bar i { display:block; height:100%; background:var(--gold); border-radius:3px; }
+.lb-v { flex:0 0 26px; text-align:center; font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:15px; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
+@media(max-width:400px){ .lb-bar { display:none; } }
+
+/* goals-by-stage strip — the one derived series score-only data can support */
+.gstrip { display:flex; gap:6px; align-items:flex-end; background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px 12px 9px; }
+.gcol { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; min-width:0; }
+.gcol .gv { font-size:12px; font-weight:800; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
+.gcol .gb { width:100%; max-width:38px; border-radius:4px 4px 0 0; background:var(--hi-border); min-height:4px; }
+.gcol .gl { font-size:9px; color:var(--t3); font-weight:600; text-align:center; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+
+/* two-up mini facts */
+.fx { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.fx-i { display:flex; align-items:baseline; justify-content:space-between; gap:8px; background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:10px 12px; }
+.fx-l { font-size:11.5px; color:var(--t2); font-weight:600; line-height:1.3; }
+.fx-v { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:16px; color:var(--gold); flex-shrink:0; direction:ltr; unicode-bidi:isolate; }
+@media(max-width:420px){ .fx { grid-template-columns:1fr; } }
+
+.ds-big { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px; text-align:center; font-size:14px; font-weight:700; color:var(--t2); direction:ltr; unicode-bidi:isolate; }
 .ds-teams { display:flex; flex-wrap:wrap; gap:6px; }
 .ds-chip { background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; color:var(--t2); }
+
+/* fold-away detail — the tail of the tab, not its front page */
+.ds-more { width:100%; margin-top:16px; padding:10px; border-radius:var(--radius-sm); border:1px solid var(--card-border); background:var(--card); color:var(--t2); font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+.ds-more:hover { border-color:var(--gold); color:var(--t1); }
+.ds-fold { display:none; }
+.ds-fold.open { display:block; }
 
 /* ── watch guide table ── */
 .wt-wrap { max-width:760px; margin:16px auto 0; }
@@ -434,16 +508,20 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
     <div id="watchTable"></div>
   </div>
 
+  <!-- Every .sec-sub is filled by renderStageHeads() from the live model.
+       They used to be hardcoded ("🔥 Quarter-finals start today!"), which was
+       still on the page days after the quarter-finals had finished. -->
+
   <!-- ── STAGE: GROUP ── -->
   <div id="stage-group" class="stage">
-    <div class="sec-head"><div class="sec-label"><span data-he="שלב הבתים" data-en="Group Stage">שלב הבתים</span></div><div class="sec-sub"><span data-he="11–27 יוני · 72 משחקים" data-en="Jun 11–27 · 72 matches">11–27 יוני · 72 משחקים</span></div></div>
+    <div class="sec-head"><div class="sec-label"><span data-he="שלב הבתים" data-en="Group Stage">שלב הבתים</span></div><div class="sec-sub" data-sub="group"></div></div>
       <div class="day-block" id="group-days"></div>
   </div>
 
 
   <!-- ── STAGE: R32 ── -->
   <div id="stage-r32" class="stage">
-    <div class="sec-head"><div class="sec-label"><span data-he="סיבוב 32" data-en="Round of 32">סיבוב 32</span></div><div class="sec-sub"><span data-he="✅ הסתיים · 28 יוני – 3 יולי" data-en="✅ Completed · Jun 28 – Jul 3">✅ הסתיים · 28 יוני – 3 יולי</span></div></div>
+    <div class="sec-head"><div class="sec-label"><span data-he="סיבוב 32" data-en="Round of 32">סיבוב 32</span></div><div class="sec-sub" data-sub="r32"></div></div>
     <div class="day-block"></div>
   </div>
 
@@ -451,9 +529,9 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
   <div id="stage-r16" class="stage">
     <div class="sec-head">
       <div class="sec-label"><span data-he="שמינית גמר" data-en="Round of 16">שמינית גמר</span></div>
-      <!-- ✅ תיקון: הסתיים -->
-      <div class="sec-sub"><span data-he="✅ הסתיים · 4–7 יולי" data-en="✅ Completed · Jul 4–7">✅ הסתיים · 4–7 יולי</span></div>
+      <div class="sec-sub" data-sub="r16"></div>
     </div>
+    <div class="bracket-box"></div>
     <div class="day-block"></div>
   </div>
 
@@ -461,32 +539,27 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
   <div id="stage-qf" class="stage">
     <div class="sec-head">
       <div class="sec-label"><span data-he="רבע גמר" data-en="Quarter-finals">רבע גמר</span></div>
-      <!-- 🔥 תיקון: מתחיל היום -->
-      <div class="sec-sub"><span data-he="🔥 מתחיל היום! · 9–12 יולי" data-en="🔥 Starts today! · Jul 9–12">🔥 מתחיל היום! · 9–12 יולי</span></div>
+      <div class="sec-sub" data-sub="qf"></div>
     </div>
-    <div class="stage-info">
-      <div class="info-box">
-        <strong data-he="רבע גמר 2026" data-en="Quarter-finals 2026">רבע גמר 2026</strong>
-        <span data-he=" · ארבע המנצחות יעפילו לחצי הגמר (14–15/7)" data-en=" · Four winners advance to semi-finals (Jul 14–15)"> · ארבע המנצחות יעפילו לחצי הגמר (14–15/7)</span>
-      </div>
-    </div>
+    <div class="bracket-box"></div>
     <div class="day-block"></div>
   </div>
 
   <!-- ── STAGE: SF ── -->
   <div id="stage-sf" class="stage">
-    <div class="sec-head"><div class="sec-label"><span data-he="חצי גמר" data-en="Semi-finals">חצי גמר</span></div><div class="sec-sub"><span data-he="14–15 יולי" data-en="Jul 14–15">14–15 יולי</span></div></div>
+    <div class="sec-head"><div class="sec-label"><span data-he="חצי גמר" data-en="Semi-finals">חצי גמר</span></div><div class="sec-sub" data-sub="sf"></div></div>
+    <div class="bracket-box"></div>
     <div class="stage-info">
       <div class="info-box">
         <div class="path-row">
-          <span class="ib-chip" data-he="מ׳101 (14/7)" data-en="M101 (Jul 14)">מ׳101 (14/7)</span>
+          <span class="ib-chip" data-he="חצי גמר 1 · 14/7" data-en="Semi-final 1 · Jul 14">חצי גמר 1 · 14/7</span>
           <span class="path-arrow">→</span>
           <span class="path-good" data-he="מנצחת → גמר" data-en="Winner → Final">מנצחת → גמר</span>
           <span style="opacity:.4">·</span>
           <span class="path-warn" data-he="מפסידה → מקום 3" data-en="Loser → 3rd place">מפסידה → מקום 3</span>
         </div>
         <div class="path-row">
-          <span class="ib-chip" data-he="מ׳102 (15/7)" data-en="M102 (Jul 15)">מ׳102 (15/7)</span>
+          <span class="ib-chip" data-he="חצי גמר 2 · 15/7" data-en="Semi-final 2 · Jul 15">חצי גמר 2 · 15/7</span>
           <span class="path-arrow">→</span>
           <span class="path-good" data-he="מנצחת → גמר" data-en="Winner → Final">מנצחת → גמר</span>
           <span style="opacity:.4">·</span>
@@ -499,12 +572,12 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
 
   <!-- ── STAGE: FINAL ── -->
   <div id="stage-final" class="stage">
-    <div class="sec-head"><div class="sec-label">🏆 <span data-he="הגמר" data-en="The Final">הגמר</span></div><div class="sec-sub"><span data-he="19 יולי · MetLife · ניו ג׳רזי" data-en="Jul 19 · MetLife · New Jersey">19 יולי · MetLife · ניו ג׳רזי</span></div></div>
+    <div class="sec-head"><div class="sec-label">🏆 <span data-he="הגמר" data-en="The Final">הגמר</span></div><div class="sec-sub" data-sub="final"></div></div>
+    <div class="bracket-box"></div>
     <div class="day-block"></div>
   </div>
 
-  <!-- ✅ תיקון: footer מעודכן -->
-  <div class="footer"><span data-he="כל השעות בשעון ישראל (UTC+3) · נתונים: FIFA / ESPN · עדכון 10 יולי 2026" data-en="All times Israel (UTC+3) · Data: FIFA / ESPN · Updated Jul 10, 2026">כל השעות בשעון ישראל (UTC+3) · נתונים: FIFA / ESPN · עדכון 10 יולי 2026</span></div>
+  <div class="footer"><span data-he="כל השעות בשעון ישראל (UTC+3) · נתונים: ESPN" data-en="All times Israel (UTC+3) · Data: ESPN">כל השעות בשעון ישראל (UTC+3) · נתונים: ESPN</span></div>
 </main>
 
 <!-- AI CHAT -->

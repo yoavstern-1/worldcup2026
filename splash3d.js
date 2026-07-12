@@ -85,46 +85,130 @@ import * as THREE from './three.module.min.js';
     return new THREE.CanvasTexture(c);
   }
 
-  // Match-ball albedo: white-dominant, curved bonded panels with real stitching,
-  // small colour accents near the seams. Reads as a modern football, not a
-  // beach ball — white is the dominant surface, colour is an accent.
-  function ballTexture() {
-    var c = document.createElement('canvas'); c.width = 1024; c.height = 512;
-    var x = c.getContext('2d');
-    x.fillStyle = '#f6f7f8'; x.fillRect(0, 0, 1024, 512);
+  // ── Match ball ──
+  // The old texture drew three wavy horizontal bands across an equirectangular
+  // map. On a sphere those read as stitched seams around a core — a baseball.
+  // A real modern match ball (the WC26 Trionda) is four curved panels meeting at
+  // three-way junctions, and the panel edges have to be *spherical* to look
+  // right, which no set of sine curves in UV space can be.
+  //
+  // So the panels are built where they actually live: on the sphere. Four seed
+  // points at the vertices of a tetrahedron, and every texel is assigned to its
+  // nearest seed — a spherical Voronoi diagram, whose four cells are exactly the
+  // four curved triangular panels. The gap between the nearest and second
+  // nearest seed gives distance-to-seam for free: near zero at a seam, largest
+  // at a panel's centre. That single number drives the groove, the inset colour
+  // triangle, and the bump map.
+  function normalize3(v) {
+    var l = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    return [v[0] / l, v[1] / l, v[2] / l];
+  }
+  var PANELS = [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]].map(normalize3);
+  // Trionda's palette: a white ball with red, blue and green panels.
+  var PANEL_COL = [[214, 25, 47], [17, 86, 176], [10, 140, 74], [252, 252, 252]];
+  var WHITE = [246, 247, 248];
 
-    var seams = [110, 256, 402];   // three horizontal bonded-panel seams
-    function seamY(y, px) { return y + Math.sin(px / 160 + y) * 30; }
+  function smooth(a, b, t) {
+    t = (t - a) / (b - a);
+    if (t < 0) t = 0; else if (t > 1) t = 1;
+    return t * t * (3 - 2 * t);
+  }
 
-    // colour accents: thin curved slivers hugging each seam (not full bands)
-    function accent(color, y, h) {
-      x.fillStyle = color; x.globalAlpha = .9; x.beginPath(); x.moveTo(0, seamY(y, 0));
-      for (var px = 0; px <= 1024; px += 10) x.lineTo(px, seamY(y, px));
-      for (var px2 = 1024; px2 >= 0; px2 -= 10) x.lineTo(px2, seamY(y, px2) + h);
-      x.closePath(); x.fill(); x.globalAlpha = 1;
+  // -> { panel, gap } for a texel. gap = dot(nearest) - dot(second nearest).
+  function panelAt(u, v) {
+    var lon = u * 6.283185307 - 3.141592653;
+    var lat = 1.570796327 - v * 3.141592653;
+    var cl = Math.cos(lat);
+    var dx = cl * Math.cos(lon), dy = Math.sin(lat), dz = cl * Math.sin(lon);
+    var best = -2, second = -2, idx = 0;
+    for (var i = 0; i < 4; i++) {
+      var p = PANELS[i];
+      var d = dx * p[0] + dy * p[1] + dz * p[2];
+      if (d > best) { second = best; best = d; idx = i; }
+      else if (d > second) { second = d; }
     }
-    accent('#c8102e', seams[0] - 30, 26);
-    accent('#0b5cc0', seams[1] - 14, 30);
-    accent('#0a8b46', seams[2] - 30, 26);
+    return { panel: idx, gap: best - second };
+  }
 
-    // panel seams: soft grey groove + a darker centre line
-    seams.forEach(function (y) {
-      x.lineWidth = 6; x.strokeStyle = 'rgba(150,160,168,.55)';
-      x.beginPath(); for (var px = 0; px <= 1024; px += 8) { var yy = seamY(y, px); px ? x.lineTo(px, yy) : x.moveTo(px, yy); } x.stroke();
-      x.lineWidth = 1.6; x.strokeStyle = 'rgba(70,80,90,.7)';
-      x.beginPath(); for (var px2 = 0; px2 <= 1024; px2 += 8) { var yy2 = seamY(y, px2); px2 ? x.lineTo(px2, yy2) : x.moveTo(px2, yy2); } x.stroke();
-    });
+  // gap runs 0 at a seam to 4/3 at a panel's centre (a tetrahedron's seeds are
+  // 109.47° apart, so dot = -1/3 between neighbours).
+  //
+  // The ball has to stay WHITE-dominant. Colouring most of each panel is what
+  // turns a football into a beach ball; the real thing is a white ball with one
+  // curved colour wedge inset in each of three panels, and the fourth panel left
+  // plain. So the colour only starts deep inside a cell, and the wide white
+  // field either side of every seam is the ball, not a stripe.
+  var SEAM  = 0.016;   // groove half-width, in gap units
+  var INSET = 0.520;   // colour begins this far inside the panel
+  var FADE  = 0.090;   // soft edge on the colour
+  var RIM   = 0.045;   // thin gold rim tracing the colour wedge
+  var GOLD  = [198, 162, 84];
 
-    // stitching: short dark dashes perpendicular to each seam
-    x.strokeStyle = 'rgba(60,70,80,.8)'; x.lineWidth = 1.4;
-    seams.forEach(function (y) {
-      for (var px = 6; px < 1024; px += 20) {
-        var yy = seamY(y, px), dx = Math.cos(px / 160) * 0.6;
-        x.beginPath(); x.moveTo(px - dx * 5, yy - 5); x.lineTo(px + dx * 5, yy + 5); x.stroke();
+  function ballTexture() {
+    var W = 1024, H = 512;
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var x = c.getContext('2d');
+    var img = x.createImageData(W, H), d = img.data;
+    var r = rng(20260619);
+
+    for (var py = 0; py < H; py++) {
+      for (var px = 0; px < W; px++) {
+        var pa = panelAt(px / W, py / H);
+        var col = PANEL_COL[pa.panel];
+
+        var cr = WHITE[0], cg = WHITE[1], cb = WHITE[2];
+
+        if (pa.panel < 3) {
+          // a thin gold rim just outside the colour, then the colour itself
+          var rim = smooth(INSET - RIM, INSET, pa.gap) * (1 - smooth(INSET, INSET + RIM, pa.gap));
+          cr += (GOLD[0] - cr) * rim; cg += (GOLD[1] - cg) * rim; cb += (GOLD[2] - cb) * rim;
+
+          var mix = smooth(INSET + RIM * 0.5, INSET + RIM * 0.5 + FADE, pa.gap);
+          cr += (col[0] - cr) * mix; cg += (col[1] - cg) * mix; cb += (col[2] - cb) * mix;
+        }
+
+        // debossed groove along every seam: a narrow grey line, not a wide band
+        var groove = 1 - smooth(0, SEAM, pa.gap);
+        if (groove > 0) {
+          var g = 0.55 * groove * groove;
+          cr += (118 - cr) * g; cg += (126 - cg) * g; cb += (134 - cb) * g;
+        }
+
+        // faint grain so the surface is not a flat plastic fill
+        var n = (r() - 0.5) * 6;
+        var o = (py * W + px) * 4;
+        d[o]     = cr + n;
+        d[o + 1] = cg + n;
+        d[o + 2] = cb + n;
+        d[o + 3] = 255;
       }
-    });
+    }
+    x.putImageData(img, 0, 0);
+    var t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  }
 
-    var t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  // Bump map from the same distance-to-seam field: the seams sink, the panels
+  // bulge very slightly. This is what stops the ball reading as a printed
+  // sphere — the light catches the panel edges.
+  function ballBump() {
+    var W = 512, H = 256;
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var x = c.getContext('2d');
+    var img = x.createImageData(W, H), d = img.data;
+    for (var py = 0; py < H; py++) {
+      for (var px = 0; px < W; px++) {
+        var pa = panelAt(px / W, py / H);
+        var h = 150 + 105 * smooth(0, 0.10, pa.gap);   // dark in the groove, light on the panel
+        var o = (py * W + px) * 4;
+        d[o] = d[o + 1] = d[o + 2] = h;
+        d[o + 3] = 255;
+      }
+    }
+    x.putImageData(img, 0, 0);
+    return new THREE.CanvasTexture(c);
   }
 
   function netTexture() {
@@ -202,11 +286,21 @@ import * as THREE from './three.module.min.js';
   earthGroup.add(atm);
   earth.rotation.z = clouds.rotation.z = 0.4;
 
-  // ── Metallic ball ──
-  // matte-leather football, not chrome: low metalness, mid roughness for a soft sheen
-  var ballMat = new THREE.MeshStandardMaterial({ map: ballTexture(), roughness: .46, metalness: .12 });
+  // ── Match ball ──
+  // Coated leather, not chrome: almost no metalness, a fairly tight roughness so
+  // the key light leaves one soft highlight, and the seams raised through the
+  // bump map so the panel edges catch it.
+  var ballMat = new THREE.MeshStandardMaterial({
+    map: ballTexture(),
+    bumpMap: ballBump(),
+    bumpScale: 0.45,
+    roughness: .38,
+    metalness: .04
+  });
   var ball = new THREE.Mesh(sphere, ballMat);
-  ball.scale.setScalar(0.001); ball.rotation.z = 0.2;
+  ball.scale.setScalar(0.001);
+  // tilt so a three-panel junction, not a flat panel face, is pointed at us
+  ball.rotation.z = 0.35; ball.rotation.x = 0.25;
   scene.add(ball);
 
   var net = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2),
@@ -253,7 +347,9 @@ import * as THREE from './three.module.min.js';
     if (e < 3400) raf = requestAnimationFrame(frame);
     else if (!ended) {
       ended = true;
-      renderer.dispose(); ballMat.map.dispose(); earth.material.map.dispose(); clouds.material.map.dispose(); net.material.map.dispose();
+      renderer.dispose();
+      ballMat.map.dispose(); ballMat.bumpMap.dispose();
+      earth.material.map.dispose(); clouds.material.map.dispose(); net.material.map.dispose();
       window.removeEventListener('resize', resize); finish(0);
     }
   }

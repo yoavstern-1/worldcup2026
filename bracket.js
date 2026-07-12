@@ -21,7 +21,10 @@ var CSS = ''
 + '.bk-matches{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:3px;padding:0 3px;}'
 + '.bk-match{background:var(--card-future);border:1px solid var(--card-border);border-radius:6px;overflow:hidden;}'
 + '.bk-match.up{border-color:var(--hi-border);}'
-+ '.bk-match.live{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger);}'
++ '.bk-match.live{border-color:var(--live);box-shadow:0 0 0 1px var(--live);}'
++ '.bk-live{display:flex;align-items:center;justify-content:center;gap:5px;font-size:9px;font-weight:800;color:var(--live);padding:2px 6px;border-top:1px solid var(--card-border);background:var(--live-soft);}'
++ '.bk-live .live-dot{width:6px;height:6px;}'
++ '.bk-live .bk-min{direction:ltr;unicode-bidi:isolate;}'
 + '.bk-team{display:flex;align-items:center;gap:4px;padding:4px 7px;font-size:11px;font-weight:600;color:var(--t2);min-height:22px;}'
 // color-mix() needs Safari 16.2+. The rgba() line before each one is the
 // fallback older iOS actually paints; without it the tint drops to transparent.
@@ -151,7 +154,15 @@ function matchCard(t, match) {
     + '<div class="bk-div"></div>'
     + teamRow(match.away, match, 'away');
 
-  if (match.status !== 'past') {
+  if (match.status === 'live') {
+    var phase = WC.livePhase(match);
+    var label = isHe() ? phase.he : phase.en;
+    var minute = WC.liveMinute(match, t.fetchedAt);
+    html += '<div class="bk-live"><span class="live-dot"></span>'
+      + '<span class="bk-min live-min" data-live-id="' + esc(match.id) + '">'
+      + esc(minute || label) + '</span>'
+      + (minute ? '<span>· ' + esc(label) + '</span>' : '') + '</div>';
+  } else if (match.status === 'future') {
     html += '<div class="bk-when">' + esc(match.date + ' · ' + match.time) + '</div>';
   } else if (match.note) {
     html += '<div class="bk-note">⚡ ' + esc(isHe() ? match.note.he : match.note.en) + '</div>';
@@ -182,15 +193,24 @@ function round(titleHe, titleEn, cardsHtml) {
 }
 
 // ── Public ───────────────────────────────────────────────────────────
+// The tree is drawn into every .bracket-box on the page — one sits at the top
+// of each knockout tab (R16, QF, SF, Final), so the bracket is there whichever
+// round the user is looking at, not only the round that happens to be current.
+// The upcoming-fixtures list underneath it is printed once, in the first box.
 function renderBracket(t) {
-  var box = document.getElementById('bracketBox');
-  if (!box) { console.warn('[bracket] #bracketBox not found'); return; }
+  var boxes = [].slice.call(document.querySelectorAll('.bracket-box'));
+  var legacy = document.getElementById('bracketBox');
+  if (legacy && boxes.indexOf(legacy) === -1) boxes.push(legacy);
+  if (!boxes.length) { console.warn('[bracket] no .bracket-box found'); return; }
   if (!t || !t.stages) return;
 
   injectCSS();
 
   var qf = t.stages.qf, sf = t.stages.sf, fin = t.stages.final[0];
-  if (qf.length < 4 || sf.length < 2) { box.innerHTML = ''; return; }
+  if (qf.length < 4 || sf.length < 2) {
+    boxes.forEach(function(b) { b.innerHTML = ''; });
+    return;
+  }
 
   // Left half feeds sf[0], right half feeds sf[1].
   var leftQF  = [qf[0], qf[1]];
@@ -255,7 +275,9 @@ function renderBracket(t) {
       + '</div></div>';
   }
 
-  box.innerHTML = stale + tree + sched;
+  boxes.forEach(function(b, i) {
+    b.innerHTML = stale + tree + (i === 0 ? sched : '');
+  });
 }
 
 window.renderBracket = renderBracket;
