@@ -28,22 +28,25 @@
   --radius:18px; --radius-sm:12px;
 }
 [data-theme="light"] {
-  /* Soft beige + champagne + emerald ink. The old ivory (#f4f0e6) was close to
-     paper white and glared; this is a warmer, dimmer sand with the text
-     contrast kept above 7:1. */
-  --bg:#e9e2d2; --bg2:#ded5c1;
-  --stripe-tint:rgba(70,58,26,.025);
-  --vignette:rgba(70,58,26,.10);
-  --line:rgba(0,0,0,.05);
-  --usa-red:#b01238; --gold:#8f6f22;
-  --t1:#1a2f24; --t2:#3d4d41; --t3:#6f7f73;
-  --card:rgba(255,253,246,.62); --card-future:rgba(252,249,240,.9);
-  --card-border:rgba(40,55,40,.16);
-  --hi:rgba(143,111,34,.13); --hi-border:rgba(143,111,34,.45);
-  --sidebar:rgba(238,231,217,.95); --drawer:rgba(240,234,221,.99);
-  --safe:#14803c; --warn:#a8650a; --danger:#c1272d;
-  --live:#a8650a; --live-soft:rgba(168,101,10,.15);
-  --shadow:rgba(60,45,15,.16);
+  /* Muted beige + champagne + emerald ink. Two rounds of softening: the original
+     ivory (#f4f0e6) was near paper-white and glared, and #e9e2d2 was still bright.
+     The ink is now the DARK theme's background emerald (#0a1f16) rather than a
+     lighter grey-green, so the two themes read as one palette inverted rather than
+     two designs. Contrast is ~13:1 — well past AA, and it is the surface that came
+     down, not the text that went up. */
+  --bg:#e2dac6; --bg2:#d5cbb3;
+  --stripe-tint:rgba(70,58,26,.03);
+  --vignette:rgba(70,58,26,.12);
+  --line:rgba(0,0,0,.06);
+  --usa-red:#a51134; --gold:#8a6a1e;
+  --t1:#0c2318; --t2:#2f4a3b; --t3:#61756a;
+  --card:rgba(252,249,240,.55); --card-future:rgba(248,244,233,.85);
+  --card-border:rgba(30,50,35,.18);
+  --hi:rgba(138,106,30,.12); --hi-border:rgba(138,106,30,.42);
+  --sidebar:rgba(228,220,203,.95); --drawer:rgba(231,224,208,.99);
+  --safe:#127336; --warn:#9c5d08; --danger:#b32228;
+  --live:#9c5d08; --live-soft:rgba(156,93,8,.15);
+  --shadow:rgba(60,45,15,.14);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
@@ -185,6 +188,33 @@ main { position:relative; z-index:1; margin-right:64px; }
 /* ── live pulse ──
    A slow amber blink, not a static red dot: the eye reads a pulse as "still
    running". 1.8s is deliberately unhurried — a fast blink reads as an error. */
+/* ── Goal alert ──────────────────────────────────────────────────────
+   Fixed to the bottom-inline-start corner so it never covers the chat ball
+   (bottom-inline-end) and never blocks the card the user is reading. Stacks if
+   two goals land in the same 60s poll. */
+#goalPops { position:fixed; inset-block-end:18px; inset-inline-start:18px; z-index:120;
+            display:flex; flex-direction:column; gap:10px; pointer-events:none; max-width:min(340px,calc(100vw - 36px)); }
+.goal-pop { background:var(--drawer); border:1px solid var(--gold); border-radius:14px;
+            padding:11px 14px; box-shadow:0 10px 34px var(--shadow);
+            opacity:0; transform:translateY(14px) scale(.94);
+            transition:opacity .32s ease, transform .32s cubic-bezier(.34,1.4,.64,1); }
+.goal-pop.in { opacity:1; transform:none; }
+.gp-top { display:flex; align-items:center; gap:7px; }
+.gp-ball { font-size:16px; line-height:1; animation:gpKick .6s ease-out; }
+@keyframes gpKick { 0% { transform:scale(.3) rotate(-40deg); } 60% { transform:scale(1.25) rotate(10deg); } 100% { transform:none; } }
+.gp-word { font-family:'Sora','Assistant',sans-serif; font-weight:900; font-size:13px;
+           letter-spacing:1.4px; color:var(--gold); }
+.gp-kind { font-size:10px; font-weight:800; color:var(--t3); }
+.gp-min { margin-inline-start:auto; font-family:'Sora','Assistant',sans-serif; font-weight:800;
+          font-size:12px; color:var(--live); direction:ltr; unicode-bidi:isolate; }
+.gp-who { display:flex; align-items:center; gap:7px; margin-top:5px; }
+.gp-nm { font-size:15px; font-weight:800; color:var(--t1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.gp-match { margin-top:3px; font-size:11.5px; color:var(--t2); direction:ltr; unicode-bidi:isolate; text-align:start; }
+@media (prefers-reduced-motion: reduce) {
+  .goal-pop { transition:opacity .2s ease; transform:none; }
+  .goal-pop.in { transform:none; }
+  .gp-ball { animation:none; }
+}
 @keyframes livePulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.28; transform:scale(.78); } }
 .live-dot { width:9px; height:9px; border-radius:50%; background:var(--live); flex-shrink:0; animation:livePulse 1.8s ease-in-out infinite; }
 .mc-live { display:flex; align-items:center; gap:6px; background:var(--live-soft); border:1px solid var(--live); border-radius:9px; padding:3px 9px; }
@@ -328,7 +358,10 @@ main { position:relative; z-index:1; margin-right:64px; }
 .tb.live { border-color:var(--live); }
 .tb.done { opacity:.75; }
 .tb-tag { grid-area:tag; font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--gold); }
-.tb-rows { grid-area:main; min-width:0; }
+/* The team rows sat in a 1fr grid cell, so the two name pills stretched the whole
+   width of the banner and left the kickoff time stranded far off to the side. Cap
+   them and centre them in the cell instead. */
+.tb-rows { grid-area:main; min-width:0; width:100%; max-width:380px; margin-inline:auto; }
 .tb-rows .mc-nm { font-size:clamp(14px,3.6vw,18px); }
 .tb-rows .mc-sc { font-size:clamp(18px,4.4vw,24px); min-width:22px; }
 .tb-rows .mc-fl { font-size:18px; }

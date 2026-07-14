@@ -471,15 +471,17 @@ function playerName(name, he) {
 // What phase of the match is this, and what minute is it in? The minute is
 // extrapolated from ESPN's clock plus the time since we fetched it, so it
 // ticks between the 60-second refreshes instead of sitting frozen.
+// Deliberately only five states the user ever sees. There is no "הפסקה" (the break
+// IS the half, and "מחצית" is what the scoreboard says) and no "סוף הארכה" — a break
+// before penalties is still extra time as far as the card is concerned. Stoppage time
+// gets its own label, because "90+3'" alone does not read as added time to everyone.
 var PHASE = {
-  ht:    { he: 'הפסקה',      en: 'HT' },
+  ht:    { he: 'מחצית',      en: 'Halftime' },
   pens:  { he: 'פנדלים',     en: 'Pens' },
-  end90: { he: 'סוף 90',     en: 'End 90' },
-  endEt: { he: 'סוף הארכה',  en: 'End ET' },
+  stop:  { he: 'תוספת זמן',  en: 'Stoppage' },
+  et:    { he: 'הארכה',      en: 'Extra time' },
   h1:    { he: 'מחצית 1',    en: '1st half' },
   h2:    { he: 'מחצית 2',    en: '2nd half' },
-  et1:   { he: 'הארכה',      en: 'Extra time' },
-  et2:   { he: 'הארכה',      en: 'Extra time' },
   live:  { he: 'משחק חי',    en: 'Live' }
 };
 
@@ -488,13 +490,25 @@ function livePhase(m) {
   var p = m.period || 0;
   if (n.indexOf('HALFTIME') !== -1) return PHASE.ht;
   if (n.indexOf('SHOOTOUT') !== -1 || p >= 5) return PHASE.pens;
-  if (n.indexOf('END_OF_EXTRATIME') !== -1) return PHASE.endEt;
-  if (n.indexOf('END_OF_REGULATION') !== -1 || n.indexOf('END_OF_PERIOD') !== -1) return PHASE.end90;
+  // End of regulation and end of extra time are both "we are in / heading into
+  // extra time", not states of their own.
+  if (n.indexOf('END_OF_EXTRATIME') !== -1) return PHASE.et;
+  if (n.indexOf('END_OF_REGULATION') !== -1 || n.indexOf('END_OF_PERIOD') !== -1) return PHASE.et;
+  if (p === 3 || p === 4) return PHASE.et;
+  // Past the period's cap with the clock still running = added time.
+  if (inStoppage(m)) return PHASE.stop;
   if (p === 1) return PHASE.h1;
   if (p === 2) return PHASE.h2;
-  if (p === 3) return PHASE.et1;
-  if (p === 4) return PHASE.et2;
   return PHASE.live;
+}
+
+// Raw clock only — no drift extrapolation. A label must not flicker between
+// "2nd half" and "Stoppage" on the strength of a few extrapolated seconds.
+function inStoppage(m) {
+  if (!clockRunning(m)) return false;
+  var cap = PERIOD_CAP[m.period];
+  if (!cap) return false;
+  return Math.floor((m.clock || 0) / 60) + 1 > cap;
 }
 
 // The clock does not advance during half-time, the break before extra time, or
@@ -698,6 +712,34 @@ function stageState(t, key, now) {
 // ── Tournament statistics ────────────────────────────────────────────
 // Everything here is derived from matches already in the model. It is computed
 // once per render, not fetched.
+// Did the side that won this match trail at any point in it? Replay the goal events
+// in order and watch for the eventual winner being behind. Shootout kicks are skipped
+// -- they are recorded as events too, and counting them would make every shootout
+// look like a comeback. This is the one genuinely narrative stat a score-and-events
+// feed can produce that the big sites do not headline, which is why it replaces
+// "clean sheets" (a binary that says nothing anyone wants to read).
+function comeback(m) {
+  if (!m.score || m.score.h === m.score.a) return false;   // a draw cannot be a comeback
+  var winner = m.score.h > m.score.a ? 'home' : 'away';
+  // playEvents() already drops shootout kicks, so every goal here is a real one.
+  // ESPN credits an own goal to the side that BENEFITS from it, not the side that put
+  // it in — checked against all 14 own-goal matches in this tournament, every one of
+  // which reconstructs its final score only if `side` is taken at face value.
+  var goals = (m.events || []).filter(function(e) {
+    return e.kind === 'goal' || e.kind === 'pk' || e.kind === 'og';
+  }).sort(function(a, b) { return (a.sec || 0) - (b.sec || 0); });
+
+  var h = 0, a = 0, trailed = false;
+  for (var i = 0; i < goals.length; i++) {
+    if (goals[i].side === 'home') h++; else a++;
+    if ((winner === 'home' ? h - a : a - h) < 0) trailed = true;
+  }
+  // Only trust the replay if it reconstructs the final score. A dropped event would
+  // otherwise invent or hide a comeback, and a wrong number here is worse than none.
+  if (h !== m.score.h || a !== m.score.a) return false;
+  return trailed;
+}
+
 function tournamentStats(t) {
   var played = t.all.filter(function(m) { return m.status !== 'future' && m.score; });
 
@@ -707,7 +749,8 @@ function tournamentStats(t) {
     goals: 0,
     avg: 0,
     homeWins: 0, awayWins: 0, draws: 0,
-    cleanSheets: 0,
+    cleanSheets: 0,   // still aggregated per team (best-defence board); no longer a headline
+    comebacks: 0,
     shootouts: 0,
     extraTime: 0,
     penaltyGoals: 0,
@@ -789,6 +832,8 @@ function tournamentStats(t) {
       if (!scorer[e.player]) scorer[e.player] = { name: e.player, goals: 0, team: side };
       scorer[e.player].goals++;
     });
+
+    if (comeback(m)) s.comebacks++;
   });
 
   s.avg = s.played ? (s.goals / s.played) : 0;

@@ -160,12 +160,114 @@ function loadTournament(force) {
   setSyncBar('loading', isHe() ? 'מעדכן נתונים...' : 'Fetching live data...');
   WC.load(function(err, t) {
     if (err) { renderHardError(err); return; }
+    var fresh = newGoals(TOURNAMENT, t);
     TOURNAMENT = t;
     renderAll(t);
     reportSync(t);
+    fresh.forEach(announceGoal);
     clearTimeout(liveRefreshTimer);
-    liveRefreshTimer = setTimeout(function(){ loadTournament(true); }, t.hasLive ? 60000 : 300000);
+    liveRefreshTimer = setTimeout(function(){ loadTournament(true); }, refreshDelay(t));
   }, { force: !!force });
+}
+
+// ── Goal alerts ──────────────────────────────────────────────────────
+// Diff the goal events of every live match against the previous poll. A goal is
+// identified by match + side + second + scorer, not by array position: ESPN
+// re-sends the whole event list each time and can insert a late-arriving event
+// ahead of one we have already shown.
+var seenGoals = {};        // key -> true, for goals already announced
+var goalAlertPrimed = false;   // the first poll is history, not news
+
+function goalKey(m, e) {
+  return m.id + '|' + e.side + '|' + (e.sec || 0) + '|' + (e.player || '') + '|' + e.kind;
+}
+
+function newGoals(prev, t) {
+  var out = [];
+  var live = WC.liveMatches(t);
+
+  // On the first load, record every goal already in the feed without announcing it.
+  // Otherwise opening the page at the 80th minute would fire four popups at once.
+  if (!goalAlertPrimed) {
+    t.all.forEach(function(m) {
+      (m.events || []).forEach(function(e) {
+        if (e.kind === 'goal' || e.kind === 'pk' || e.kind === 'og') seenGoals[goalKey(m, e)] = true;
+      });
+    });
+    goalAlertPrimed = true;
+    return out;
+  }
+
+  live.forEach(function(m) {
+    (m.events || []).forEach(function(e) {
+      if (e.kind !== 'goal' && e.kind !== 'pk' && e.kind !== 'og') return;
+      var k = goalKey(m, e);
+      if (seenGoals[k]) return;
+      seenGoals[k] = true;
+      out.push({ m: m, e: e });
+    });
+  });
+  return out;
+}
+
+function announceGoal(g) {
+  var he = isHe();
+  var m = g.m, e = g.e;
+  var team = e.side === 'home' ? m.home : m.away;
+  var who = WC.playerName(e.player, he);
+  var minute = e.min || (Math.floor((e.sec || 0) / 60) + 1) + "'";
+  var kind = e.kind === 'pk' ? (he ? 'פנדל' : 'Penalty')
+           : e.kind === 'og' ? (he ? 'שער עצמי' : 'Own goal')
+           : '';
+  var flag = WC.flagFor(team);
+
+  var el = document.createElement('div');
+  el.className = 'goal-pop';
+  el.setAttribute('role', 'status');
+  el.innerHTML =
+    '<div class="gp-top">' +
+      '<span class="gp-ball">⚽</span>' +
+      '<span class="gp-word">' + (he ? 'שער!' : 'GOAL!') + '</span>' +
+      (kind ? '<span class="gp-kind">' + esc(kind) + '</span>' : '') +
+      '<span class="gp-min">' + esc(minute) + '</span>' +
+    '</div>' +
+    '<div class="gp-who">' +
+      (flag ? '<span class="mc-fl">' + flag + '</span>' : '') +
+      '<span class="gp-nm">' + esc(who || (he ? 'לא ידוע' : 'Unknown')) + '</span>' +
+    '</div>' +
+    '<div class="gp-match">' +
+      esc(teamLabel(m.home)) + ' ' + (m.score ? m.score.h + ' – ' + m.score.a : '') + ' ' + esc(teamLabel(m.away)) +
+    '</div>';
+
+  var host = document.getElementById('goalPops') || (function() {
+    var d = document.createElement('div');
+    d.id = 'goalPops';
+    document.body.appendChild(d);
+    return d;
+  })();
+  host.appendChild(el);
+
+  // Force a frame so the entry transition actually runs.
+  requestAnimationFrame(function() { el.classList.add('in'); });
+  setTimeout(function() {
+    el.classList.remove('in');
+    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+  }, 7000);
+}
+
+// The idle poll used to be a flat 5 minutes, so a match that kicked off at 22:00
+// was not noticed until 22:05 — the card sat on its kickoff time and the clock
+// only started once that poll happened to land. Close in on kickoff instead: from
+// 5 minutes before to 3 minutes after, poll every 30s, so the clock starts on time.
+function refreshDelay(t) {
+  if (t.hasLive) return 60000;
+  var now = Date.now();
+  var nearKickoff = t.all.some(function(m) {
+    if (m.status !== 'future' || !m.utc) return false;
+    var ms = m.utc.getTime() - now;
+    return ms < 300000 && ms > -180000;
+  });
+  return nearKickoff ? 30000 : 300000;
 }
 
 // The old code called this "ok" even when all four fetches had 404d and zero
@@ -300,6 +402,19 @@ function renderDayBlocks(matches, t) {
   }).join('');
 }
 
+// The Final tab holds two fixtures, and sorting them by kickoff put the wrong one on
+// top: the 3rd-place match kicks off at 00:00 Israel time on the 19th and the final at
+// 22:00 the same day, so chronological order pushed the final BELOW the play-off. The
+// final is the headline of that tab whatever the clock says; the 3rd-place match goes
+// last. (Same reason it must not sit third in the bracket column.)
+function finalTabOrder(t) {
+  var rank = { final: 0, third: 1 };
+  return t.stages.final.concat(t.stages.third).sort(function(a, b) {
+    var d = (rank[a.stage] || 0) - (rank[b.stage] || 0);
+    return d || (a.utc - b.utc);
+  });
+}
+
 function renderStage(stageKey, matches, t) {
   var st = document.getElementById('stage-' + stageKey);
   if (!st) return;
@@ -323,15 +438,16 @@ function renderStageHeads(t) {
     var range = s.total > 1 ? (s.from + ' – ' + s.to) : s.from;
     var span = '<span class="wt-num">' + esc(range) + '</span>';
     var txt;
+    // No emoji, and no "starts today" badge — that one is true for exactly one day
+    // and reads as stale on every other. The live dot stays: it is a state
+    // indicator, not decoration.
     if (s.state === 'live') {
       txt = '<span class="live-dot" style="display:inline-block;vertical-align:middle;margin-inline-end:5px"></span>' +
             (he ? 'משחק חי עכשיו · ' : 'Live now · ') + span;
-    } else if (s.state === 'today') {
-      txt = (he ? '🔥 מתחיל היום · ' : '🔥 Starts today · ') + span;
     } else if (s.state === 'done') {
-      txt = (he ? '✅ הסתיים · ' : '✅ Completed · ') + span;
+      txt = (he ? 'הסתיים · ' : 'Completed · ') + span;
     } else if (s.state === 'next') {
-      txt = (he ? '⏭ הבא בתור · ' : '⏭ Up next · ') + span;
+      txt = (he ? 'הבא בתור · ' : 'Up next · ') + span;
     } else {
       txt = span;
     }
@@ -351,7 +467,7 @@ function renderAll(t) {
   renderStage('r16',   t.stages.r16,   t);
   renderStage('qf',    t.stages.qf,    t);
   renderStage('sf',    t.stages.sf,    t);
-  renderStage('final', t.stages.final.concat(t.stages.third).sort(function(a,b){ return a.utc - b.utc; }), t);
+  renderStage('final', finalTabOrder(t), t);
 
   renderStageHeads(t);
   if (typeof window.renderBracket === 'function') window.renderBracket(t);
@@ -676,16 +792,20 @@ function renderDataTab() {
   }
 
   // ── records + discipline
+  // "Clean sheets" is gone: a count of shutouts is a binary nobody reads. It is
+  // replaced by comebacks — teams that trailed and still won — which is the one
+  // narrative number a score-and-events feed can honestly produce, and which none of
+  // the sites we benchmarked (365Scores, ONE, FotMob, Sofascore) put on a hub page.
   html += head('מספרים', 'The numbers') + '<div class="fx">' +
-    fact('שערים שלא ספגו (משחקי שער נקי)', 'Clean sheets', s.cleanSheets) +
+    fact('קאמבקים (פיגרו וניצחו)', 'Comebacks (trailed, then won)', s.comebacks) +
+    fact('שערים מדקה 80', 'Goals from the 80th min', s.lateGoals) +
     fact('הוכרעו בשער אחד', 'Decided by one goal', s.oneGoalGames) +
-    fact('תיקו', 'Draws', s.draws) +
-    fact('0-0', 'Goalless draws', s.goalless) +
     fact('הכרעות בפנדלים', 'Shootouts', s.shootouts) +
     fact('הוארכו', 'Went to extra time', s.extraTime) +
     fact('שערים מפנדל', 'Penalty goals', s.penaltyGoals) +
     fact('שערים עצמיים', 'Own goals', s.ownGoals) +
-    fact('שערים מדקה 80', 'Goals from the 80th min', s.lateGoals) +
+    fact('תיקו', 'Draws', s.draws) +
+    fact('0-0', 'Goalless draws', s.goalless) +
     fact('כרטיסים צהובים', 'Yellow cards', s.yellow) +
     fact('כרטיסים אדומים', 'Red cards', s.red) +
     fact('נצחונות קבוצת הבית', 'Home-side wins', s.homeWins) +
@@ -722,19 +842,29 @@ function renderDataTab() {
       }).join('') + '</div>';
   }
 
-  // ── single-match records
-  if (s.biggest) {
-    html += head('משחקי השיא', 'Match records') +
-      '<div class="fx">' +
-      '<div class="fx-i"><span class="fx-l">' + (he ? 'הניצחון הגדול' : 'Biggest win') + '<br>' +
-        '<span class="ds-big" style="display:block;border:none;background:none;padding:4px 0 0;text-align:start;font-size:12px">' +
-        esc(teamLabel(s.biggest.m.home)) + ' ' + scoreLine(s.biggest.m) + ' ' + esc(teamLabel(s.biggest.m.away)) +
-        '</span></span><span class="fx-v">+' + s.biggest.diff + '</span></div>' +
-      '<div class="fx-i"><span class="fx-l">' + (he ? 'המשחק עתיר השערים' : 'Highest scoring') + '<br>' +
-        '<span class="ds-big" style="display:block;border:none;background:none;padding:4px 0 0;text-align:start;font-size:12px">' +
-        esc(teamLabel(s.highest.m.home)) + ' ' + scoreLine(s.highest.m) + ' ' + esc(teamLabel(s.highest.m.away)) +
-        '</span></span><span class="fx-v">' + s.highest.total + '</span></div>' +
-      '</div>';
+  // The "match records" pair is gone. "Biggest win" and "Highest scoring" were two
+  // tiles side by side that, in a tournament with one lopsided result, name the SAME
+  // match — the page showed "Germany 7–1 Curaçao" twice in a row and called it two
+  // statistics.
+
+  // ── shot accuracy: on-target share, which says more than a raw shot count
+  var shooters = s.teams.filter(function(x) { return x.p >= 3 && x.shots >= 15; });
+  if (shooters.length >= 3) {
+    var acc = shooters.map(function(x) {
+      return { t: x, pct: x.shots ? (x.sog / x.shots * 100) : 0 };
+    }).sort(function(a, b) { return b.pct - a.pct; }).slice(0, 3);
+
+    html += head('דיוק בעיטות למסגרת', 'Shot accuracy') + '<div class="lb">' +
+      acc.map(function(x, i) {
+        var flag = WC.flagFor(x.t);
+        return '<div class="lb-row' + (i === 0 ? ' top' : '') + '">' +
+          '<span class="lb-rk">' + (i + 1) + '</span>' +
+          (flag ? '<span class="mc-fl">' + flag + '</span>' : '') +
+          '<span class="lb-nm">' + esc(he ? x.t.he : x.t.en) + '</span>' +
+          '<span class="lb-sub">' + x.t.sog + '/' + x.t.shots + '</span>' +
+          '<span class="lb-bar"><i style="width:' + Math.round(x.pct) + '%"></i></span>' +
+          '<span class="lb-v">' + Math.round(x.pct) + '%</span></div>';
+      }).join('') + '</div>';
   }
 
   // ── who is left
