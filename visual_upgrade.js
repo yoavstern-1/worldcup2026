@@ -95,9 +95,13 @@ var ballSVG = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' + b
 // 4. Chat button becomes the ball, with ASK above it
 var btn = document.getElementById('chatFloatBtn');
 if (btn) {
+  // data-he/data-en, not a bare textContent: setLang() only rewrites [data-he],
+  // so a hardcoded string here is Latin script that survives into Hebrew mode.
   var label = document.createElement('span');
   label.id = 'chat-ask-label';
-  label.textContent = 'ASK';
+  label.setAttribute('data-he', 'שאל');
+  label.setAttribute('data-en', 'ASK');
+  label.textContent = (window.curLang === 'he' || document.documentElement.lang === 'he') ? 'שאל' : 'ASK';
   btn.innerHTML = ballSVG;
   btn.insertBefore(label, btn.firstChild);
 }
