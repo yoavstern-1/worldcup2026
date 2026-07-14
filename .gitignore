@@ -9,3 +9,6 @@ node_modules/
 
 # Build output for Cloudflare Pages direct upload (generated from source)
 dist/
+
+# Claude Code worktree scratch dirs
+.claude/

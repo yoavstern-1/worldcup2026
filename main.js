@@ -785,21 +785,63 @@ function sendChat() {
     body: JSON.stringify({
       system_instruction: { parts: [{ text: buildSystemPrompt() }] },
       contents: contents,
-      generationConfig: { maxOutputTokens: 512 }
+      // 512 was far too tight: gemini-2.5-flash thinks by default and its
+      // thinking tokens come out of this same budget, so answers were cut
+      // mid-word or came back with no text at all. The worker also enforces
+      // a floor and switches thinking off; this just keeps the two in step.
+      generationConfig: { maxOutputTokens: 2048 }
     })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     setChatTyping(false);
-    var reply = (data.candidates && data.candidates[0] &&
-      data.candidates[0].content && data.candidates[0].content.parts &&
-      data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
-    if (!reply) {
-      var errMsg = data.error && data.error.message ? data.error.message : '';
-      reply = curLang === 'he'
-        ? ('⚠️ שגיאה' + (errMsg ? ': ' + errMsg : '.'))
-        : ('⚠️ Error' + (errMsg ? ': ' + errMsg : '.'));
+
+    var cand = (data.candidates && data.candidates[0]) || null;
+
+    // Join every text part. Reading only parts[0] dropped the answer whenever
+    // the model returned more than one chunk.
+    var reply = '';
+    if (cand && cand.content && cand.content.parts) {
+      var parts = cand.content.parts;
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i] && typeof parts[i].text === 'string' && !parts[i].thought) {
+          reply += parts[i].text;
+        }
+      }
     }
+    reply = reply.trim();
+
+    // A cut-off answer used to be rendered as if it were complete. Say so.
+    if (reply && cand && cand.finishReason === 'MAX_TOKENS') {
+      reply += curLang === 'he' ? '\n\n… (התשובה נקטעה)' : '\n\n… (answer was cut off)';
+    }
+
+    if (!reply) {
+      var err = data.error || {};
+      var quota = err.code === 429 || err.status === 'QUOTA_EXHAUSTED';
+      var blocked = cand && cand.finishReason === 'SAFETY';
+      var msg;
+      if (quota) {
+        msg = curLang === 'he'
+          ? '⚠️ הצ\'אט עמוס כרגע (מכסת ה-API נגמרה). נסה שוב מאוחר יותר.'
+          : '⚠️ Chat is out of API quota right now. Try again later.';
+      } else if (blocked) {
+        msg = curLang === 'he' ? '⚠️ התשובה נחסמה מטעמי בטיחות.' : '⚠️ The answer was blocked for safety.';
+      } else if (cand && cand.finishReason === 'MAX_TOKENS') {
+        msg = curLang === 'he'
+          ? '⚠️ המודל חרג ממכסת האורך לפני שהספיק לענות. נסה לנסח שאלה קצרה יותר.'
+          : '⚠️ The model ran out of length budget before answering. Try a shorter question.';
+      } else {
+        msg = curLang === 'he'
+          ? ('⚠️ שגיאה' + (err.message ? ': ' + err.message : '.'))
+          : ('⚠️ Error' + (err.message ? ': ' + err.message : '.'));
+      }
+      // Do NOT push errors into chatHistory -- an error bubble stored as a model
+      // turn poisons the context of every later question.
+      addChatBubble('assistant', msg);
+      return;
+    }
+
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
     addChatBubble('assistant', reply);
   })

@@ -54,6 +54,22 @@ async function fetchFootballData(apiKey) {
   return summary;
 }
 
+// gemini-2.5-flash runs with thinking ON by default, and thinking tokens are
+// charged against maxOutputTokens. With a small budget the model spends it all
+// on internal reasoning and returns a truncated answer -- or none at all, with
+// `content.parts` missing entirely. Both are enforced here rather than trusted
+// to the client, so no caller can under-budget the answer again.
+const MIN_OUTPUT_TOKENS = 2048;
+
+function withAnswerBudget(gen) {
+  const cfg = { ...(gen || {}) };
+  const asked = Number(cfg.maxOutputTokens) || 0;
+  cfg.maxOutputTokens = Math.max(asked, MIN_OUTPUT_TOKENS);
+  // 0 disables thinking; every token then goes to the visible answer.
+  cfg.thinkingConfig = { thinkingBudget: 0, ...(cfg.thinkingConfig || {}) };
+  return cfg;
+}
+
 async function callGemini(key, body) {
   const res = await fetch(GEMINI_BASE + key, {
     method: 'POST',
@@ -125,9 +141,11 @@ export default {
       ...body,
       system_instruction: { parts: [{ text: enrichedSystem }] },
       tools: [{ google_search: {} }],
+      generationConfig: withAnswerBudget(body.generationConfig),
     };
 
     // Try each key, rotating to the next on quota/auth errors
+    let lastQuotaError = null;
     for (let i = 0; i < keys.length; i++) {
       try {
         const data = await callGemini(keys[i], enrichedBody);
@@ -139,7 +157,16 @@ export default {
             msg.includes('quota') || msg.includes('rate') ||
             msg.includes('api key') || msg.includes('invalid') ||
             msg.includes('high demand');
-          if (isQuota && i < keys.length - 1) continue;
+          if (isQuota) {
+            lastQuotaError = data.error;
+            if (i < keys.length - 1) continue;
+            // every key is spent -- say so plainly instead of leaking Google's
+            // billing URLs into a chat bubble
+            return json(
+              { error: { code: 429, status: 'QUOTA_EXHAUSTED', message: 'All Gemini keys are out of quota.' } },
+              429
+            );
+          }
         }
         return json(data);
       } catch (err) {
@@ -147,5 +174,10 @@ export default {
         return json({ error: { message: err.message } }, 500);
       }
     }
+
+    return json(
+      { error: { code: 429, status: 'QUOTA_EXHAUSTED', message: (lastQuotaError && lastQuotaError.message) || 'No key succeeded.' } },
+      429
+    );
   },
 };
