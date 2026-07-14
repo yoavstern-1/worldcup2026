@@ -5,13 +5,17 @@
 // shootout scores, and placeholder teams for rounds not yet decided
 // ("Quarterfinal 2 Winner"). Everything else in the app reads this model.
 // Nothing scrapes the DOM.
+//
+// The same payload also carries per-match play details (every goal with scorer
+// and minute, every card) and team statistics (possession, shots, corners,
+// fouls). Those feed the Data tab; they are normalized here, never re-fetched.
 // ══════════════════════════════════════════════════════
 (function() {
 
 var URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
         + '?dates=20260611-20260719&limit=300';
 
-var CACHE_KEY = 'wc26:v2';   // bump when the normalized shape or labels change
+var CACHE_KEY = 'wc26:v3';   // bump when the normalized shape or labels change
 var TTL_LIVE  = 60 * 1000;
 var TTL_IDLE  = 300 * 1000;
 
@@ -66,6 +70,71 @@ var TEAMS = {
     URU: {he:"אורוגוואי", en:"Uruguay", flag:"🇺🇾"},
     USA: {he:"ארה\"ב", en:"United States", flag:"🇺🇸"},
     UZB: {he:"אוזבקיסטן", en:"Uzbekistan", flag:"🇺🇿"}
+};
+
+// ── Venue names ──────────────────────────────────────────────────────
+// ESPN returns the commercial name in English. Hebrew mode must not show a
+// Latin string, so every one of the 16 WC26 venues has a Hebrew rendering with
+// its city. Keyed on the exact fullName ESPN emits (Azteca now reports as
+// "Estadio Banorte"); unknown venues fall back to the English name.
+var VENUE_HE = {
+  'MetLife Stadium':                'מטלייף · ניו ג׳רזי',
+  'AT&T Stadium':                   'אצטדיון דאלאס',
+  'Mercedes-Benz Stadium':          'מרצדס-בנץ · אטלנטה',
+  'NRG Stadium':                    'אצטדיון יוסטון',
+  'GEHA Field at Arrowhead Stadium':'ארוהד · קנזס סיטי',
+  'Arrowhead Stadium':              'ארוהד · קנזס סיטי',
+  'Lumen Field':                    'לומן פילד · סיאטל',
+  "Levi's Stadium":                 'ליוויס · סן פרנסיסקו',
+  'SoFi Stadium':                   'סופיי · לוס אנג׳לס',
+  'Lincoln Financial Field':        'לינקולן פילד · פילדלפיה',
+  'Gillette Stadium':               'ג׳ילט · בוסטון',
+  'Hard Rock Stadium':              'הארד רוק · מיאמי',
+  'BMO Field':                      'בי-אם-או פילד · טורונטו',
+  'BC Place':                       'בי-סי פלייס · ונקובר',
+  'Estadio Banorte':                'אצטקה · מקסיקו סיטי',
+  'Estadio Azteca':                 'אצטקה · מקסיקו סיטי',
+  'Estadio BBVA':                   'אצטדיון מונטריי',
+  'Estadio Akron':                  'אקרון · גוודלחרה'
+};
+
+// Hebrew spellings for the players who actually appear on the scorer board.
+// Only the leaders are ever rendered, so a partial map is enough; anyone
+// missing falls back to the Latin name ESPN gives.
+var PLAYER_HE = {
+  'Kylian Mbappé':      'קיליאן אמבפה',
+  'Lionel Messi':       'ליונל מסי',
+  'Erling Haaland':     'ארלינג הולאנד',
+  'Harry Kane':         'הארי קיין',
+  'Jude Bellingham':    'ג׳וד בלינגהאם',
+  'Ousmane Dembélé':    'עוסמאן דמבלה',
+  'Julián Quiñones':    'חוליאן קיניונס',
+  'Vinícius Júnior':    'ויניסיוס ז׳וניור',
+  'Mikel Oyarzabal':    'מיקל אויארסבאל',
+  'Ismaïla Sarr':       'איסמעילה סאר',
+  'Raúl Jiménez':       'ראול חימנס',
+  'Folarin Balogun':    'פולארין בלוגון',
+  'Ismael Saibari':     'איסמעיל סאיברי',
+  'Kai Havertz':        'קאי הברץ',
+  'Deniz Undav':        'דניז אונדב',
+  'Elijah Just':        'אלייז׳ה ג׳אסט',
+  'Yoane Wissa':        'יואן ויסה',
+  'Johan Manzambi':     'יוהאן מנזמבי',
+  'Jonathan David':     'ג׳ונתן דיוויד',
+  'Matheus Cunha':      'מתאוס קונה',
+  'Lamine Yamal':       'לאמין ימאל',
+  'Cristiano Ronaldo':  'כריסטיאנו רונאלדו',
+  'Bukayo Saka':        'בוקאיו סאקה',
+  'Rodrygo':            'רודריגו',
+  'Lautaro Martínez':   'לאוטרו מרטינס',
+  'Julián Álvarez':     'חוליאן אלוורס',
+  'Michael Olise':      'מייקל אוליסה',
+  'Florian Wirtz':      'פלוריאן וירץ',
+  'Jamal Musiala':      'ג׳מאל מוסיאלה',
+  'Nico Williams':      'ניקו וויאמס',
+  'Pedri':              'פדרי',
+  'Alexis Mac Allister':'אלקסיס מק אליסטר',
+  'Dan Ndoye':          'דן נדואה'
 };
 
 var STAGE_BY_SLUG = {
@@ -137,8 +206,9 @@ function stripFor(utcDate) {
 // Windows has no flag-emoji font. Regional-indicator pairs (🇪🇸) degrade to the
 // letters "ES", while England's tag sequence (🏴󠁧󠁢󠁥󠁮󠁧󠁿) degrades to a bare black 🏴 —
 // so the two styles fail differently and England looks like the odd one out.
-// Detect support once; if the platform can't draw flags, use the 3-letter code
-// for every team instead of a mix of letters and black flags.
+// Detect support once; if the platform can't draw flags there is nothing to
+// show. The old 3-letter chip is gone: in Hebrew it printed a Latin code next
+// to every Hebrew team name, and the name alone identifies the team anyway.
 var _flagsOK = null;
 
 function flagsSupported() {
@@ -158,12 +228,12 @@ function flagsSupported() {
   return _flagsOK;
 }
 
-// HTML for a team's flag slot: emoji where supported, otherwise its code.
+// HTML for a team's flag slot: the emoji where the platform can draw it,
+// nothing at all where it cannot.
 function flagFor(team) {
   if (!team || team.placeholder) return '';
   if (flagsSupported() && team.flag) return team.flag;
-  if (!team.abbr) return '';
-  return '<span class="fabbr">' + team.abbr + '</span>';
+  return '';
 }
 
 // ── Team resolution ──────────────────────────────────────────────────
@@ -174,9 +244,10 @@ var PLACEHOLDER_RE = /^(Quarterfinal|Semifinal|Round of \d+)\s+(\d+)\s+(Winner|L
 function resolveTeam(competitor) {
   var abbr = competitor.team.abbreviation || '';
   var name = competitor.team.displayName || '';
+  var id = competitor.team.id || '';
   var known = TEAMS[abbr];
   if (known) {
-    return { abbr: abbr, en: known.en, he: known.he, flag: known.flag, placeholder: false, ref: null };
+    return { abbr: abbr, id: id, en: known.en, he: known.he, flag: known.flag, placeholder: false, ref: null };
   }
 
   var m = PLACEHOLDER_RE.exec(name);
@@ -186,6 +257,7 @@ function resolveTeam(competitor) {
     var isWin = m[3] === 'Winner';
     return {
       abbr: abbr,
+      id: id,
       en: name,
       he: (isWin ? 'מנצחת ' : 'מפסידת ') + roundHe + ' ' + m[2],
       flag: '',
@@ -198,7 +270,7 @@ function resolveTeam(competitor) {
 
   // Unknown team, no placeholder pattern. Degrade to the English name rather
   // than rendering "undefined".
-  return { abbr: abbr, en: name, he: name, flag: '', placeholder: false, ref: null };
+  return { abbr: abbr, id: id, en: name, he: name, flag: '', placeholder: false, ref: null };
 }
 
 // ── Normalization ────────────────────────────────────────────────────
@@ -208,6 +280,52 @@ function statusOf(name) {
       name === 'STATUS_FINAL' || name === 'STATUS_FINAL_AET') return 'past';
   // STATUS_IN_PROGRESS, STATUS_HALFTIME, and anything unrecognized mid-match
   return 'live';
+}
+
+var STAT_KEYS = {
+  possessionPct: 'poss', totalShots: 'shots', shotsOnTarget: 'sog',
+  wonCorners: 'corners', foulsCommitted: 'fouls'
+};
+
+function teamStats(competitor) {
+  var out = null;
+  (competitor.statistics || []).forEach(function(s) {
+    var key = STAT_KEYS[s.name];
+    if (!key) return;
+    var v = parseInt(s.displayValue, 10);
+    if (isNaN(v)) return;
+    if (!out) out = {};
+    out[key] = v;
+  });
+  return out;
+}
+
+// Every goal and card, flattened to the smallest shape that survives a JSON
+// round-trip into localStorage. Shootout kicks are excluded — they are already
+// carried as m.pens and would otherwise double-count as goals.
+function playEvents(comp, homeId, awayId) {
+  var out = [];
+  (comp.details || []).forEach(function(d) {
+    if (d.shootout) return;
+    var side = String(d.team && d.team.id) === String(homeId) ? 'home'
+             : (String(d.team && d.team.id) === String(awayId) ? 'away' : null);
+    if (!side) return;
+    var kind = null;
+    if (d.scoringPlay) kind = d.ownGoal ? 'og' : (d.penaltyKick ? 'pk' : 'goal');
+    else if (d.redCard) kind = 'red';
+    else if (d.yellowCard) kind = 'yellow';
+    if (!kind) return;
+    var who = (d.athletesInvolved || [])[0];
+    out.push({
+      kind: kind,
+      side: side,
+      min: (d.clock && d.clock.displayValue) || '',
+      sec: (d.clock && d.clock.value) || 0,
+      player: (who && who.displayName) || ''
+    });
+  });
+  out.sort(function(a, b) { return a.sec - b.sec; });
+  return out;
 }
 
 function normalize(raw) {
@@ -232,7 +350,9 @@ function normalize(raw) {
 
     var utc = parseUTC(ev.date);
     if (isNaN(utc.getTime())) return;   // unparseable kickoff: drop rather than render NaN
-    var st = statusOf(ev.status && ev.status.type && ev.status.type.name);
+    var stObj = (ev.status || {});
+    var stType = stObj.type || {};
+    var st = statusOf(stType.name);
     if (st === 'live') hasLive = true;
 
     // A scheduled match reports score "0" — that is not a score, it is an absence.
@@ -260,6 +380,8 @@ function normalize(raw) {
     if (gm) group = gm[1];
 
     var parts = ilParts(utc);
+    var home = resolveTeam(homeC);
+    var away = resolveTeam(awayC);
 
     var match = {
       id: ev.id,
@@ -270,9 +392,16 @@ function normalize(raw) {
       dayKey: parts.dayKey,
       dayLabelHe: parts.dayLabelHe,
       dayLabelEn: parts.dayLabelEn,
-      home: resolveTeam(homeC),
-      away: resolveTeam(awayC),
+      home: home,
+      away: away,
       status: st,
+      // Live clock, straight from ESPN. `clock` is seconds elapsed in the match
+      // (2700 at half-time, 7200 at the end of extra time); `period` is 1-2 for
+      // regulation, 3-4 for extra time, 5 for a shootout.
+      statusName: stType.name || '',
+      period: stObj.period || 0,
+      clock: stObj.clock || 0,
+      displayClock: stObj.displayClock || '',
       score: score,
       pens: pens,
       winner: winner,
@@ -280,6 +409,8 @@ function normalize(raw) {
       group: group,
       note: note,
       strip: stripFor(utc),
+      events: st === 'future' ? [] : playEvents(comp, home.id, away.id),
+      stats: st === 'future' ? null : { home: teamStats(homeC), away: teamStats(awayC) },
       bracketIndex: 0   // assigned below, per stage
     };
 
@@ -324,6 +455,79 @@ function teamHeByEn(en) {
   return en;
 }
 
+// ── Localized names ──────────────────────────────────────────────────
+function venueName(m, he) {
+  if (!m || !m.venue) return '';
+  if (!he) return m.venue;
+  return VENUE_HE[m.venue] || m.venue;
+}
+
+function playerName(name, he) {
+  if (!name) return '';
+  return he ? (PLAYER_HE[name] || name) : name;
+}
+
+// ── Live clock ───────────────────────────────────────────────────────
+// What phase of the match is this, and what minute is it in? The minute is
+// extrapolated from ESPN's clock plus the time since we fetched it, so it
+// ticks between the 60-second refreshes instead of sitting frozen.
+var PHASE = {
+  ht:    { he: 'הפסקה',      en: 'HT' },
+  pens:  { he: 'פנדלים',     en: 'Pens' },
+  end90: { he: 'סוף 90',     en: 'End 90' },
+  endEt: { he: 'סוף הארכה',  en: 'End ET' },
+  h1:    { he: 'מחצית 1',    en: '1st half' },
+  h2:    { he: 'מחצית 2',    en: '2nd half' },
+  et1:   { he: 'הארכה',      en: 'Extra time' },
+  et2:   { he: 'הארכה',      en: 'Extra time' },
+  live:  { he: 'משחק חי',    en: 'Live' }
+};
+
+function livePhase(m) {
+  var n = m.statusName || '';
+  var p = m.period || 0;
+  if (n.indexOf('HALFTIME') !== -1) return PHASE.ht;
+  if (n.indexOf('SHOOTOUT') !== -1 || p >= 5) return PHASE.pens;
+  if (n.indexOf('END_OF_EXTRATIME') !== -1) return PHASE.endEt;
+  if (n.indexOf('END_OF_REGULATION') !== -1 || n.indexOf('END_OF_PERIOD') !== -1) return PHASE.end90;
+  if (p === 1) return PHASE.h1;
+  if (p === 2) return PHASE.h2;
+  if (p === 3) return PHASE.et1;
+  if (p === 4) return PHASE.et2;
+  return PHASE.live;
+}
+
+// The clock does not advance during half-time, the break before extra time, or
+// a shootout — extrapolating through those would invent minutes that never ran.
+function clockRunning(m) {
+  var n = m.statusName || '';
+  if (n.indexOf('HALFTIME') !== -1 || n.indexOf('SHOOTOUT') !== -1) return false;
+  if (n.indexOf('END_OF_') !== -1) return false;
+  return (m.period || 0) >= 1 && (m.period || 0) <= 4;
+}
+
+// Cap of each period, so a 46th minute in the first half prints as 45+1 rather
+// than running away to 47, 48… while the broadcast is still in stoppage time.
+var PERIOD_CAP = { 1: 45, 2: 90, 3: 105, 4: 120 };
+
+// Empty during half-time, the break before extra time and a shootout: there is
+// no minute to show, and printing the frozen one ("45+1'" through the whole
+// interval) reads as a stuck clock. The phase label carries those on its own.
+function liveMinute(m, fetchedAt) {
+  if (!m || m.status !== 'live') return '';
+  if (!clockRunning(m)) return '';
+  var sec = m.clock || 0;
+  if (clockRunning(m) && fetchedAt) {
+    var drift = (Date.now() - fetchedAt) / 1000;
+    if (drift > 0 && drift < 900) sec += drift;   // ignore a wildly stale cache
+  }
+  var minute = Math.floor(sec / 60) + 1;
+  var cap = PERIOD_CAP[m.period];
+  if (!cap) return m.displayClock || '';
+  if (minute > cap) return cap + "+" + (minute - cap) + "'";
+  return minute + "'";
+}
+
 // ── Cache ────────────────────────────────────────────────────────────
 // Dates do not survive JSON. Revive them on read.
 function readCache() {
@@ -334,6 +538,7 @@ function readCache() {
     if (!obj || !obj.t || !obj.fetchedAt) return null;
     reviveDates(obj.t);
     obj.t.updatedAt = new Date(obj.t.updatedAt);
+    obj.t.fetchedAt = obj.fetchedAt;
     return { t: obj.t, fetchedAt: obj.fetchedAt };
   } catch (e) {
     return null;
@@ -386,6 +591,7 @@ function load(cb, opts) {
     .then(function(raw) {
       var t = normalize(raw);
       if (!t.all.length) throw new Error('empty response');
+      t.fetchedAt = Date.now();
       writeCache(t);
       cb(null, t);
     })
@@ -403,18 +609,32 @@ function load(cb, opts) {
 
 // ── Derived helpers used by more than one renderer ────────────────────
 
-// Which stage is "now"? The one with a match today; else the next one with an
-// unplayed match; else the last stage of the tournament.
+// Which stage is "now"?
+//   1. one with a live match
+//   2. one with a match still to come today
+//   3. the first with any unplayed match  ("up next")
+//   4. the final
+//
+// Note what is deliberately NOT here: "a stage with any match today". A stage
+// whose last fixture kicked off this morning and is already over is finished —
+// on the evening of the last quarter-final the site should be pointing at the
+// semi-finals, not still sitting on a round that has nothing left to play.
 function currentStage(t, now) {
   now = now || new Date();
   var todayKey = ilParts(now).dayKey;
   var order = ['group', 'r32', 'r16', 'qf', 'sf', 'third', 'final'];
-  var i, s, ms, j;
+  var i, ms, j;
 
   for (i = 0; i < order.length; i++) {
     ms = t.stages[order[i]];
     for (j = 0; j < ms.length; j++) {
-      if (ms[j].dayKey === todayKey) return order[i];
+      if (ms[j].status === 'live') return order[i];
+    }
+  }
+  for (i = 0; i < order.length; i++) {
+    ms = t.stages[order[i]];
+    for (j = 0; j < ms.length; j++) {
+      if (ms[j].dayKey === todayKey && ms[j].status !== 'past') return order[i];
     }
   }
   for (i = 0; i < order.length; i++) {
@@ -442,6 +662,151 @@ function refMatch(t, team) {
   return (arr && arr[team.ref.index]) || null;
 }
 
+// Where does a stage stand right now? Drives the sub-heading on every tab, so
+// "Quarter-finals start today!" cannot survive into the following week.
+// -> { state: 'done'|'live'|'today'|'next'|'future', from, to, played, total }
+function stageState(t, key, now) {
+  now = now || new Date();
+  var ms = t.stages[key] || [];
+  if (!ms.length) return { state: 'future', from: '', to: '', played: 0, total: 0 };
+  var todayKey = ilParts(now).dayKey;
+  var played = 0, live = 0, today = 0;
+  ms.forEach(function(m) {
+    if (m.status === 'past') played++;
+    if (m.status === 'live') live++;
+    if (m.dayKey === todayKey && m.status !== 'past') today++;
+  });
+  var state;
+  if (live) state = 'live';
+  else if (played === ms.length) state = 'done';
+  else if (today) state = 'today';
+  else state = 'future';
+
+  // The one stage that is next up gets a distinct label from stages further out.
+  if (state === 'future' && currentStage(t, now) === key) state = 'next';
+
+  return {
+    state: state,
+    from: ms[0].date,
+    to: ms[ms.length - 1].date,
+    fromDayHe: ms[0].dayLabelHe,
+    played: played,
+    total: ms.length
+  };
+}
+
+// ── Tournament statistics ────────────────────────────────────────────
+// Everything here is derived from matches already in the model. It is computed
+// once per render, not fetched.
+function tournamentStats(t) {
+  var played = t.all.filter(function(m) { return m.status !== 'future' && m.score; });
+
+  var s = {
+    played: played.length,
+    total: t.all.length,
+    goals: 0,
+    avg: 0,
+    homeWins: 0, awayWins: 0, draws: 0,
+    cleanSheets: 0,
+    shootouts: 0,
+    extraTime: 0,
+    penaltyGoals: 0,
+    ownGoals: 0,
+    yellow: 0,
+    red: 0,
+    oneGoalGames: 0,
+    goalless: 0,
+    biggest: null,
+    highest: null,
+    scorers: [],
+    teams: [],       // per-team table
+    byStage: [],     // goals per stage, for the trend row
+    lateGoals: 0     // goals from the 80th minute on (incl. stoppage)
+  };
+
+  var team = {};   // abbr -> aggregate
+  function slot(tm) {
+    if (!team[tm.abbr]) {
+      team[tm.abbr] = { abbr: tm.abbr, he: tm.he, en: tm.en, flag: tm.flag,
+                        p: 0, gf: 0, ga: 0, w: 0, d: 0, l: 0, cs: 0,
+                        shots: 0, sog: 0, poss: 0, possN: 0 };
+    }
+    return team[tm.abbr];
+  }
+
+  var scorer = {};
+  var stageGoals = {};
+
+  played.forEach(function(m) {
+    var h = m.score.h, a = m.score.a;
+    s.goals += h + a;
+    stageGoals[m.stage] = (stageGoals[m.stage] || 0) + h + a;
+
+    if (h === a) s.draws++;
+    else if (h > a) s.homeWins++;
+    else s.awayWins++;
+
+    if (Math.abs(h - a) === 1) s.oneGoalGames++;
+    if (h + a === 0) s.goalless++;
+    if (h === 0 || a === 0) s.cleanSheets++;
+    if (m.pens) s.shootouts++;
+    if (m.statusName === 'STATUS_FINAL_AET' || (m.period || 0) >= 4) s.extraTime++;
+
+    var diff = Math.abs(h - a);
+    if (!s.biggest || diff > s.biggest.diff) s.biggest = { diff: diff, m: m };
+    if (!s.highest || (h + a) > s.highest.total) s.highest = { total: h + a, m: m };
+
+    if (!m.home.placeholder && !m.away.placeholder) {
+      var th = slot(m.home), ta = slot(m.away);
+      th.p++; ta.p++;
+      th.gf += h; th.ga += a;
+      ta.gf += a; ta.ga += h;
+      if (h > a) { th.w++; ta.l++; }
+      else if (a > h) { ta.w++; th.l++; }
+      else { th.d++; ta.d++; }
+      if (a === 0) th.cs++;
+      if (h === 0) ta.cs++;
+      if (m.stats) {
+        ['home', 'away'].forEach(function(side) {
+          var st = m.stats[side];
+          if (!st) return;
+          var agg = side === 'home' ? th : ta;
+          if (st.shots != null) agg.shots += st.shots;
+          if (st.sog != null) agg.sog += st.sog;
+          if (st.poss != null) { agg.poss += st.poss; agg.possN++; }
+        });
+      }
+    }
+
+    (m.events || []).forEach(function(e) {
+      if (e.kind === 'yellow') { s.yellow++; return; }
+      if (e.kind === 'red') { s.red++; return; }
+      if (e.kind === 'pk') s.penaltyGoals++;
+      if (e.kind === 'og') { s.ownGoals++; return; }   // an own goal has no scorer to credit
+      if (e.sec >= 79 * 60) s.lateGoals++;
+      var side = e.side === 'home' ? m.home : m.away;
+      if (!e.player) return;
+      if (!scorer[e.player]) scorer[e.player] = { name: e.player, goals: 0, team: side };
+      scorer[e.player].goals++;
+    });
+  });
+
+  s.avg = s.played ? (s.goals / s.played) : 0;
+
+  s.scorers = Object.keys(scorer).map(function(k) { return scorer[k]; })
+    .sort(function(a, b) { return b.goals - a.goals || a.name.localeCompare(b.name); });
+
+  s.teams = Object.keys(team).map(function(k) { return team[k]; });
+
+  var ORDER = ['group', 'r32', 'r16', 'qf', 'sf', 'third', 'final'];
+  s.byStage = ORDER.filter(function(k) { return stageGoals[k]; }).map(function(k) {
+    var n = (t.stages[k] || []).filter(function(m) { return m.status !== 'future'; }).length;
+    return { stage: k, goals: stageGoals[k], matches: n, avg: n ? stageGoals[k] / n : 0 };
+  });
+
+  return s;
+}
+
 window.WC = {
   URL: URL,
   TEAMS: TEAMS,
@@ -453,9 +818,15 @@ window.WC = {
   flagsSupported: flagsSupported,
   flagFor: flagFor,
   currentStage: currentStage,
+  stageState: stageState,
   upcoming: upcoming,
   liveMatches: liveMatches,
+  livePhase: livePhase,
+  liveMinute: liveMinute,
+  venueName: venueName,
+  playerName: playerName,
   refMatch: refMatch,
+  tournamentStats: tournamentStats,
   _normalize: normalize   // exposed for tests
 };
 

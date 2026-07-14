@@ -5,7 +5,7 @@ var http = require('http');
 var fs = require('fs');
 var path = require('path');
 
-var PORT = 8099;
+var PORT = parseInt(process.env.PORT, 10) || 8099;
 var TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css' };
 
 http.createServer(function(req, res) {

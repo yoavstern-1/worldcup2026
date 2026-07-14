@@ -4,9 +4,36 @@
 //   wrangler secret put GEMINI_KEYS         # comma-separated list of Gemini keys
 //   wrangler secret put FOOTBALL_API_KEY    # optional; omit to skip live stats
 // They arrive on `env` at runtime and are never committed.
+//
+// The worker returns a normalized shape so the page never has to walk Gemini's
+// candidate/parts tree:
+//   success -> { reply: "..." }
+//   failure -> { error: { message, code } }   with a 4xx/5xx status
+//
+// Three things used to make the chat fail intermittently, and all three are
+// fixed here:
+//   1. gemini-2.5-flash thinks before it answers, and thinking tokens come out
+//      of maxOutputTokens. At 512 the model regularly spent the whole budget on
+//      thinking and returned a candidate with finishReason MAX_TOKENS and no
+//      text parts at all — which the page rendered as a bare "⚠️ Error".
+//      thinkingConfig.thinkingBudget = 0 turns that off.
+//   2. google_search grounding was forced on every call. It roughly doubles
+//      latency and fails on its own (grounding timeouts, empty candidates). The
+//      page already ships the full fixture list and results in the system
+//      prompt, so the search tool bought nothing and cost reliability.
+//   3. A key was only rotated on a quota error, and a network wobble or a 5xx
+//      was returned to the user as-is. Now every key is retried and every key is
+//      tried before giving up.
 
-const GEMINI_BASE =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=';
+// The free-tier quota is metered PerProjectPerModel. Every key issued from the same
+// Google Cloud project therefore draws on ONE bucket: once it is empty, rotating keys
+// buys nothing — they all 429 together. A different *model* has its own bucket, so
+// flash-lite still answers after flash is spent. flash is the better answer and is
+// always tried first; flash-lite only picks up what flash can no longer serve.
+const MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+const GEMINI_TIMEOUT_MS = 25000;
+const PER_KEY_ATTEMPTS = 2;
 
 // Cache football data for 10 minutes to stay under the rate limit
 let footballCache = { data: null, ts: 0 };
@@ -65,18 +92,69 @@ function withAnswerBudget(gen) {
   const cfg = { ...(gen || {}) };
   const asked = Number(cfg.maxOutputTokens) || 0;
   cfg.maxOutputTokens = Math.max(asked, MIN_OUTPUT_TOKENS);
+  if (typeof cfg.temperature !== 'number') cfg.temperature = 0.4;
   // 0 disables thinking; every token then goes to the visible answer.
   cfg.thinkingConfig = { thinkingBudget: 0, ...(cfg.thinkingConfig || {}) };
   return cfg;
 }
 
-async function callGemini(key, body) {
-  const res = await fetch(GEMINI_BASE + key, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return res.json();
+// A hung upstream must not become a hung page.
+async function callGemini(model, key, body) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT_MS);
+  try {
+    const res = await fetch(GEMINI_BASE + model + ':generateContent?key=' + key, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    return { status: res.status, data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// All the text parts of the first candidate, joined. A candidate can legitimately
+// arrive split across several parts; taking only parts[0] dropped answers.
+function textOf(data) {
+  const c = data && data.candidates && data.candidates[0];
+  const parts = (c && c.content && c.content.parts) || [];
+  return parts.map((p) => (typeof p.text === 'string' ? p.text : '')).join('').trim();
+}
+
+function blockReason(data) {
+  const c = data && data.candidates && data.candidates[0];
+  if (data && data.promptFeedback && data.promptFeedback.blockReason) {
+    return 'blocked: ' + data.promptFeedback.blockReason;
+  }
+  if (c && c.finishReason && c.finishReason !== 'STOP') return 'finish: ' + c.finishReason;
+  return '';
+}
+
+// Worth trying another key / another attempt? Quota, auth, rate limit, and any
+// 5xx are transient from our side. A malformed request is not.
+function isTransient(status, data) {
+  if (status === 429 || status >= 500) return true;
+  const msg = ((data && data.error && data.error.message) || '').toLowerCase();
+  const code = data && data.error && data.error.code;
+  if (code === 429 || code === 403 || code === 503 || (code >= 500 && code < 600)) return true;
+  return (
+    msg.includes('quota') || msg.includes('rate') || msg.includes('overloaded') ||
+    msg.includes('api key') || msg.includes('unavailable') || msg.includes('high demand') ||
+    msg.includes('exhausted') || msg.includes('internal')
+  );
+}
+
+// Specifically "the bucket is empty", as opposed to any other transient failure.
+// Quota is PerProjectPerModel, so a key spent on flash may still have its full
+// flash-lite budget -- only when every (model, key) pair reports quota is it really
+// over, and only then should the page say so.
+function isQuota(status, data) {
+  const code = (data && data.error && data.error.code) || status;
+  const msg = ((data && data.error && data.error.message) || '').toLowerCase();
+  return code === 429 || msg.includes('quota') || msg.includes('exhausted') || msg.includes('rate limit');
 }
 
 function parseKeys(env) {
@@ -108,6 +186,8 @@ function json(obj, status) {
   });
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
@@ -124,6 +204,9 @@ export default {
     } catch {
       return json({ error: { message: 'Invalid JSON' } }, 400);
     }
+    if (!body || !Array.isArray(body.contents) || body.contents.length === 0) {
+      return json({ error: { message: 'No message' } }, 400);
+    }
 
     let footballData = '';
     try {
@@ -138,46 +221,61 @@ export default {
       (footballData ? '\n\nYou also have access to the following LIVE data from football-data.org:' + footballData : '');
 
     const enrichedBody = {
-      ...body,
+      contents: body.contents,
       system_instruction: { parts: [{ text: enrichedSystem }] },
-      tools: [{ google_search: {} }],
+      // No google_search: it roughly doubled token usage (8.1k vs 4.1k per question)
+      // and burned the free-tier quota into the ground -- the real source of the
+      // intermittent "API error". The page already ships every fixture and result in
+      // the system prompt, so grounding bought nothing and cost reliability.
       generationConfig: withAnswerBudget(body.generationConfig),
     };
 
-    // Try each key, rotating to the next on quota/auth errors
-    let lastQuotaError = null;
-    for (let i = 0; i < keys.length; i++) {
-      try {
-        const data = await callGemini(keys[i], enrichedBody);
-        if (data.error) {
-          const code = data.error.code;
-          const msg = (data.error.message || '').toLowerCase();
-          const isQuota =
-            code === 429 || code === 403 ||
-            msg.includes('quota') || msg.includes('rate') ||
-            msg.includes('api key') || msg.includes('invalid') ||
-            msg.includes('high demand');
-          if (isQuota) {
-            lastQuotaError = data.error;
-            if (i < keys.length - 1) continue;
-            // every key is spent -- say so plainly instead of leaking Google's
-            // billing URLs into a chat bubble
-            return json(
-              { error: { code: 429, status: 'QUOTA_EXHAUSTED', message: 'All Gemini keys are out of quota.' } },
-              429
-            );
-          }
+    // (model, key) pairs, flash across every key before flash-lite across every key.
+    const tries = [];
+    MODELS.forEach((model) => keys.forEach((key) => tries.push({ model, key })));
+
+    let lastErr = 'unknown error';
+    let allQuota = true;   // did every single attempt fail on quota?
+
+    for (let i = 0; i < tries.length; i++) {
+      for (let attempt = 0; attempt < PER_KEY_ATTEMPTS; attempt++) {
+        let status, data;
+        try {
+          ({ status, data } = await callGemini(tries[i].model, tries[i].key, enrichedBody));
+        } catch (err) {
+          allQuota = false;
+          lastErr = err && err.name === 'AbortError' ? 'upstream timeout' : String(err && err.message || err);
+          await sleep(300);
+          continue;   // same key, one more go — then the next pair
         }
-        return json(data);
-      } catch (err) {
-        if (i < keys.length - 1) continue;
-        return json({ error: { message: err.message } }, 500);
+
+        const reply = textOf(data);
+        if (reply) return json({ reply });
+
+        lastErr = (data && data.error && data.error.message) || blockReason(data) || 'empty response';
+        if (!isQuota(status, data)) allQuota = false;
+
+        // A safety block or a malformed request will fail identically on every
+        // key — stop rather than burn the whole keyring on it.
+        if (!isTransient(status, data)) {
+          if (blockReason(data).startsWith('blocked')) {
+            return json({ error: { message: 'Message was blocked by the safety filter.' } }, 400);
+          }
+          break;   // next pair: an empty candidate can be key-specific
+        }
+        await sleep(300 * (attempt + 1));
       }
     }
 
-    return json(
-      { error: { code: 429, status: 'QUOTA_EXHAUSTED', message: (lastQuotaError && lastQuotaError.message) || 'No key succeeded.' } },
-      429
-    );
+    // Falling off the end used to return nothing at all, which Cloudflare turns into
+    // "Response not returned" -- the page then showed a connection error instead of
+    // the quota problem it actually was. Say which one it is.
+    if (allQuota) {
+      return json(
+        { error: { code: 429, status: 'QUOTA_EXHAUSTED', message: 'Gemini daily quota is spent on every key and model.' } },
+        429
+      );
+    }
+    return json({ error: { message: lastErr } }, 502);
   },
 };
