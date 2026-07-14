@@ -106,7 +106,7 @@ body::after {
 .side-btn:active { transform:scale(.88); }
 .side-btn.active { background:var(--usa-red); color:#fff; border-color:var(--usa-red); }
 .side-btn.spinning { animation:spin .9s linear infinite; }
-.side-label { font-size:8px; font-weight:700; color:var(--t3); letter-spacing:.5px; text-align:center; line-height:1.2; max-width:54px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.side-label { font-size:10px; font-weight:700; color:var(--t3); letter-spacing:.3px; text-align:center; line-height:1.2; max-width:56px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .side-panel {
   position:fixed; z-index:60;
   background:var(--drawer); backdrop-filter:blur(18px);
@@ -181,17 +181,22 @@ body::after {
    Elevation is a ring of light + an ambient shadow, never a hard black drop shadow.
    Restraint is deliberate: the ambient shadows are wide and near-invisible; what you
    actually read is the 1px sheen along the top edge. It is a results site. */
-.mc { transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid), border-color var(--t-mid); box-shadow:var(--elev-1); }
+/* The hover lift is a VARIABLE, not a transform declaration. scroll-reveal.js composes
+   reveal + parallax into one transform on .sr-el; a competing `transform:translateY(-2px)`
+   on :hover would win the cascade and throw the parallax offset away, so a card hovered
+   near the viewport edge would jump up to 8px and snap its scale back to 1. Both rules
+   read --sr-lift out of the same calc() instead, so the two effects add. */
+.mc { transform:translateY(var(--sr-lift,0px)) scale(var(--sr-press,1)); transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid), border-color var(--t-mid); box-shadow:var(--elev-1); }
 .mc.past   { box-shadow:var(--elev-0); }           /* played: flush with the page */
 .mc.future { box-shadow:var(--elev-2); }           /* still to come: lifted */
 .mc.star   { box-shadow:var(--glow-gold), var(--elev-2); }
 /* live last: a live star match must keep its amber ring, not the gold one */
 .mc.live   { box-shadow:0 0 0 1px var(--live), var(--elev-2); }
 @media (hover:hover) {
-  .mc:hover { transform:translateY(-2px); box-shadow:var(--glow), var(--elev-3); }
+  .mc:hover { --sr-lift:-2px; box-shadow:var(--glow), var(--elev-3); }
   .mc.live:hover { box-shadow:var(--glow-gold), var(--elev-3); }
-  .side-btn:hover { transform:translateY(-1px); }
-  .ds:hover, .bk-match:hover { transform:translateY(-1px); box-shadow:var(--glow), var(--elev-2); }
+  .side-btn:hover { transform:translateY(-1px); }   /* not a scroll-reveal element */
+  .ds:hover, .bk-match:hover { --sr-lift:-1px; box-shadow:var(--glow), var(--elev-2); }
   .lb-row:hover { background:var(--hi); }
 }
 /* Floating surfaces */
@@ -199,25 +204,26 @@ body::after {
 .drawer, .side-panel { box-shadow:var(--elev-3); }
 #chatPanel { box-shadow:var(--elev-4); }
 /* Tiles, rows, bracket cards */
-.ds        { box-shadow:var(--elev-1); transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid); }
+.ds        { box-shadow:var(--elev-1); transform:translateY(var(--sr-lift,0px)); transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid); }
 .ds.hero   { box-shadow:var(--glow-gold), var(--elev-2); }
 .lb, .gstrip, .fx-i, .ds-lede, .wt, .gs-card { box-shadow:var(--elev-1); }
 .lb-row    { box-shadow:inset 0 1px 0 0 var(--sheen); transition:background var(--t-fast); }
 .lb-row.top { box-shadow:inset 0 0 0 1px var(--hi-border), inset 0 1px 0 0 var(--sheen); }
 /* bracket.js injects .bk-match's background/border later in the cascade; it sets no
    box-shadow on the base class, so this lands without an !important. */
-.bk-match  { box-shadow:var(--elev-1); transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid); }
+.bk-match  { box-shadow:var(--elev-1); transform:translateY(var(--sr-lift,0px)); transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid); }
 .bk-match.up { box-shadow:var(--glow-gold), var(--elev-2); }
 .mc, .drawer-item, .ds, .lb-row { border-radius:var(--r-md); }
 .tb { border-radius:var(--r-lg); }
 
 @media (prefers-reduced-motion: reduce) {
-  .mc, .side-btn, .ds, .bk-match { transition:box-shadow var(--t-mid); }
-  .mc:hover, .side-btn:hover, .ds:hover, .bk-match:hover { transform:none; }
+  .mc, .side-btn, .ds, .bk-match { transition:box-shadow var(--t-mid); transform:none; }
+  .mc:hover, .ds:hover, .bk-match:hover, .mc:active { --sr-lift:0px; --sr-press:1; transform:none; }
+  .side-btn:hover { transform:none; }
   .sync-dot { animation:none !important; }
 }
 
-.panel-title { font-size:9px; font-weight:700; color:var(--t3); letter-spacing:.8px; text-transform:uppercase; padding:4px 10px 8px; border-bottom:1px solid var(--card-border); margin-bottom:4px; }
+.panel-title { font-size:11px; font-weight:700; color:var(--t3); letter-spacing:.6px; text-transform:uppercase; padding:4px 10px 8px; border-bottom:1px solid var(--card-border); margin-bottom:4px; }
 /* min-height 44px: the panel rows and the reset button were 32-34px tall, under the
    44px touch-target floor. Padding grows the hit area, not the glyph. */
 .panel-opt { display:flex; align-items:center; gap:9px; padding:11px 12px; min-height:44px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; color:var(--t2); white-space:nowrap; transition:background .2s, color .2s; }
@@ -283,8 +289,11 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mc.live { background:var(--card-future); border-color:var(--live); }
 .mc.star { border-color:var(--hi-border); }
 .mc.star.future, .mc.star.live { background:var(--hi); }
-.mc:hover { transform:translateY(-3px); }
-.mc:active { transform:scale(.98); }
+/* The lift lives in the DEPTH block as --sr-lift. A second `transform:translateY(-3px)`
+   used to sit here — later in the cascade, so it won, disagreed with the -2px above, AND
+   replaced the composed transform, throwing scroll-reveal's parallax away. The press is a
+   variable for the same reason: it has to MULTIPLY the parallax scale, not overwrite it. */
+.mc:active { --sr-press:.98; }
 .strip { position:absolute; inset-inline-end:0; top:0; bottom:0; width:5px; }
 .strip.safe { background:var(--safe); }
 .strip.warn { background:var(--warn); }
@@ -292,12 +301,16 @@ main { position:relative; z-index:1; margin-right:64px; }
 .star-tag { position:absolute; top:9px; inset-inline-start:13px; font-size:9px; font-weight:700; color:var(--gold); letter-spacing:.5px; line-height:1; pointer-events:none; }
 .mc.star .mc-top { margin-top:14px; }
 .mc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:9px; min-height:30px; }
-.mc-grp { font-size:10px; font-weight:700; letter-spacing:.8px; color:var(--t3); text-transform:uppercase; padding-top:3px; }
+/* 11px is the floor for any Hebrew string on this page. Assistant has no ascender /
+   descender contrast to carry 9px — a venue at 9px/500 in --t3 was a grey smudge, not a
+   line of text, and it was the ONE string on the card telling you where the match is.
+   Latin can take 9px; Hebrew cannot, and this page is Hebrew first. */
+.mc-grp { font-size:11px; font-weight:700; letter-spacing:.8px; color:var(--t3); text-transform:uppercase; padding-top:3px; }
 .mc-rt { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
 [dir="ltr"] .mc-rt { align-items:flex-start; }
 .mc-time { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:22px; letter-spacing:1px; line-height:1; }
 .mc-time.safe { color:var(--safe); } .mc-time.warn { color:var(--warn); } .mc-time.danger { color:var(--danger); }
-.mc-fin { font-size:9px; color:var(--t3); font-weight:600; }
+.mc-fin { font-size:11px; color:var(--t3); font-weight:700; }
 
 /* ── live pulse ──
    A slow amber blink, not a static red dot: the eye reads a pulse as "still
@@ -335,7 +348,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mc-min { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:17px; line-height:1; color:var(--live); direction:ltr; unicode-bidi:isolate; min-width:34px; text-align:center; }
 /* half-time / shootout: the phase word takes the slot instead of a frozen clock */
 .mc-min.txt { font-size:11px; letter-spacing:.3px; direction:inherit; white-space:nowrap; }
-.mc-phase { font-size:9px; font-weight:700; color:var(--live); letter-spacing:.4px; }
+.mc-phase { font-size:11px; font-weight:800; color:var(--live); letter-spacing:.4px; }
 
 /* ── scoreline ──
    One row per team, each team's goals on its own line. The old layout put the
@@ -354,7 +367,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mc-row.w .mc-nm, .mc-row.w .mc-sc { color:var(--gold); }
 .mc-row.ph .mc-nm { color:var(--t3); font-weight:600; }
 .mc.live .mc-row .mc-sc { color:var(--live); }
-.mc-venue { margin-top:8px; font-size:10px; color:var(--t3); font-weight:500; line-height:1.4; }
+.mc-venue { margin-top:8px; font-size:12px; color:var(--t2); font-weight:600; line-height:1.45; }
 .mc-note { color:var(--gold); }
 .rec-wrap { max-width:1080px; margin:16px auto 0; padding:0 20px 60px; }
 .stand-wrap { max-width:1080px; margin:16px auto 0; padding:0 20px 60px; }
@@ -431,7 +444,11 @@ main { position:relative; z-index:1; margin-right:64px; }
 /* Height caps to whatever fits above the floating button (100px + a margin),
    using dvh so mobile browser bars don't clip it. Prevents a long answer's
    last lines from hiding behind the input row. */
-#chatPanel { position:fixed; bottom:86px; left:16px; z-index:199; width:340px; max-width:calc(100vw - 32px); background:var(--drawer); border:1px solid var(--card-border); border-radius:16px; display:flex; flex-direction:column; overflow:hidden; opacity:0; transform:translateY(12px) scale(.97); pointer-events:none; transition:opacity .22s, transform .22s; max-height:min(72vh, calc(100vh - 120px)); max-height:min(72dvh, calc(100dvh - 120px)); }
+/* inset-inline-END, not `left`. The nav rail is `right` in Hebrew and `left` in English,
+   so a hardcoded `left` put the chat on top of the rail in English. inline-end resolves
+   to left under RTL and right under LTR — i.e. always the side the rail is not on. The
+   FAB in visual_upgrade.js is anchored the same way, so the two stay together. */
+#chatPanel { position:fixed; bottom:86px; inset-inline-end:16px; z-index:199; width:340px; max-width:calc(100vw - 32px); background:var(--drawer); border:1px solid var(--card-border); border-radius:16px; display:flex; flex-direction:column; overflow:hidden; opacity:0; transform:translateY(12px) scale(.97); pointer-events:none; transition:opacity .22s, transform .22s; max-height:min(72vh, calc(100vh - 120px)); max-height:min(72dvh, calc(100dvh - 120px)); }
 #chatPanel.open { opacity:1; transform:none; pointer-events:auto; }
 #chatHeader { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--bg2); font-weight:700; font-size:14px; color:var(--gold); flex-shrink:0; border-bottom:1px solid var(--card-border); }
 /* Was 19x14 — the smallest control on the page and one of the most tapped. */
@@ -503,7 +520,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 .tb { max-width:760px; margin:0 auto 18px; padding:14px 18px 12px; border-radius:var(--r-lg); background:var(--hi); border:1px solid var(--hi-border); position:relative; display:grid; grid-template-columns:minmax(200px,340px) auto; justify-content:center; grid-template-areas:"tag tag" "main right" "stage stage"; gap:4px 26px; align-items:center; }
 .tb.live { border-color:var(--live); }
 .tb.done { opacity:.75; }
-.tb-tag { grid-area:tag; font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--gold); }
+.tb-tag { grid-area:tag; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--gold); }
 /* The team rows sat in a 1fr grid cell, so the two name pills stretched the whole
    width of the banner and left the kickoff time stranded far off to the side. Cap
    them and centre them in the cell instead. */
@@ -514,8 +531,10 @@ main { position:relative; z-index:1; margin-right:64px; }
 .tb-rows .mc-fl { font-size:18px; }
 .tb-right { grid-area:right; text-align:center; display:flex; flex-direction:column; align-items:center; gap:3px; }
 .tb-time { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:30px; line-height:1; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
-.tb-sub { font-size:10px; color:var(--t3); white-space:nowrap; }
-.tb-stage { grid-area:stage; font-size:10px; color:var(--t3); margin-top:4px; }
+.tb-sub { font-size:11px; font-weight:600; color:var(--t3); white-space:nowrap; }
+/* Carries the venue ("חצי גמר · אצטדיון דאלאס") — the one line on the banner that says
+   WHERE. It was 10px/400 in --t3 and read as a caption for the scoreline above it. */
+.tb-stage { grid-area:stage; font-size:12px; font-weight:600; color:var(--t2); margin-top:5px; }
 @media(max-width:520px){ .tb { margin-inline:12px; padding:12px 14px; } .tb-time { font-size:24px; } }
 
 /* ── search reset ── */
@@ -541,7 +560,7 @@ select:disabled { opacity:.45; cursor:not-allowed; }
 .ds { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:14px 8px; text-align:center; }
 .ds.hero { border-color:var(--hi-border); background:var(--hi); }
 .ds-v { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:clamp(22px,6vw,30px); line-height:1; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
-.ds-l { font-size:10px; color:var(--t3); margin-top:5px; line-height:1.3; }
+.ds-l { font-size:11px; font-weight:600; color:var(--t3); margin-top:5px; line-height:1.35; }
 @media(max-width:520px){ .ds-grid { grid-template-columns:repeat(2,1fr); } }
 
 /* one-line narrative under the tiles — the Opta move: a sentence, not a table */
@@ -555,7 +574,7 @@ select:disabled { opacity:.45; cursor:not-allowed; }
 .lb-rk { width:18px; flex-shrink:0; font-size:11px; font-weight:800; color:var(--t3); text-align:center; direction:ltr; unicode-bidi:isolate; }
 .lb-row.top .lb-rk { color:var(--gold); }
 .lb-nm { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--t1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.lb-sub { font-size:10px; font-weight:600; color:var(--t3); flex-shrink:0; }
+.lb-sub { font-size:11px; font-weight:600; color:var(--t3); flex-shrink:0; }
 .lb-bar { flex:0 0 74px; height:5px; border-radius:3px; background:var(--card-border); overflow:hidden; }
 .lb-bar i { display:block; height:100%; background:var(--gold); border-radius:3px; }
 .lb-v { flex:0 0 26px; text-align:center; font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:15px; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
@@ -566,7 +585,7 @@ select:disabled { opacity:.45; cursor:not-allowed; }
 .gcol { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; min-width:0; }
 .gcol .gv { font-size:12px; font-weight:800; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
 .gcol .gb { width:100%; max-width:38px; border-radius:4px 4px 0 0; background:var(--hi-border); min-height:4px; }
-.gcol .gl { font-size:9px; color:var(--t3); font-weight:600; text-align:center; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+.gcol .gl { font-size:11px; color:var(--t3); font-weight:600; text-align:center; line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
 
 /* two-up mini facts */
 .fx { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }

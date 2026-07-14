@@ -588,12 +588,27 @@ function cacheIsFresh(entry) {
 //   network ok         -> cb(null, t)
 //   network fails +cache -> cb(null, t) with t.stale = true, t.error set
 //   network fails, no cache -> cb(err, null)
+//
+// cb is fired from a setTimeout, OUTSIDE the promise chain, and settle() fires it at most
+// once. Both matter. Calling cb() inside .then() put the caller's renderer inside the
+// chain, so an exception THERE was caught by the .catch() below and reported as a network
+// failure: a ReferenceError in the render path came back as "could not refresh", and the
+// .catch() then re-entered cb with the cached tournament, which threw again — the second
+// throw escaped as an unhandled rejection and the refresh button spun for ever. A render
+// bug must surface as a render bug.
 function load(cb, opts) {
   opts = opts || {};
   var cached = readCache();
+  var settled = false;
+
+  function settle(err, t) {
+    if (settled) return;
+    settled = true;
+    setTimeout(function() { cb(err, t); }, 0);
+  }
 
   if (!opts.force && cacheIsFresh(cached)) {
-    cb(null, cached.t);
+    settle(null, cached.t);
     return;
   }
 
@@ -607,16 +622,16 @@ function load(cb, opts) {
       if (!t.all.length) throw new Error('empty response');
       t.fetchedAt = Date.now();
       writeCache(t);
-      cb(null, t);
+      settle(null, t);
     })
     .catch(function(err) {
       var reason = (err && err.message) || 'network error';
       if (cached) {
         cached.t.stale = true;
         cached.t.error = reason;
-        cb(null, cached.t);
+        settle(null, cached.t);
       } else {
-        cb(new Error(reason), null);
+        settle(new Error(reason), null);
       }
     });
 }

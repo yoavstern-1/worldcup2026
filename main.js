@@ -167,8 +167,17 @@ function loadTournament(force) {
     if (err) { renderHardError(err); return; }
     var fresh = newGoals(TOURNAMENT, t);
     TOURNAMENT = t;
-    renderAll(t);
-    reportSync(t);
+    // Every exit from here clears the spinner. A throw inside renderAll used to leave the
+    // button spinning for ever, because both calls that drop .spinning sat after it. The
+    // error state is reported rather than swallowed — a broken renderer must not look like
+    // a page that is still working.
+    try {
+      renderAll(t);
+      reportSync(t);
+    } catch (e) {
+      setSyncBar('error', isHe() ? 'שגיאה בהצגת הנתונים' : 'Failed to render data');
+      throw e;                      // straight to the console, unmodified
+    }
     fresh.forEach(announceGoal);
     clearTimeout(liveRefreshTimer);
     liveRefreshTimer = setTimeout(function(){ loadTournament(true); }, refreshDelay(t));

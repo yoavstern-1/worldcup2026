@@ -11,11 +11,11 @@ body,button,input,select,.panel-opt,.drawer-item,.set-opt,.mc-team,.mc-venue,.mc
    ballMarkup) and everything around it — ring, glow, contact shadow — is built
    from theme tokens only, so it inverts correctly under [data-theme="light"].
    No hard black drop-shadow: on the emerald background that reads as dirt.
-   NOTE: the button keeps index.html's physical "left" anchor on purpose. It is
-   pinned to the same edge as #chatPanel, which lives in index.html; flipping
-   only the button to inset-inline-start would strand it across from its panel
-   in Hebrew. Everything added below is logical (inset-inline / inset-block). */
-#chatFloatBtn{background:transparent !important;border:none !important;box-shadow:none !important;width:56px !important;height:74px !important;padding:0 !important;font-size:0 !important;animation:chatFloat 3s ease-in-out infinite;bottom:calc(14px + env(safe-area-inset-bottom)) !important;left:calc(14px + env(safe-area-inset-left)) !important;display:flex !important;flex-direction:column !important;align-items:center !important;gap:2px !important;transition:opacity .25s ease,transform .25s ease;}
+   Anchored to inset-inline-END, matching #chatPanel in index.html. The nav rail is
+   `right` in Hebrew and `left` in English, so the old physical `left` anchor put the
+   ball on top of the rail in English. inline-end resolves to left under RTL and right
+   under LTR — always the side the rail is not on. */
+#chatFloatBtn{background:transparent !important;border:none !important;box-shadow:none !important;width:56px !important;height:74px !important;padding:0 !important;font-size:0 !important;animation:chatFloat 3s ease-in-out infinite;bottom:calc(14px + env(safe-area-inset-bottom)) !important;left:auto !important;right:auto !important;inset-inline-end:14px !important;display:flex !important;flex-direction:column !important;align-items:center !important;gap:2px !important;transition:opacity .25s ease,transform .25s ease;}
 /* A fixed button always sits on top of content. Fade it out while the user is
    scrolling so it never blocks the card they are reading; bring it back at rest. */
 #chatFloatBtn.scrolling{opacity:.18 !important;transform:translateY(6px) scale(.9) !important;pointer-events:none;}

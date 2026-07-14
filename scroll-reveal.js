@@ -44,7 +44,8 @@
          drop the parallax offset, so the card would jump on hover; the hover rules set
          a variable instead and land inside this same calc(). */
       '.sr-el{position:relative;',
-      'transform:translateY(calc(var(--sr-in-y,0px) + var(--sr-y,0px) + var(--sr-lift,0px))) scale(var(--sr-s,1));',
+      'transform:translateY(calc(var(--sr-in-y,0px) + var(--sr-y,0px) + var(--sr-lift,0px)))',
+      ' scale(calc(var(--sr-s,1) * var(--sr-press,1)));',
       'transition:transform .28s cubic-bezier(.22,.61,.36,1),opacity .5s ease,',
       'box-shadow .35s ease,background .3s ease,border-color .3s ease;}',
 
