@@ -157,8 +157,11 @@ function isQuota(status, data) {
   return code === 429 || msg.includes('quota') || msg.includes('exhausted') || msg.includes('rate limit');
 }
 
+// GEMINI_KEYS is a comma-separated secret; also accept GEMINI_KEY_1..N, and the
+// singular GEMINI_KEY -- that is the name the binding has actually carried in
+// production since the worker was first set up by hand, and reading only the
+// plural names meant a correctly-configured worker still reported "no keys set".
 function parseKeys(env) {
-  // GEMINI_KEYS is a comma-separated secret; also accept GEMINI_KEY_1..N.
   const list = [];
   if (env.GEMINI_KEYS) {
     env.GEMINI_KEYS.split(',').forEach((k) => {
@@ -166,6 +169,7 @@ function parseKeys(env) {
       if (t) list.push(t);
     });
   }
+  if (env.GEMINI_KEY && env.GEMINI_KEY.trim()) list.push(env.GEMINI_KEY.trim());
   for (let i = 1; i <= 20; i++) {
     const v = env['GEMINI_KEY_' + i];
     if (v && v.trim()) list.push(v.trim());
