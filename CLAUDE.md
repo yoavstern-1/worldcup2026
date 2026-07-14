@@ -197,9 +197,12 @@ before load.
 
 ## Open / not done
 
-- **`worker.js` is not deployed.** The chat fixes that live in the worker (no grounding, key
-  rotation, `{reply}` shape) need `npx wrangler deploy`. The page-side half of the fix works
-  without it.
+- **`gemini-2.5-flash` is ~20 requests/day**, and that is the whole free-tier budget for it
+  (`limit: 20` came from the live 429). The chain adds the other models' buckets on top; it
+  is capacity, not redundancy. Heavy testing burns the day's quota — probe with `curl`
+  against one model, not through the page.
+- **ESPN's payload has no `officials`** — the chat cannot name a referee, and the system
+  prompt says so explicitly rather than letting the model invent one.
 - Standings tab was removed (was empty and claimed "updates via ESPN API" — untrue).
 - `PLAYER_HE` covers the current top ~30 scorers; a new name entering the top 5 will render
   in Latin until it is added.
