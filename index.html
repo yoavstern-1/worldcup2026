@@ -107,8 +107,66 @@ body::after {
 }
 [dir="ltr"] .side-panel { transform:translateX(-6px); box-shadow:6px 0 28px var(--shadow); }
 .side-panel.open { opacity:1; pointer-events:auto; transform:translateX(0); }
+/* ── Icons ───────────────────────────────────────────────────────────
+   An <svg> with no width/height falls back to 300x150 and blows the layout apart,
+   which is what a bare `class="ic"` did to the reset X and the theme options. Size
+   is a token, never an arbitrary per-icon value; the stroke is set once on the
+   symbol so every glyph shares a weight. */
+:root {
+  --icon-sm:16px; --icon-md:20px; --icon-lg:22px;
+  /* Radius + elevation scale. Previously every component picked its own number
+     (8/9/10/14px) and nothing sat on a rhythm. */
+  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:26px;
+  --ease:cubic-bezier(.34,1.4,.64,1);
+  --t-fast:.16s; --t-mid:.24s; --t-slow:.32s;
+  /* Depth is a ring of light, not a drop shadow: a glow reads as premium on a dark
+     surface where a black shadow reads as dirt. */
+  --glow:0 0 0 1px var(--hi-border), 0 8px 30px -10px var(--shadow);
+  --glow-gold:0 0 0 1px var(--hi-border), 0 10px 34px -8px rgba(217,184,102,.28);
+  --focus-ring:0 0 0 2px var(--bg), 0 0 0 4px var(--gold);
+}
+[data-theme="light"] { --glow-gold:0 0 0 1px var(--hi-border), 0 10px 30px -10px rgba(138,106,30,.32); }
+
+.ic { width:var(--icon-md); height:var(--icon-md); flex:0 0 auto; display:block; color:inherit; }
+.ic-sm { width:var(--icon-sm); height:var(--icon-sm); }
+
+/* One visible focus style for the whole app. Keyboard users had nothing before. */
+:where(button,a,select,[onclick],[tabindex]):focus-visible {
+  outline:none; box-shadow:var(--focus-ring); border-radius:var(--r-sm);
+}
+
+/* Sync state as a token-coloured dot, replacing the emoji that used to be written
+   into the button's textContent. */
+#btnRefresh { position:relative; }
+.sync-dot { position:absolute; top:7px; inset-inline-end:7px; width:7px; height:7px; border-radius:50%;
+            background:var(--t3); transition:background var(--t-mid); }
+#btnRefresh[data-sync="ok"]    .sync-dot { background:var(--safe); }
+#btnRefresh[data-sync="live"]  .sync-dot { background:var(--live); animation:livePulse 1.8s ease-in-out infinite; }
+#btnRefresh[data-sync="stale"] .sync-dot { background:var(--warn); }
+#btnRefresh[data-sync="error"] .sync-dot { background:var(--danger); }
+
+/* Cards lift into a ring of light on hover instead of sitting flat. */
+.mc { transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid), border-color var(--t-mid); }
+@media (hover:hover) {
+  .mc:hover { transform:translateY(-2px); box-shadow:var(--glow); }
+  .mc.live:hover { box-shadow:var(--glow-gold); }
+  .side-btn:hover { transform:translateY(-1px); }
+}
+.tb { box-shadow:var(--glow-gold); }
+.mc, .drawer-item, .ds, .lb-row { border-radius:var(--r-md); }
+.tb { border-radius:var(--r-lg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mc, .side-btn { transition:box-shadow var(--t-mid); }
+  .mc:hover, .side-btn:hover { transform:none; }
+  .sync-dot { animation:none !important; }
+}
+
 .panel-title { font-size:9px; font-weight:700; color:var(--t3); letter-spacing:.8px; text-transform:uppercase; padding:4px 10px 8px; border-bottom:1px solid var(--card-border); margin-bottom:4px; }
-.panel-opt { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; color:var(--t2); white-space:nowrap; transition:background .2s, color .2s; }
+/* min-height 44px: the panel rows and the reset button were 32-34px tall, under the
+   44px touch-target floor. Padding grows the hit area, not the glyph. */
+.panel-opt { display:flex; align-items:center; gap:9px; padding:11px 12px; min-height:44px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; color:var(--t2); white-space:nowrap; transition:background .2s, color .2s; }
+.panel-opt .ic { width:var(--icon-sm); height:var(--icon-sm); }
 .panel-opt:hover { background:var(--hi); color:var(--t1); }
 .panel-opt.active { color:var(--gold); }
 .refresh-tip { position:fixed; z-index:60; background:var(--drawer); backdrop-filter:blur(16px); border:1px solid var(--card-border); border-radius:10px; padding:7px 13px; font-size:11px; font-weight:600; color:var(--t2); white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .2s; }
@@ -267,7 +325,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 /* min-width:0 — a flex item defaults to min-width:auto, so the widest <option>
    ("ARG Argentina") would force the select past its container and shove the
    reset button off-screen. */
-.search-selects select { flex:1 1 38%; min-width:0; max-width:100%; text-overflow:ellipsis; padding:7px 10px; border-radius:10px; border:1px solid var(--card-border); background:var(--card); color:var(--t1); font-size:13px; font-weight:600; appearance:none; -webkit-appearance:none; cursor:pointer; outline:none; }
+.search-selects select { flex:1 1 38%; min-width:0; max-width:100%; min-height:44px; text-overflow:ellipsis; padding:10px 12px; border-radius:10px; border:1px solid var(--card-border); background:var(--card); color:var(--t1); font-size:13px; font-weight:600; appearance:none; -webkit-appearance:none; cursor:pointer; outline:none; }
 .search-selects select:focus { border-color:var(--gold); }
 /* Native dropdown list — set solid option colours so team names stay legible
    (translucent --card would render unreadable in the OS popup). */
@@ -318,7 +376,9 @@ main { position:relative; z-index:1; margin-right:64px; }
 #chatPanel { position:fixed; bottom:86px; left:16px; z-index:199; width:340px; max-width:calc(100vw - 32px); background:var(--drawer); border:1px solid var(--card-border); border-radius:16px; box-shadow:0 8px 32px var(--shadow); display:flex; flex-direction:column; overflow:hidden; opacity:0; transform:translateY(12px) scale(.97); pointer-events:none; transition:opacity .22s, transform .22s; max-height:min(72vh, calc(100vh - 120px)); max-height:min(72dvh, calc(100dvh - 120px)); }
 #chatPanel.open { opacity:1; transform:none; pointer-events:auto; }
 #chatHeader { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--bg2); font-weight:700; font-size:14px; color:var(--gold); flex-shrink:0; border-bottom:1px solid var(--card-border); }
-#chatClose { background:none; border:none; color:var(--t3); font-size:14px; cursor:pointer; padding:0 4px; line-height:1; }
+/* Was 19x14 — the smallest control on the page and one of the most tapped. */
+#chatClose { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; min-width:44px; min-height:44px; box-sizing:border-box; background:none; border:none; border-radius:var(--r-sm); color:var(--t3); cursor:pointer; padding:0; line-height:1; transition:color var(--t-mid), background var(--t-mid); }
+#chatClose .ic { width:var(--icon-sm); height:var(--icon-sm); }
 #chatClose:hover { color:var(--t1); }
 #chatMessages { flex:1; overflow-y:auto; padding:12px 12px 14px; display:flex; flex-direction:column; gap:8px; min-height:100px; background:var(--bg); overscroll-behavior:contain; scroll-padding-bottom:14px; }
 .chat-bubble { max-width:82%; padding:8px 12px; border-radius:12px; font-size:13.5px; line-height:1.5; word-break:break-word; }
@@ -335,7 +395,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 #chatInputField { flex:1; padding:8px 10px; border-radius:8px; font-size:13px; background:var(--card-future); border:1px solid var(--card-border); color:var(--t1); outline:none; }
 #chatInputField::placeholder { color:var(--t3); }
 #chatInputField:focus { border-color:var(--gold); }
-#chatSendBtn { padding:8px 14px; border-radius:8px; font-size:13px; font-weight:700; background:var(--gold); color:#1a1405; border:none; cursor:pointer; transition:opacity .15s; }
+#chatSendBtn { min-height:44px; box-sizing:border-box; padding:10px 16px; border-radius:var(--r-sm); font-size:13px; font-weight:700; background:var(--gold); color:#1a1405; border:none; cursor:pointer; transition:opacity var(--t-fast), transform var(--t-fast); }
+#chatSendBtn:active:not(:disabled) { transform:scale(.95); }
 #chatSendBtn:hover { opacity:.85; }
 @media(max-width:520px){ #chatPanel { left:8px; right:8px; width:auto; max-width:100%; bottom:80px; } }
 
@@ -354,14 +415,22 @@ main { position:relative; z-index:1; margin-right:64px; }
 
 /* ── today's match banner ── */
 #todayBanner:empty { display:none; }
-.tb { max-width:760px; margin:0 auto 18px; padding:14px 18px 12px; border-radius:var(--radius); background:var(--hi); border:1px solid var(--hi-border); position:relative; display:grid; grid-template-columns:1fr auto; grid-template-areas:"tag tag" "main right" "stage stage"; gap:4px 14px; align-items:center; }
+/* `1fr auto` gave the team rows a full-width cell to float in, so centring them left a
+   dead gap between the rows and the clock. `auto auto` + justify-content:center sizes
+   both columns to their content and centres the PAIR, which is what "centred" meant. */
+/* `1fr auto` gave the rows a full-width cell to float in, leaving a dead gap between
+   them and the clock; plain `auto auto` shrank them to the width of the longest team
+   name. A bounded column does both jobs: the rows get a real, capped width and the
+   PAIR is centred. */
+.tb { max-width:760px; margin:0 auto 18px; padding:14px 18px 12px; border-radius:var(--r-lg); background:var(--hi); border:1px solid var(--hi-border); position:relative; display:grid; grid-template-columns:minmax(200px,340px) auto; justify-content:center; grid-template-areas:"tag tag" "main right" "stage stage"; gap:4px 26px; align-items:center; }
 .tb.live { border-color:var(--live); }
 .tb.done { opacity:.75; }
 .tb-tag { grid-area:tag; font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--gold); }
 /* The team rows sat in a 1fr grid cell, so the two name pills stretched the whole
    width of the banner and left the kickoff time stranded far off to the side. Cap
    them and centre them in the cell instead. */
-.tb-rows { grid-area:main; min-width:0; width:100%; max-width:380px; margin-inline:auto; }
+.tb-rows { grid-area:main; min-width:0; width:100%; }
+.tb-tag, .tb-stage { justify-self:center; text-align:center; }
 .tb-rows .mc-nm { font-size:clamp(14px,3.6vw,18px); }
 .tb-rows .mc-sc { font-size:clamp(18px,4.4vw,24px); min-width:22px; }
 .tb-rows .mc-fl { font-size:18px; }
@@ -372,7 +441,11 @@ main { position:relative; z-index:1; margin-right:64px; }
 @media(max-width:520px){ .tb { margin-inline:12px; padding:12px 14px; } .tb-time { font-size:24px; } }
 
 /* ── search reset ── */
-.search-reset { flex-shrink:0; width:34px; height:34px; border-radius:8px; border:1px solid var(--card-border); background:var(--card); color:var(--t2); font-size:13px; cursor:pointer; line-height:1; }
+/* 44x44, not 34x34 — the reset X sat under the touch-target floor. The hit area
+   grows; the glyph stays 16px. */
+.search-reset { flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:10px; border:1px solid var(--card-border); background:var(--card); color:var(--t2); cursor:pointer; line-height:1; transition:border-color .2s, color .2s, transform .15s; }
+.search-reset .ic { width:var(--icon-sm); height:var(--icon-sm); }
+.search-reset:active { transform:scale(.92); }
 .search-reset:hover { border-color:var(--danger); color:var(--danger); }
 select:disabled { opacity:.45; cursor:not-allowed; }
 
@@ -459,21 +532,51 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
 
 <div id="splashScreen"></div>
 
+<!-- Icon sprite. Emoji were doing this job before: ☰ 🌐 🌙 ↺ ✕ 📈 🏆. They are
+     font-dependent (the same reason 🇪🇸 collapses to "ES" on Windows and forced the
+     flag fallback), cannot take a design token, and render at a different weight on
+     every OS. One symbol set, one 1.75 stroke, sized and coloured by CSS. -->
+<!-- 2.4px round-capped stroke on a 24px grid, and every glyph is drawn inset from the
+     edge so it reads as a compact mark rather than a hairline sketch. A 1.75 stroke at
+     16px renders sub-pixel and looks like a placeholder. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+    <path d="M4.5 7.5h15M4.5 12h15M4.5 16.5h15"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8"/><path d="M4 12h16"/>
+    <path d="M12 4c2.1 2.2 3.1 5 3.1 8s-1 5.8-3.1 8c-2.1-2.2-3.1-5-3.1-8s1-5.8 3.1-8Z"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.5 13.6A7.8 7.8 0 1 1 10.4 4.5a6.3 6.3 0 0 0 9.1 9.1Z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+    <circle cx="12" cy="12" r="4.2"/><path d="M12 3.2v1.9M12 18.9v1.9M3.2 12h1.9M18.9 12h1.9M5.9 5.9l1.35 1.35M16.75 16.75 18.1 18.1M18.1 5.9 16.75 7.25M7.25 16.75 5.9 18.1"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.5 11.2A7.5 7.5 0 0 0 6.6 6.1L4.5 8.2"/><path d="M4.5 4.4v3.8h3.8"/>
+    <path d="M4.5 12.8a7.5 7.5 0 0 0 12.9 5.1l2.1-2.1"/><path d="M19.5 19.6v-3.8h-3.8"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+    <path d="M7 7l10 10M17 7 7 17"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.5 19.5h15"/><path d="m5.5 15.2 4.3-4.7 3.3 3.3 5.4-6.3"/><path d="M18.5 11.2V7.5h-3.7"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.5 4.5h9v4.6a4.5 4.5 0 0 1-9 0Z"/>
+    <path d="M7.5 6.2H5.4a2.1 2.1 0 0 0 2.1 3.6M16.5 6.2h2.1a2.1 2.1 0 0 1-2.1 3.6"/>
+    <path d="M12 13.6v3.1M9.3 19.5h5.4M10.3 16.7h3.4"/></symbol>
+</defs></svg>
+
 <div class="sidebar">
   <div class="side-item">
-    <button class="side-btn" id="btnMatches" onclick="closePanel();toggleDrawer('matches')">☰</button>
+    <button class="side-btn" id="btnMatches" aria-label="Menu" onclick="closePanel();toggleDrawer('matches')"><svg class="ic"><use href="#i-menu"/></svg></button>
     <span class="side-label" data-he="תוכן" data-en="Menu">תוכן</span>
   </div>
   <div class="side-item">
-    <button class="side-btn" id="btnLang" onclick="openPanel('lang',this)">🌐</button>
+    <button class="side-btn" id="btnLang" aria-label="Language" onclick="openPanel('lang',this)"><svg class="ic"><use href="#i-globe"/></svg></button>
     <span class="side-label" data-he="שפה" data-en="Lang">שפה</span>
   </div>
   <div class="side-item">
-    <button class="side-btn" id="btnTheme" onclick="openPanel('theme',this)">🌙</button>
+    <button class="side-btn" id="btnTheme" aria-label="Theme" onclick="openPanel('theme',this)"><svg class="ic"><use href="#i-moon"/></svg></button>
     <span class="side-label" data-he="צבע" data-en="Theme">צבע</span>
   </div>
   <div class="side-item">
-    <button class="side-btn" id="btnRefresh" onclick="manualRefresh()" onmouseenter="showRefreshTip(this)" onmouseleave="hideRefreshTip()">↺</button>
+    <button class="side-btn" id="btnRefresh" data-sync="ok" aria-label="Refresh" onclick="manualRefresh()" onmouseenter="showRefreshTip(this)" onmouseleave="hideRefreshTip()"><svg class="ic"><use href="#i-sync"/></svg><span class="sync-dot" aria-hidden="true"></span></button>
     <span class="side-label" data-he="רענון" data-en="Sync">רענון</span>
   </div>
 </div>
@@ -481,13 +584,13 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
 <div id="sidePanel" class="side-panel">
   <div id="panelLang" style="display:none">
     <div class="panel-title" data-he="שפה" data-en="Language">שפה</div>
-    <div class="panel-opt active" id="langHe" onclick="setLang('he');closePanel()">🇮🇱 עברית</div>
-    <div class="panel-opt" id="langEn" onclick="setLang('en');closePanel()">🇺🇸 English</div>
+    <div class="panel-opt active" id="langHe" onclick="setLang('he');closePanel()">עברית</div>
+    <div class="panel-opt" id="langEn" onclick="setLang('en');closePanel()">English</div>
   </div>
   <div id="panelTheme" style="display:none">
     <div class="panel-title" data-he="מצב תצוגה" data-en="Display">מצב תצוגה</div>
-    <div class="panel-opt active" id="themeDark" onclick="setTheme('dark');closePanel()">🌙 <span data-he="כהה" data-en="Dark">כהה</span></div>
-    <div class="panel-opt" id="themeLight" onclick="setTheme('light');closePanel()">☀️ <span data-he="בהיר" data-en="Light">בהיר</span></div>
+    <div class="panel-opt active" id="themeDark" onclick="setTheme('dark');closePanel()"><svg class="ic"><use href="#i-moon"/></svg><span data-he="כהה" data-en="Dark">כהה</span></div>
+    <div class="panel-opt" id="themeLight" onclick="setTheme('light');closePanel()"><svg class="ic"><use href="#i-sun"/></svg><span data-he="בהיר" data-en="Light">בהיר</span></div>
   </div>
 </div>
 
@@ -502,7 +605,7 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
       <select id="searchTeam1" onchange="onTeam1Change()"><option value="" data-he="בחר קבוצה 1" data-en="Team 1">בחר קבוצה 1</option></select>
       <span class="search-vs" data-he="נגד" data-en="vs">נגד</span>
       <select id="searchTeam2" onchange="runTeamSearch()" disabled><option value="" data-he="בחר קודם קבוצה 1" data-en="Pick team 1 first">בחר קודם קבוצה 1</option></select>
-      <button id="searchReset" class="search-reset" onclick="resetTeamSearch()" title="איפוס" aria-label="Reset">✕</button>
+      <button id="searchReset" class="search-reset" onclick="resetTeamSearch()" title="איפוס" aria-label="Reset"><svg class="ic"><use href="#i-close"/></svg></button>
     </div>
     <div class="search-result" id="searchResult">
       <div class="sr-teams" id="srTeams"></div>
@@ -510,13 +613,13 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
       <div class="sr-meta" id="srMeta"></div>
     </div>
   </div>
-  <div class="drawer-item" data-stage="rec" onclick="goStage('rec',this)"><span data-he="📈 נתונים" data-en="📈 Data">📈 נתונים</span></div>
+  <div class="drawer-item" data-stage="rec" onclick="goStage('rec',this)"><svg class="ic"><use href="#i-chart"/></svg><span data-he="נתונים" data-en="Data">נתונים</span></div>
   <div class="drawer-item" data-stage="group" onclick="goStage('group',this)"><span data-he="שלב הבתים" data-en="Group Stage">שלב הבתים</span></div>
   <div class="drawer-item" data-stage="r32" onclick="goStage('r32',this)"><span data-he="סיבוב 32" data-en="Round of 32">סיבוב 32</span></div>
   <div class="drawer-item" data-stage="r16" onclick="goStage('r16',this)"><span data-he="שמינית גמר" data-en="Round of 16">שמינית גמר</span></div>
   <div class="drawer-item" data-stage="qf" onclick="goStage('qf',this)"><span data-he="רבע גמר" data-en="Quarter-finals">רבע גמר</span></div>
   <div class="drawer-item" data-stage="sf" onclick="goStage('sf',this)"><span data-he="חצי גמר" data-en="Semi-finals">חצי גמר</span></div>
-  <div class="drawer-item" data-stage="final" onclick="goStage('final',this)"><span data-he="🏆 גמר" data-en="🏆 Final">🏆 גמר</span></div>
+  <div class="drawer-item" data-stage="final" onclick="goStage('final',this)"><svg class="ic"><use href="#i-trophy"/></svg><span data-he="גמר" data-en="Final">גמר</span></div>
 </div>
 
 <main>
@@ -618,7 +721,7 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
 <div id="chatPanel" dir="rtl">
   <div id="chatHeader">
     <span id="chatTitle" data-he="🤖 שאל על המונדיאל" data-en="🤖 Ask about the World Cup">🤖 שאל על המונדיאל</span>
-    <button id="chatClose" onclick="closeChat()" aria-label="Close">✕</button>
+    <button id="chatClose" onclick="closeChat()" aria-label="Close"><svg class="ic"><use href="#i-close"/></svg></button>
   </div>
   <div id="chatMessages"></div>
   <div id="chatInputRow">

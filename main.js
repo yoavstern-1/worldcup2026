@@ -139,18 +139,20 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeDra
 var liveRefreshTimer = null;
 var liveClockTimer = null;
 
-var SYNC_ICON = { live: '🟡', stale: '⚠️', error: '⚠️', ok: '↺' };
-
+// State is a data attribute, not a replaced glyph. This used to write an emoji into
+// btnRefresh.textContent (🟡 / ⚠️ / ↺), which both blew away the button's SVG icon and
+// made the sync state font-dependent. The icon is now permanent; a token-coloured dot
+// in the corner carries the state.
 function setSyncBar(state, text) {
   var btn = document.getElementById('btnRefresh');
   refreshTipText = text;
+  if (!btn) return;
   if (state === 'loading') {
-    if (btn) btn.classList.add('spinning');
+    btn.classList.add('spinning');
     return;
   }
-  if (!btn) return;
   btn.classList.remove('spinning');
-  btn.textContent = SYNC_ICON[state] || SYNC_ICON.ok;
+  btn.setAttribute('data-sync', state || 'ok');
 }
 
 // ── TOURNAMENT LOAD + RENDER ─────────────────────────────────────────
