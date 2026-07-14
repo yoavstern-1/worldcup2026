@@ -26,11 +26,15 @@
 //      tried before giving up.
 
 // The free-tier quota is metered PerProjectPerModel. Every key issued from the same
-// Google Cloud project therefore draws on ONE bucket: once it is empty, rotating keys
-// buys nothing — they all 429 together. A different *model* has its own bucket, so
-// flash-lite still answers after flash is spent. flash is the better answer and is
-// always tried first; flash-lite only picks up what flash can no longer serve.
-const MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+// Google Cloud project draws on ONE bucket per model: once it is empty, rotating keys
+// buys nothing — they all 429 together (observed: `limit: 20, model: gemini-2.5-flash`).
+// A different *model* has its own bucket, so the chain below is daily capacity added up,
+// not redundancy.
+//
+// Every entry was verified with a live generateContent call, not read off ListModels --
+// ListModels still advertises gemini-2.5-flash-lite, which now 404s with "no longer
+// available to new users". Re-verify with a real call before adding a model here.
+const MODELS = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
 const GEMINI_TIMEOUT_MS = 25000;
 const PER_KEY_ATTEMPTS = 2;
@@ -257,7 +261,11 @@ export default {
         if (reply) return json({ reply });
 
         lastErr = (data && data.error && data.error.message) || blockReason(data) || 'empty response';
-        if (!isQuota(status, data)) allQuota = false;
+
+        // A spent bucket does not refill in 300ms. Retrying the same model just adds
+        // latency before the inevitable move to the next one -- go there immediately.
+        if (isQuota(status, data)) break;
+        allQuota = false;
 
         // A safety block or a malformed request will fail identically on every
         // key — stop rather than burn the whole keyring on it.

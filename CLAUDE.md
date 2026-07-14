@@ -119,8 +119,26 @@ Fonts: **Sora** (Latin) + **Assistant** (Hebrew) — browser picks per glyph.
 
 ## Security
 
-`worker.js` reads `env.GEMINI_KEYS` (comma-separated) and `env.FOOTBALL_API_KEY`,
-set via `wrangler secret put` / Cloudflare dashboard. **Never put a key in code.**
+`worker.js` reads the Gemini key from `env.GEMINI_KEY` (what production actually binds),
+`env.GEMINI_KEYS` (comma-separated) or `env.GEMINI_KEY_1..N`, plus `env.FOOTBALL_API_KEY`.
+**Never put a key in code.**
+
+- **The binding is `GEMINI_KEY` — singular.** It was created by hand in the dashboard long
+  before `wrangler.toml` existed. `parseKeys()` used to read only the plural names, so a
+  correctly-configured worker still answered "no Gemini keys set". It reads all three now.
+- **A key must be a `secret_text` binding, never `plain_text`.** `wrangler deploy` replaces
+  non-secret vars with whatever the config declares, and `wrangler.toml` declares none — so a
+  deploy silently **wipes a dashboard-set plain_text key** and every chat request 500s. This
+  happened. The key is now `secret_text` (`wrangler versions secret put GEMINI_KEY`), which
+  survives deploys. If you ever see `[]` from `wrangler secret list`, stop before deploying.
+- **To ship worker changes without an outage**, don't `wrangler deploy` — build the version
+  first and only then move traffic:
+  ```
+  wrangler versions upload                       # new code, not live
+  wrangler versions secret put GEMINI_KEY        # -> new version carrying the secret
+  wrangler versions deploy <id>@100%             # atomic switch
+  wrangler rollback <previous-id> --yes          # one command back
+  ```
 
 ### Why the chat used to fail at random
 
@@ -139,9 +157,23 @@ Measured against the live worker, not guessed:
 3. **Only `parts[0].text` was read.** Gemini legitimately splits an answer across parts; a
    two-part reply was silently truncated. Join them all.
 
-The worker now returns `{ reply }` / `{ error: { message } }` — the page never walks Gemini's
-candidate tree. It retries each key twice and rotates through every key on any transient
-failure. The page has a 30s timeout, two retries, and a **"try again" button** on every
+4. **Grounding also made the answers wrong, not just expensive.** Gemini preferred stale
+   search results over the exact fixture data in the system prompt: asked how many goals had
+   been scored it said **173**, and on another run "11 goals in 50 matches, as of 25 June".
+   The model said **292 in 100**. With `google_search` gone the chat now matches the model.
+
+**Key rotation does nothing.** All four fix branches "solved" the quota error by retrying
+across keys. Free-tier quota is metered **PerProjectPerModel**: every key issued from one
+Google Cloud project draws on **one** bucket (observed 429: `limit: 20, model:
+gemini-2.5-flash`), so once it is empty every key 429s together. A different *model* has its
+own bucket — hence `MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite']`, tried in that
+order. `isQuota()` distinguishes a spent bucket from any other transient failure, so a real
+exhaustion returns an explicit 429 instead of falling off the end of the loop (which
+Cloudflare turns into "Response not returned", i.e. a bogus connection error).
+
+The worker returns `{ reply }` / `{ error: { message } }` — the page never walks Gemini's
+candidate tree, though `replyOf()` still tolerates a raw payload in case an older worker is
+deployed. The page has a 30s timeout, two retries, and a **"try again" button** on every
 failure, and drops the unanswered turn from `chatHistory` (replaying it made the next
 question fail too).
 

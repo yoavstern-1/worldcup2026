@@ -867,8 +867,20 @@ function buildSystemPrompt() {
       st.avg.toFixed(2) + '/match), ' + st.shootouts + ' shootouts, ' + st.yellow + ' yellow cards, ' +
       st.red + ' red cards.\n' +
     'TOP SCORERS: ' + (scorers || 'none yet') + '\n\n' +
-    'Tournament: Jun 11 - Jul 19 2026 · USA / Canada / Mexico · 48 teams · 104 matches.\n' +
-    'Answer only from the data above. If it is not there, say you do not have it.';
+    'Tournament: Jun 11 - Jul 19 2026 · USA / Canada / Mexico · 48 teams · 104 matches.\n\n' +
+    // This used to read "Answer only from the data above. If it is not there, say you do not
+    // have it." That was survivable while the worker forced google_search, which quietly
+    // filled the gaps. With grounding removed it turned the assistant into a brick: it
+    // refused "who was Pele" and "how many World Cups did Messi play". The rule it actually
+    // needs is narrower -- the feed is authoritative for THIS tournament, and nothing else.
+    'RULES:\n' +
+    '- For anything about THIS tournament (fixtures, results, scores, who advanced or was\n' +
+    '  eliminated, stats, top scorers), the data above is the ONLY source of truth. Never\n' +
+    '  guess and never use outside memory for it. If a fact is not above, say you do not\n' +
+    '  have it.\n' +
+    '- Referees / match officials are not in the feed at all. Say so if asked.\n' +
+    '- For general football knowledge (history, past World Cups, players\' careers, rules),\n' +
+    '  answer normally from what you know. Do not refuse it.';
 }
 
 function toggleChat() {
