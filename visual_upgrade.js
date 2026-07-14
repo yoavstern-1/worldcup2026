@@ -6,16 +6,58 @@
 var style = document.createElement('style');
 style.textContent = `
 body,button,input,select,.panel-opt,.drawer-item,.set-opt,.mc-team,.mc-venue,.mc-et,.leg-item,.sync-bar,.hero-sub,.hero-badge,.side-label,.set-label,.day-lbl,.mc-grp,.mc-fin,.mc-note,.mc-vs,.search-vs,.sr-teams,.sr-score,.sr-meta,.panel-title,.search-title,.info-box,.gs-tbl{font-family:'Sora','Assistant',sans-serif !important;}
+/* ── Chat FAB ────────────────────────────────────────────────────────────────
+   The ball is a lit sphere, not a disc: the shading lives in the SVG (see
+   ballMarkup) and everything around it — ring, glow, contact shadow — is built
+   from theme tokens only, so it inverts correctly under [data-theme="light"].
+   No hard black drop-shadow: on the emerald background that reads as dirt.
+   NOTE: the button keeps index.html's physical "left" anchor on purpose. It is
+   pinned to the same edge as #chatPanel, which lives in index.html; flipping
+   only the button to inset-inline-start would strand it across from its panel
+   in Hebrew. Everything added below is logical (inset-inline / inset-block). */
 #chatFloatBtn{background:transparent !important;border:none !important;box-shadow:none !important;width:56px !important;height:74px !important;padding:0 !important;font-size:0 !important;animation:chatFloat 3s ease-in-out infinite;bottom:calc(14px + env(safe-area-inset-bottom)) !important;left:calc(14px + env(safe-area-inset-left)) !important;display:flex !important;flex-direction:column !important;align-items:center !important;gap:2px !important;transition:opacity .25s ease,transform .25s ease;}
 /* A fixed button always sits on top of content. Fade it out while the user is
    scrolling so it never blocks the card they are reading; bring it back at rest. */
 #chatFloatBtn.scrolling{opacity:.18 !important;transform:translateY(6px) scale(.9) !important;pointer-events:none;}
-#chat-ask-label{font-family:'Sora','Assistant',sans-serif;font-size:9px;font-weight:900;letter-spacing:1.2px;color:#d9b866;text-shadow:0 1px 8px rgba(0,0,0,.8);pointer-events:none;line-height:1;margin-bottom:2px;}
-#chatFloatBtn svg{width:56px;height:56px;filter:drop-shadow(0 4px 16px rgba(0,0,0,.5));transition:transform .22s cubic-bezier(.34,1.56,.64,1);}
+#chat-ask-label{font-family:'Sora','Assistant',sans-serif;font-size:9px;font-weight:900;letter-spacing:1.2px;color:var(--gold);text-shadow:0 1px 6px var(--shadow);pointer-events:none;line-height:1;margin-bottom:2px;}
+
+/* The ball's own box. It carries the elevation (hairline ring + soft gold
+   bloom), so the SVG inside can rotate on hover without dragging the ring with
+   it, and the press can scale ball+ring together while the contact shadow goes
+   the other way. */
+#chat-ball-wrap{position:relative;display:block;width:56px;height:56px;border-radius:50%;transform:translateY(0);will-change:transform;box-shadow:0 0 0 1px var(--hi-border),0 8px 22px -10px var(--shadow),0 0 18px -4px var(--hi);transition:transform .26s cubic-bezier(.34,1.56,.64,1),box-shadow .26s ease;}
+/* Contact shadow: a separate blurred ellipse on the floor rather than a
+   drop-shadow hanging off the ball, so hover/press can move the ball and the
+   shadow independently. var(--shadow) is warm-brown in the light theme. */
+#chat-ball-wrap::after{content:'';position:absolute;z-index:-1;inset-inline:0;margin-inline:auto;inset-block-end:-6px;width:34px;height:9px;border-radius:50%;background:var(--shadow);filter:blur(5px);opacity:.55;transition:transform .26s cubic-bezier(.34,1.56,.64,1),opacity .26s ease,filter .26s ease;}
+#chatFloatBtn svg{width:56px;height:56px;display:block;transition:transform .22s cubic-bezier(.34,1.56,.64,1);}
+
+/* index.html scales the whole button on hover, but the float keyframes already
+   own that transform — neutralise it and lift the ball instead. */
 #chatFloatBtn:hover{transform:scale(1) !important;}
-#chatFloatBtn:hover svg{transform:scale(1.1) rotate(-4deg);}
+#chatFloatBtn:hover #chat-ball-wrap{transform:translateY(-3px) scale(1.05);box-shadow:0 0 0 1px var(--gold),0 14px 28px -10px var(--shadow),0 0 26px -2px var(--hi);}
+/* lifted → the shadow stays on the floor, spreads and fades */
+#chatFloatBtn:hover #chat-ball-wrap::after{transform:translateY(3px) scale(.9);opacity:.3;filter:blur(7px);}
+#chatFloatBtn:hover svg{transform:rotate(-8deg);}
+/* pressed → ball squashes toward the page, contact shadow tightens and darkens */
+#chatFloatBtn:active #chat-ball-wrap{transform:translateY(1px) scale(.9);transition-duration:.12s;}
+#chatFloatBtn:active #chat-ball-wrap::after{transform:scale(1.15);opacity:.72;filter:blur(3px);}
+#chatFloatBtn:focus-visible{outline:none;}
+#chatFloatBtn:focus-visible #chat-ball-wrap{box-shadow:var(--focus-ring),0 0 22px -4px var(--hi);}
+/* while the panel is open the ball stays pushed in, and stops bobbing */
+#chatFloatBtn.active{animation:none;}
+#chatFloatBtn.active #chat-ball-wrap{transform:scale(.94);box-shadow:0 0 0 1px var(--gold),0 6px 16px -8px var(--shadow),0 0 20px -4px var(--hi);}
 #chatPanel{bottom:calc(100px + env(safe-area-inset-bottom)) !important;}
 @keyframes chatFloat{0%,100%{transform:translateY(0px);}50%{transform:translateY(-8px);}}
+/* Reduced motion: no float, no bounce, no travel — the ring, the bloom and the
+   sphere shading are static, so the 3D read survives intact. */
+@media (prefers-reduced-motion: reduce){
+  #chatFloatBtn{animation:none !important;}
+  #chatFloatBtn,#chatFloatBtn svg,#chat-ball-wrap,#chat-ball-wrap::after{transition:none !important;}
+  #chatFloatBtn:hover #chat-ball-wrap,#chatFloatBtn:active #chat-ball-wrap,#chatFloatBtn.active #chat-ball-wrap{transform:none;}
+  #chatFloatBtn:hover #chat-ball-wrap::after,#chatFloatBtn:active #chat-ball-wrap::after{transform:none;}
+  #chatFloatBtn:hover svg{transform:none;}
+}
 /* Chat colours now come from index.html theme vars — no overrides needed. */
 
 #splashScreen{position:fixed;inset:0;z-index:9999;background:radial-gradient(120% 90% at 50% 38%, #0a1830 0%, #060a14 55%, #03060c 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;}
@@ -49,6 +91,25 @@ function ballMarkup(p) {
         '<stop offset="100%" stop-color="#a7aeb3"/>',
       '</radialGradient>',
       '<radialGradient id="' + p + '-gloss" cx="32%" cy="24%" r="34%">',
+        '<stop offset="0%" stop-color="#fff" stop-opacity=".6"/>',
+        '<stop offset="100%" stop-color="#fff" stop-opacity="0"/>',
+      '</radialGradient>',
+      // Shading pass. Centred on the light, so brightness falls off with the
+      // angle away from it: the panels stop being flat fills and the sphere
+      // gets a terminator instead of a hard silhouette edge.
+      '<radialGradient id="' + p + '-shade" cx="34%" cy="26%" r="88%">',
+        '<stop offset="45%" stop-color="#000" stop-opacity="0"/>',
+        '<stop offset="78%" stop-color="#000" stop-opacity=".16"/>',
+        '<stop offset="100%" stop-color="#000" stop-opacity=".44"/>',
+      '</radialGradient>',
+      // Faint all-round rim (fresnel). Keeps the ball readable against the
+      // ivory light theme, where the dark edge stroke alone looks drawn-on.
+      '<radialGradient id="' + p + '-rim" cx="50%" cy="50%" r="50%">',
+        '<stop offset="88%" stop-color="#fff" stop-opacity="0"/>',
+        '<stop offset="100%" stop-color="#fff" stop-opacity=".18"/>',
+      '</radialGradient>',
+      // Tight specular hotspot sitting inside the broad gloss.
+      '<radialGradient id="' + p + '-spec" cx="30%" cy="22%" r="15%">',
         '<stop offset="0%" stop-color="#fff" stop-opacity=".9"/>',
         '<stop offset="100%" stop-color="#fff" stop-opacity="0"/>',
       '</radialGradient>',
@@ -85,12 +146,20 @@ function ballMarkup(p) {
       '<circle cx="32" cy="32" r="2.6" fill="none" stroke="#d9b23f" stroke-width="1.1"/>',
     '</g>',
 
+    // Lighting goes on top of the panels, or the panels stay flat: shade first
+    // (terminator), then rim, then the two highlights, then the silhouette.
+    '<circle cx="32" cy="32" r="29" fill="url(#' + p + '-shade)"/>',
+    '<circle cx="32" cy="32" r="29" fill="url(#' + p + '-rim)"/>',
     '<circle cx="32" cy="32" r="29" fill="url(#' + p + '-gloss)"/>',
+    '<circle cx="32" cy="32" r="29" fill="url(#' + p + '-spec)"/>',
     '<circle cx="32" cy="32" r="28.4" fill="none" stroke="rgba(0,0,0,.2)" stroke-width="1.1"/>'
   ].join('');
 }
 
-var ballSVG = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' + ballMarkup('tb') + '</svg>';
+// viewBox is cropped to the ball (circle r=29 at 32,32) plus half a unit of
+// slack, so the sphere fills its 56px box and the ring on #chat-ball-wrap hugs
+// the silhouette instead of floating a few px off it.
+var ballSVG = '<svg viewBox="2.5 2.5 59 59" xmlns="http://www.w3.org/2000/svg">' + ballMarkup('tb') + '</svg>';
 
 // 4. Chat button becomes the ball, with ASK above it
 var btn = document.getElementById('chatFloatBtn');
@@ -102,8 +171,17 @@ if (btn) {
   label.setAttribute('data-he', 'שאל');
   label.setAttribute('data-en', 'ASK');
   label.textContent = (window.curLang === 'he' || document.documentElement.lang === 'he') ? 'שאל' : 'ASK';
-  btn.innerHTML = ballSVG;
-  btn.insertBefore(label, btn.firstChild);
+
+  // The ball gets its own box. The elevation ring, the gold bloom and the
+  // contact shadow hang off the wrapper, so the SVG is free to rotate on hover
+  // and to scale on press without any of them following it around.
+  var wrap = document.createElement('span');
+  wrap.id = 'chat-ball-wrap';
+  wrap.innerHTML = ballSVG;
+
+  btn.innerHTML = '';
+  btn.appendChild(label);
+  btn.appendChild(wrap);
 }
 
 // Mascots removed — the ball is the only character now.

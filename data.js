@@ -740,6 +740,23 @@ function comeback(m) {
   return trailed;
 }
 
+// 15-minute block a goal fell in. Anything past 90 is its own bucket rather than being
+// folded into 76-90: stoppage-time goals are the story, not a rounding error.
+function bucketOf(sec) {
+  var min = Math.floor((sec || 0) / 60) + 1;
+  if (min > 90) return 6;
+  return Math.min(5, Math.floor((min - 1) / 15));
+}
+
+// Which side scored the opening goal, or null if the match had none. Own goals count
+// for the side they benefit, same convention as everywhere else here.
+function firstScorer(m) {
+  var goals = (m.events || []).filter(function(e) {
+    return e.kind === 'goal' || e.kind === 'pk' || e.kind === 'og';
+  }).sort(function(a, b) { return (a.sec || 0) - (b.sec || 0); });
+  return goals.length ? goals[0].side : null;
+}
+
 function tournamentStats(t) {
   var played = t.all.filter(function(m) { return m.status !== 'future' && m.score; });
 
@@ -764,15 +781,30 @@ function tournamentStats(t) {
     scorers: [],
     teams: [],       // per-team table
     byStage: [],     // goals per stage, for the trend row
-    lateGoals: 0     // goals from the 80th minute on (incl. stoppage)
+    lateGoals: 0,    // goals from the 80th minute on (incl. stoppage)
+    // "The side that scored first went on to win N% of the time" — the single most
+    // predictive number a fixtures+events feed holds, and it replaces "home-side wins",
+    // which in a neutral-venue tournament measures nothing at all.
+    firstGoalGames: 0,
+    firstGoalWon: 0,
+    byMinute: [],    // goals per 15-minute block — WHEN a World Cup is decided
+    multiGoal: []    // players who scored 2+ in a single match
   };
+
+  var minuteBuckets = [0, 0, 0, 0, 0, 0, 0];   // 1-15,16-30,31-45,46-60,61-75,76-90,90+
+  var multi = {};                               // player|matchId -> {name, team, n, m}
 
   var team = {};   // abbr -> aggregate
   function slot(tm) {
     if (!team[tm.abbr]) {
       team[tm.abbr] = { abbr: tm.abbr, he: tm.he, en: tm.en, flag: tm.flag,
                         p: 0, gf: 0, ga: 0, w: 0, d: 0, l: 0, cs: 0,
-                        shots: 0, sog: 0, poss: 0, possN: 0 };
+                        shots: 0, sog: 0, poss: 0, possN: 0,
+                        // statsN: matches this team actually had a statistics[] block for.
+                        // ESPN omits it on some fixtures, and a shots-per-goal ratio that
+                        // divides a full goal count by a partial shot count is a lie.
+                        statsN: 0,
+                        yellow: 0, red: 0, comebacks: 0 };
     }
     return team[tm.abbr];
   }
@@ -814,27 +846,67 @@ function tournamentStats(t) {
           var st = m.stats[side];
           if (!st) return;
           var agg = side === 'home' ? th : ta;
-          if (st.shots != null) agg.shots += st.shots;
+          if (st.shots != null) { agg.shots += st.shots; agg.statsN++; }
           if (st.sog != null) agg.sog += st.sog;
           if (st.poss != null) { agg.poss += st.poss; agg.possN++; }
         });
       }
     }
 
+    var real = !m.home.placeholder && !m.away.placeholder;
+
     (m.events || []).forEach(function(e) {
-      if (e.kind === 'yellow') { s.yellow++; return; }
-      if (e.kind === 'red') { s.red++; return; }
-      if (e.kind === 'pk') s.penaltyGoals++;
-      if (e.kind === 'og') { s.ownGoals++; return; }   // an own goal has no scorer to credit
+      var tm = e.side === 'home' ? m.home : m.away;
+      if (e.kind === 'yellow') { s.yellow++; if (real) slot(tm).yellow++; return; }
+      if (e.kind === 'red')    { s.red++;    if (real) slot(tm).red++;    return; }
+
+      // Everything from here down is a goal. Count it in the minute buckets and the
+      // late-goal tally BEFORE the own-goal branch returns: an own goal has no scorer
+      // to credit, but it is still a goal that hit the net in a particular minute, and
+      // leaving it out made the "when goals are scored" chart sum to 278 while the
+      // headline above it said 292.
+      minuteBuckets[bucketOf(e.sec)]++;
       if (e.sec >= 79 * 60) s.lateGoals++;
-      var side = e.side === 'home' ? m.home : m.away;
+
+      if (e.kind === 'pk') s.penaltyGoals++;
+      if (e.kind === 'og') { s.ownGoals++; return; }   // no scorer to credit
+
       if (!e.player) return;
-      if (!scorer[e.player]) scorer[e.player] = { name: e.player, goals: 0, team: side };
+      if (!scorer[e.player]) scorer[e.player] = { name: e.player, goals: 0, team: tm };
       scorer[e.player].goals++;
+
+      var mk = e.player + '|' + m.id;
+      if (!multi[mk]) multi[mk] = { name: e.player, team: tm, n: 0, m: m };
+      multi[mk].n++;
     });
 
-    if (comeback(m)) s.comebacks++;
+    if (comeback(m)) {
+      s.comebacks++;
+      if (real) slot(m.score.h > m.score.a ? m.home : m.away).comebacks++;
+    }
+
+    // Did scoring first actually win the match?
+    var first = firstScorer(m);
+    if (first && m.score.h !== m.score.a) {
+      s.firstGoalGames++;
+      var won = m.score.h > m.score.a ? 'home' : 'away';
+      if (first === won) s.firstGoalWon++;
+    }
   });
+
+  var BLOCKS = ['1-15', '16-30', '31-45', '46-60', '61-75', '76-90', '90+'];
+  var peakBucket = Math.max.apply(null, minuteBuckets) || 1;
+  s.byMinute = minuteBuckets.map(function(n, i) {
+    return { block: BLOCKS[i], goals: n, ratio: n / peakBucket };
+  });
+
+  s.multiGoal = Object.keys(multi).map(function(k) { return multi[k]; })
+    .filter(function(x) { return x.n >= 2; })
+    .sort(function(a, b) { return b.n - a.n || (b.m.utc - a.m.utc); });
+
+  s.scorelines = Object.keys(scoreCount).map(function(k) {
+    return { score: k, n: scoreCount[k] };
+  }).sort(function(a, b) { return b.n - a.n; });
 
   s.avg = s.played ? (s.goals / s.played) : 0;
 

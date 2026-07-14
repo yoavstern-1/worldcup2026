@@ -47,6 +47,9 @@ function goStage(id, el){
   var st = document.getElementById('stage-'+id);
   if (st) st.classList.add('active');
   if(el) el.classList.add('active');
+  // The tab that just became visible may hold an un-upgraded (SVG) trophy — the 3D one
+  // is only mounted into a box that is actually on screen.
+  if (typeof window.mountTrophies === 'function') window.mountTrophies();
   setTimeout(function(){ closeDrawer(); window.scrollTo({top:0,behavior:'smooth'}); }, 220);
 }
 
@@ -810,62 +813,77 @@ function renderDataTab() {
     fact('0-0', 'Goalless draws', s.goalless) +
     fact('כרטיסים צהובים', 'Yellow cards', s.yellow) +
     fact('כרטיסים אדומים', 'Red cards', s.red) +
-    fact('נצחונות קבוצת הבית', 'Home-side wins', s.homeWins) +
+    // "Home-side wins" measured nothing: at a World Cup every match bar the hosts' is
+    // played at a neutral venue, so "home" is a coin-flip label ESPN assigns. Scoring
+    // first, by contrast, is the most predictive fact this feed holds.
+    fact('הבקיעו ראשונים וניצחו', 'Scored first, then won',
+         s.firstGoalGames ? Math.round(s.firstGoalWon / s.firstGoalGames * 100) + '%' : '—') +
     '</div>';
 
-  // ── attack / defence leaders, top 3 each
+  // ── team boards
+  // What was here before: "Best attack" (goals scored), "Best defence" (goals conceded)
+  // and "Shot accuracy". All three are league-table filler — by the semi-finals only
+  // four teams remain, every survivor has scored a lot and conceded little, and the
+  // boards just re-rank the same names by a number the reader already saw. These three
+  // say something the scoreline does not.
+  function lbRow(x, i, val, ratio, subHe, subEn) {
+    var flag = WC.flagFor(x);
+    return '<div class="lb-row' + (i === 0 ? ' top' : '') + '">' +
+      '<span class="lb-rk">' + (i + 1) + '</span>' +
+      (flag ? '<span class="mc-fl">' + flag + '</span>' : '') +
+      '<span class="lb-nm">' + esc(he ? x.he : x.en) + '</span>' +
+      '<span class="lb-sub">' + esc(he ? subHe : subEn) + '</span>' +
+      '<span class="lb-bar"><i style="width:' + Math.round(ratio * 100) + '%"></i></span>' +
+      '<span class="lb-v">' + val + '</span></div>';
+  }
+
   var played3 = s.teams.filter(function(x) { return x.p >= 3; });
-  if (played3.length >= 3) {
-    var atk = played3.slice().sort(function(a, b) { return b.gf - a.gf || a.ga - b.ga; }).slice(0, 3);
-    var def = played3.slice().sort(function(a, b) { return a.ga - b.ga || b.cs - a.cs; }).slice(0, 3);
-    var maxGf = atk[0].gf || 1;
-    var maxGa = Math.max.apply(null, def.map(function(x) { return x.ga; })) || 1;
 
-    function lbRow(x, i, val, ratio, subHe, subEn) {
-      var flag = WC.flagFor(x);
-      return '<div class="lb-row' + (i === 0 ? ' top' : '') + '">' +
-        '<span class="lb-rk">' + (i + 1) + '</span>' +
-        (flag ? '<span class="mc-fl">' + flag + '</span>' : '') +
-        '<span class="lb-nm">' + esc(he ? x.he : x.en) + '</span>' +
-        '<span class="lb-sub">' + esc(he ? subHe : subEn) + '</span>' +
-        '<span class="lb-bar"><i style="width:' + Math.round(ratio * 100) + '%"></i></span>' +
-        '<span class="lb-v">' + val + '</span></div>';
-    }
-
-    html += head('ההתקפה הטובה ביותר', 'Best attack') + '<div class="lb">' +
-      atk.map(function(x, i) {
-        return lbRow(x, i, x.gf, x.gf / maxGf, x.p + ' מש׳', x.p + ' pl');
-      }).join('') + '</div>';
-
-    html += head('ההגנה הטובה ביותר', 'Best defence') + '<div class="lb">' +
-      def.map(function(x, i) {
-        return lbRow(x, i, x.ga, 1 - (x.ga / (maxGa + 1)),
-          x.cs + ' שער נקי', x.cs + ' CS');
+  // ── when a World Cup is actually decided
+  // Not a leaderboard: a leaderboard by definition re-ranks the same four surviving
+  // names. This is the shape of the tournament itself, and 90+ gets its own column
+  // because a stoppage-time goal is the story, not a rounding error.
+  if (s.goals) {
+    html += head('מתי נופלים השערים', 'When goals are scored') +
+      '<div class="gstrip">' + s.byMinute.map(function(b) {
+        return '<div class="gcol">' +
+          '<span class="gv">' + b.goals + '</span>' +
+          '<span class="gb" style="height:' + Math.round(10 + b.ratio * 54) + 'px"></span>' +
+          '<span class="gl">' + esc(b.block) + "'" + '</span></div>';
       }).join('') + '</div>';
   }
 
-  // The "match records" pair is gone. "Biggest win" and "Highest scoring" were two
-  // tiles side by side that, in a tournament with one lopsided result, name the SAME
-  // match — the page showed "Germany 7–1 Curaçao" twice in a row and called it two
-  // statistics.
-
-  // ── shot accuracy: on-target share, which says more than a raw shot count
-  var shooters = s.teams.filter(function(x) { return x.p >= 3 && x.shots >= 15; });
-  if (shooters.length >= 3) {
-    var acc = shooters.map(function(x) {
-      return { t: x, pct: x.shots ? (x.sog / x.shots * 100) : 0 };
-    }).sort(function(a, b) { return b.pct - a.pct; }).slice(0, 3);
-
-    html += head('דיוק בעיטות למסגרת', 'Shot accuracy') + '<div class="lb">' +
-      acc.map(function(x, i) {
-        var flag = WC.flagFor(x.t);
+  // ── two or more in one match
+  if (s.multiGoal.length) {
+    html += head('צמד ומעלה במשחק', 'Braces and hat-tricks') + '<div class="lb">' +
+      s.multiGoal.slice(0, 5).map(function(x, i) {
+        var flag = WC.flagFor(x.team);
+        var vs = teamLabel(x.m.home) + ' – ' + teamLabel(x.m.away);
+        var tag = x.n >= 3 ? (he ? 'שלושער' : 'Hat-trick') : (he ? 'צמד' : 'Brace');
         return '<div class="lb-row' + (i === 0 ? ' top' : '') + '">' +
           '<span class="lb-rk">' + (i + 1) + '</span>' +
           (flag ? '<span class="mc-fl">' + flag + '</span>' : '') +
-          '<span class="lb-nm">' + esc(he ? x.t.he : x.t.en) + '</span>' +
-          '<span class="lb-sub">' + x.t.sog + '/' + x.t.shots + '</span>' +
-          '<span class="lb-bar"><i style="width:' + Math.round(x.pct) + '%"></i></span>' +
-          '<span class="lb-v">' + Math.round(x.pct) + '%</span></div>';
+          '<span class="lb-nm">' + esc(WC.playerName(x.name, he)) + '</span>' +
+          '<span class="lb-sub">' + esc(tag + ' · ' + vs) + '</span>' +
+          '<span class="lb-bar"><i style="width:' + Math.round(x.n / 3 * 100) + '%"></i></span>' +
+          '<span class="lb-v">' + x.n + '</span></div>';
+      }).join('') + '</div>';
+  }
+
+  // ── shots per goal: who is clinical, who is just loud
+  // Only teams with shot data on EVERY match they played — ESPN omits statistics[] on
+  // some fixtures, and dividing a full goal count by a partial shot count would invent
+  // a flattering ratio out of missing data.
+  var eff = played3.filter(function(x) { return x.gf > 0 && x.shots > 0 && x.statsN === x.p; })
+    .map(function(x) { return { t: x, spg: x.shots / x.gf }; })
+    .sort(function(a, b) { return a.spg - b.spg; }).slice(0, 3);
+  if (eff.length >= 3) {
+    var worst = eff[eff.length - 1].spg || 1;
+    html += head('בעיטות לשער', 'Shots per goal') + '<div class="lb">' +
+      eff.map(function(x, i) {
+        // Lower is better, so the bar is inverted: the longest bar is the most clinical.
+        return lbRow(x.t, i, x.spg.toFixed(1), (worst - x.spg) / worst + 0.35,
+          x.t.gf + ' שערים', x.t.gf + ' goals');
       }).join('') + '</div>';
   }
 
@@ -888,9 +906,12 @@ function renderDataTab() {
   left.forEach(function(m) { leftCounts[m.strip]++; });
 
   var ROWS = [
-    { k: 'safe',   he: 'שעה נוחה', en: 'Good hour',  hours: '06:00–23:59' },
-    { k: 'warn',   he: 'מאוחר',     en: 'Late',       hours: '00:00–01:59' },
-    { k: 'danger', he: 'לילה עמוק', en: 'Deep night', hours: '02:00–05:59' }
+    // Round boundaries. The buckets are whole hours (stripFor() keys off the hour), so
+    // printing 23:59 / 01:59 / 05:59 was exposing an off-by-a-minute artefact of how the
+    // range was written down, not a real edge.
+    { k: 'safe',   he: 'שעה נוחה', en: 'Good hour',  hours: '06:00–24:00' },
+    { k: 'warn',   he: 'מאוחר',     en: 'Late',       hours: '00:00–02:00' },
+    { k: 'danger', he: 'לילה עמוק', en: 'Deep night', hours: '02:00–06:00' }
   ];
   html += head('נוחות שעות · כל הטורניר', 'Hour comfort · whole tournament') +
     '<table class="wt"><thead><tr>' +
@@ -982,8 +1003,14 @@ function buildSystemPrompt() {
   });
 
   var st = WC.tournamentStats(t);
-  var scorers = st.scorers.slice(0, 10).map(function(p) {
+  // Every scorer, not the top 10. The chat kept saying "I have no information" about a
+  // player who HAD scored, simply because he sat 11th — the model was answering
+  // truthfully about a list we had needlessly truncated.
+  var scorers = st.scorers.map(function(p) {
     return p.name + ' (' + p.team.en + ') ' + p.goals;
+  }).join('; ');
+  var braces = st.multiGoal.map(function(x) {
+    return x.name + ' ' + x.n + ' vs ' + x.m.home.en + '-' + x.m.away.en;
   }).join('; ');
 
   return 'You are a helpful assistant for a FIFA World Cup 2026 live schedule page.\n' +
@@ -998,21 +1025,37 @@ function buildSystemPrompt() {
     'TOURNAMENT TOTALS: ' + st.played + ' of ' + st.total + ' matches played, ' + st.goals + ' goals (' +
       st.avg.toFixed(2) + '/match), ' + st.shootouts + ' shootouts, ' + st.yellow + ' yellow cards, ' +
       st.red + ' red cards.\n' +
-    'TOP SCORERS: ' + (scorers || 'none yet') + '\n\n' +
+    'EVERY SCORER IN THIS TOURNAMENT (name, team, goals): ' + (scorers || 'none yet') + '\n' +
+    (braces ? 'TWO OR MORE IN ONE MATCH: ' + braces + '\n' : '') +
+    'MORE TOTALS: ' + st.comebacks + ' comebacks (team trailed, then won), ' +
+      st.penaltyGoals + ' penalty goals, ' + st.ownGoals + ' own goals, ' +
+      st.extraTime + ' went to extra time.\n\n' +
     'Tournament: Jun 11 - Jul 19 2026 · USA / Canada / Mexico · 48 teams · 104 matches.\n\n' +
     // This used to read "Answer only from the data above. If it is not there, say you do not
     // have it." That was survivable while the worker forced google_search, which quietly
     // filled the gaps. With grounding removed it turned the assistant into a brick: it
-    // refused "who was Pele" and "how many World Cups did Messi play". The rule it actually
-    // needs is narrower -- the feed is authoritative for THIS tournament, and nothing else.
+    // refused "who was Pele" and "how many World Cups did Messi play". The rule it needs is
+    // narrower -- the feed is authoritative for THIS tournament, and for nothing else. The
+    // ANSWER list is spelled out because a bare permission to use general knowledge was not
+    // enough: the model kept defaulting to refusal on anything with a player's name in it.
     'RULES:\n' +
-    '- For anything about THIS tournament (fixtures, results, scores, who advanced or was\n' +
-    '  eliminated, stats, top scorers), the data above is the ONLY source of truth. Never\n' +
-    '  guess and never use outside memory for it. If a fact is not above, say you do not\n' +
-    '  have it.\n' +
-    '- Referees / match officials are not in the feed at all. Say so if asked.\n' +
-    '- For general football knowledge (history, past World Cups, players\' careers, rules),\n' +
-    '  answer normally from what you know. Do not refuse it.';
+    '\n' +
+    'ANSWER these, using your own football knowledge — do NOT refuse them:\n' +
+    '- Who a player is, their club, position, nationality, career, past World Cups.\n' +
+    '- Football history: past World Cups, past winners, records, legends.\n' +
+    '- The rules of the game, how the format works, what a term means.\n' +
+    '- Opinions and comparisons, if you say plainly that it is an opinion.\n' +
+    '\n' +
+    'USE ONLY THE DATA ABOVE for anything about THIS 2026 tournament — fixtures, kickoff\n' +
+    'times, scores, who advanced or was eliminated, goals, scorers, cards, totals. Never\n' +
+    'guess these and never fill them in from memory: your training data predates this\n' +
+    'tournament, so anything you "remember" about it is wrong. The scorer list above is\n' +
+    'COMPLETE — if a player is not on it, he has not scored in this tournament, and you\n' +
+    'should say exactly that rather than saying you have no information.\n' +
+    '\n' +
+    'GENUINELY NOT AVAILABLE (say so, do not invent): referees and match officials, squad\n' +
+    'and lineup lists, assists, substitutions, injuries, attendance, xG, player ratings.\n' +
+    'The match feed does not carry them.';
 }
 
 function toggleChat() {

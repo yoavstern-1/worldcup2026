@@ -46,7 +46,11 @@ var CSS = ''
 + '.bk-ct{display:flex;flex-direction:column;justify-content:center;width:10px;flex-shrink:0;align-self:stretch;}'
 + '.bk-ct-line{position:relative;flex:1;border-inline-end:1px solid var(--card-border);}'
 + '.bk-ct-line::after{content:"";position:absolute;inset-inline-end:0;top:50%;width:10px;height:1px;background:var(--card-border);}'
-+ '.bk-trophy-col{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;width:84px;padding:0 4px;}'
++ '.bk-trophy-col{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;width:96px;padding:0 4px;}'
+/* The 3D canvas is taller than it is wide; reserve the box so swapping the SVG out for
+   it does not shift the whole bracket sideways. */
++ '.bk-trophy-art{display:flex;align-items:center;justify-content:center;width:76px;height:97px;filter:drop-shadow(0 6px 18px rgba(217,184,102,.28));}'
++ '.bk-trophy-art canvas{display:block;}'
 + '.bk-trophy-lbl{font-size:11px;font-weight:700;color:var(--gold);text-align:center;margin-top:6px;line-height:1.4;}'
 + '.bk-stale{max-width:960px;margin:0 auto 8px;padding:7px 12px;border-radius:var(--radius-sm);background:rgba(251,191,36,.14);background:color-mix(in srgb,var(--warn) 14%,transparent);border:1px solid var(--warn);color:var(--warn);font-size:12px;font-weight:600;text-align:center;}'
 + '.bk-sched{max-width:960px;margin:0 auto;border-top:1px solid var(--card-border);padding-top:.75rem;}'
@@ -230,12 +234,11 @@ function renderBracket(t) {
           + '</div>';
   }
 
+  // The SVG goes in as the fallback. trophy3d.js swaps a real WebGL trophy into
+  // .bk-trophy-art after render, and leaves this alone if it cannot.
   var finalDate = fin ? fin.date : '';
   var trophy = '<div class="bk-trophy-col">'
-    + '<div style="position:relative;display:flex;align-items:center;justify-content:center">'
-    + '<span style="position:absolute;top:-10px;inset-inline-start:4px;font-size:10px;animation:bk-twinkle 1.8s ease-in-out infinite">✦</span>'
-    + '<span style="position:absolute;top:-6px;inset-inline-end:2px;font-size:10px;animation:bk-twinkle 1.8s ease-in-out infinite .6s">✦</span>'
-    + TROPHY + '</div>'
+    + '<div class="bk-trophy-art">' + TROPHY + '</div>'
     + '<div class="bk-trophy-lbl"><span data-he="גמר" data-en="Final">' + (isHe() ? 'גמר' : 'Final') + '</span><br>' + esc(finalDate) + '</div>'
     + '</div>';
 
@@ -256,7 +259,14 @@ function renderBracket(t) {
     + '</div></div>';
 
   // Upcoming list — derived, never a second hardcoded copy of the fixtures.
-  var up = WC.upcoming(t);
+  // The 3rd-place play-off kicks off at 00:00 Israel time on 19/7, the final at 22:00
+  // the same day, so plain chronological order puts the play-off before the final.
+  // Force it last, same idea as finalTabOrder() in main.js.
+  var up = WC.upcoming(t).slice().sort(function(a, b) {
+    var rank = { third: 1 };
+    var d = (rank[a.stage] || 0) - (rank[b.stage] || 0);
+    return d || (a.utc - b.utc);
+  });
   var sched = '';
   if (up.length) {
     sched = '<div class="bk-sched">'
@@ -278,7 +288,24 @@ function renderBracket(t) {
   boxes.forEach(function(b, i) {
     b.innerHTML = stale + tree + (i === 0 ? sched : '');
   });
+
+  mountTrophies();
 }
+
+// Upgrade the trophy to WebGL where trophy3d.js loaded and the device can do it.
+// Only a VISIBLE tab gets a live canvas: there are four .bracket-box elements (one per
+// knockout tab), and four spinning renderers would be four times the GPU work for three
+// trophies nobody is looking at. Called again on tab change, hence the data-3d guard.
+function mountTrophies() {
+  if (typeof window.mountTrophy3D !== 'function') return;
+  [].forEach.call(document.querySelectorAll('.bracket-box'), function(b) {
+    var art = b.querySelector('.bk-trophy-art');
+    if (!art || art.getAttribute('data-3d')) return;
+    if (!b.offsetParent) return;                 // tab hidden — leave the SVG in place
+    if (window.mountTrophy3D(art, 76)) art.setAttribute('data-3d', '1');
+  });
+}
+window.mountTrophies = mountTrophies;
 
 window.renderBracket = renderBracket;
 window._bracketFeeders = feeders;   // exposed for tests

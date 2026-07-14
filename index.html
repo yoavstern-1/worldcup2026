@@ -24,29 +24,41 @@
   /* A live match pulses amber, not red: red is already the "deep night" strip
      colour, and a slow amber blink reads as "in progress" rather than "alert". */
   --live:#facc15; --live-soft:rgba(250,204,21,.16);
-  --shadow:rgba(0,0,0,.45);
+  /* An emerald-black, not pure black: a true black shadow on a deep emerald surface
+     reads as a smudge of dirt rather than as depth. */
+  --shadow:rgba(2,10,7,.5);
+  /* Top-edge highlight — the "light comes from above" cue that makes a panel read as
+     a raised slab instead of a painted rectangle. */
+  --sheen:rgba(255,255,255,.055);
+  --scrim:rgba(0,0,0,.5);
+  --on-gold:#1a1405;
   --radius:18px; --radius-sm:12px;
 }
 [data-theme="light"] {
-  /* Muted beige + champagne + emerald ink. Two rounds of softening: the original
-     ivory (#f4f0e6) was near paper-white and glared, and #e9e2d2 was still bright.
-     The ink is now the DARK theme's background emerald (#0a1f16) rather than a
-     lighter grey-green, so the two themes read as one palette inverted rather than
-     two designs. Contrast is ~13:1 — well past AA, and it is the surface that came
-     down, not the text that went up. */
-  --bg:#e2dac6; --bg2:#d5cbb3;
-  --stripe-tint:rgba(70,58,26,.03);
-  --vignette:rgba(70,58,26,.12);
-  --line:rgba(0,0,0,.06);
-  --usa-red:#a51134; --gold:#8a6a1e;
-  --t1:#0c2318; --t2:#2f4a3b; --t3:#61756a;
-  --card:rgba(252,249,240,.55); --card-future:rgba(248,244,233,.85);
-  --card-border:rgba(30,50,35,.18);
-  --hi:rgba(138,106,30,.12); --hi-border:rgba(138,106,30,.42);
-  --sidebar:rgba(228,220,203,.95); --drawer:rgba(231,224,208,.99);
-  --safe:#127336; --warn:#9c5d08; --danger:#b32228;
-  --live:#9c5d08; --live-soft:rgba(156,93,8,.15);
-  --shadow:rgba(60,45,15,.14);
+  /* Third pass. The two earlier surfaces (#f4f0e6, then #e2dac6) were still lit like
+     paper and glared. This one is a warm, muted sand — the surface came down again,
+     the text did NOT go up. The ink is now literally the dark theme's background
+     emerald (#0a1f16), so the two themes read as one palette inverted rather than as
+     two designs; body text lands at 10.8:1 on --bg (AA/AAA, well past the 4.5 floor).
+     Borders, dividers and the gold accent were all pulled back to match: a muted
+     surface with the old .18-alpha borders and near-white cards looked wrong — every
+     hairline shouted. */
+  --bg:#d6ccb4; --bg2:#c9bfa5;
+  --stripe-tint:rgba(62,50,20,.028);
+  --vignette:rgba(62,50,20,.10);
+  --line:rgba(18,44,31,.07);
+  --usa-red:#9d1032; --gold:#6c5011;
+  --t1:#0a1f16; --t2:#2b4b3c; --t3:#3f5a49;
+  --card:rgba(250,246,235,.5); --card-future:rgba(243,238,225,.9);
+  --card-border:rgba(18,44,31,.14);
+  --hi:rgba(108,80,17,.10); --hi-border:rgba(108,80,17,.34);
+  --sidebar:rgba(203,193,170,.94); --drawer:rgba(222,213,193,.985);
+  --safe:#0c5f2c; --warn:#7f4a05; --danger:#9e1c22;
+  --live:#7f4a05; --live-soft:rgba(127,74,5,.14);
+  --shadow:rgba(52,42,18,.16);
+  --sheen:rgba(255,255,255,.62);
+  --scrim:rgba(38,30,12,.34);
+  --on-gold:#f6f1e2;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
@@ -100,12 +112,11 @@ body::after {
   background:var(--drawer); backdrop-filter:blur(18px);
   border:1px solid var(--card-border); border-radius:var(--radius-sm);
   padding:6px; min-width:152px;
-  box-shadow:-6px 0 28px var(--shadow);
   opacity:0; pointer-events:none;
   transform:translateX(6px);
   transition:opacity .22s ease, transform .22s ease;
 }
-[dir="ltr"] .side-panel { transform:translateX(-6px); box-shadow:6px 0 28px var(--shadow); }
+[dir="ltr"] .side-panel { transform:translateX(-6px); }
 .side-panel.open { opacity:1; pointer-events:auto; transform:translateX(0); }
 /* ── Icons ───────────────────────────────────────────────────────────
    An <svg> with no width/height falls back to 300x150 and blows the layout apart,
@@ -124,8 +135,25 @@ body::after {
   --glow:0 0 0 1px var(--hi-border), 0 8px 30px -10px var(--shadow);
   --glow-gold:0 0 0 1px var(--hi-border), 0 10px 34px -8px rgba(217,184,102,.28);
   --focus-ring:0 0 0 2px var(--bg), 0 0 0 4px var(--gold);
+  /* ── Elevation scale ──────────────────────────────────────────────
+     One recipe, four steps: a top sheen (light from above) + a tight contact shadow
+     + a wide, very soft ambient shadow. No hard black drop shadows — see --shadow.
+     Both halves are built from theme vars, so the whole scale re-tints itself in
+     light mode without a single override.
+       0  flush with the page (past matches, dividers)
+       1  card resting on the surface
+       2  raised card / active panel
+       3  floating surface (drawer, side panel, today banner)
+       4  overlay (chat) */
+  --elev-0:0 0 0 1px var(--line);
+  --elev-1:inset 0 1px 0 0 var(--sheen), 0 1px 2px -1px var(--shadow), 0 8px 18px -14px var(--shadow);
+  --elev-2:inset 0 1px 0 0 var(--sheen), 0 2px 6px -3px var(--shadow), 0 16px 32px -20px var(--shadow);
+  --elev-3:inset 0 1px 0 0 var(--sheen), 0 6px 14px -8px var(--shadow), 0 26px 52px -26px var(--shadow);
+  --elev-4:inset 0 1px 0 0 var(--sheen), 0 10px 24px -12px var(--shadow), 0 40px 80px -32px var(--shadow);
+  /* the hairline that separates one layer from the one behind it */
+  --ring:0 0 0 1px var(--card-border);
 }
-[data-theme="light"] { --glow-gold:0 0 0 1px var(--hi-border), 0 10px 30px -10px rgba(138,106,30,.32); }
+[data-theme="light"] { --glow-gold:0 0 0 1px var(--hi-border), 0 10px 30px -10px rgba(108,80,17,.30); }
 
 .ic { width:var(--icon-md); height:var(--icon-md); flex:0 0 auto; display:block; color:inherit; }
 .ic-sm { width:var(--icon-sm); height:var(--icon-sm); }
@@ -145,20 +173,47 @@ body::after {
 #btnRefresh[data-sync="stale"] .sync-dot { background:var(--warn); }
 #btnRefresh[data-sync="error"] .sync-dot { background:var(--danger); }
 
-/* Cards lift into a ring of light on hover instead of sitting flat. */
-.mc { transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid), border-color var(--t-mid); }
+/* ── DEPTH ────────────────────────────────────────────────────────────
+   The page used to be a stack of flat rectangles that all sat on the same plane.
+   Now every surface declares which layer it lives on, and the layers agree:
+     page  →  card (--elev-1)  →  raised card (--elev-2)  →  floating (--elev-3)
+           →  overlay (--elev-4)
+   Elevation is a ring of light + an ambient shadow, never a hard black drop shadow.
+   Restraint is deliberate: the ambient shadows are wide and near-invisible; what you
+   actually read is the 1px sheen along the top edge. It is a results site. */
+.mc { transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid), border-color var(--t-mid); box-shadow:var(--elev-1); }
+.mc.past   { box-shadow:var(--elev-0); }           /* played: flush with the page */
+.mc.future { box-shadow:var(--elev-2); }           /* still to come: lifted */
+.mc.star   { box-shadow:var(--glow-gold), var(--elev-2); }
+/* live last: a live star match must keep its amber ring, not the gold one */
+.mc.live   { box-shadow:0 0 0 1px var(--live), var(--elev-2); }
 @media (hover:hover) {
-  .mc:hover { transform:translateY(-2px); box-shadow:var(--glow); }
-  .mc.live:hover { box-shadow:var(--glow-gold); }
+  .mc:hover { transform:translateY(-2px); box-shadow:var(--glow), var(--elev-3); }
+  .mc.live:hover { box-shadow:var(--glow-gold), var(--elev-3); }
   .side-btn:hover { transform:translateY(-1px); }
+  .ds:hover, .bk-match:hover { transform:translateY(-1px); box-shadow:var(--glow), var(--elev-2); }
+  .lb-row:hover { background:var(--hi); }
 }
-.tb { box-shadow:var(--glow-gold); }
+/* Floating surfaces */
+.tb        { box-shadow:var(--glow-gold), var(--elev-3); }
+.drawer, .side-panel { box-shadow:var(--elev-3); }
+#chatPanel { box-shadow:var(--elev-4); }
+/* Tiles, rows, bracket cards */
+.ds        { box-shadow:var(--elev-1); transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid); }
+.ds.hero   { box-shadow:var(--glow-gold), var(--elev-2); }
+.lb, .gstrip, .fx-i, .ds-lede, .wt, .gs-card { box-shadow:var(--elev-1); }
+.lb-row    { box-shadow:inset 0 1px 0 0 var(--sheen); transition:background var(--t-fast); }
+.lb-row.top { box-shadow:inset 0 0 0 1px var(--hi-border), inset 0 1px 0 0 var(--sheen); }
+/* bracket.js injects .bk-match's background/border later in the cascade; it sets no
+   box-shadow on the base class, so this lands without an !important. */
+.bk-match  { box-shadow:var(--elev-1); transition:transform var(--t-mid) var(--ease), box-shadow var(--t-mid); }
+.bk-match.up { box-shadow:var(--glow-gold), var(--elev-2); }
 .mc, .drawer-item, .ds, .lb-row { border-radius:var(--r-md); }
 .tb { border-radius:var(--r-lg); }
 
 @media (prefers-reduced-motion: reduce) {
-  .mc, .side-btn { transition:box-shadow var(--t-mid); }
-  .mc:hover, .side-btn:hover { transform:none; }
+  .mc, .side-btn, .ds, .bk-match { transition:box-shadow var(--t-mid); }
+  .mc:hover, .side-btn:hover, .ds:hover, .bk-match:hover { transform:none; }
   .sync-dot { animation:none !important; }
 }
 
@@ -172,7 +227,7 @@ body::after {
 .refresh-tip { position:fixed; z-index:60; background:var(--drawer); backdrop-filter:blur(16px); border:1px solid var(--card-border); border-radius:10px; padding:7px 13px; font-size:11px; font-weight:600; color:var(--t2); white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .2s; }
 main { position:relative; z-index:1; margin-right:64px; }
 [dir="ltr"] main { margin-right:0; margin-left:64px; }
-.overlay { position:fixed; top:0; bottom:0; left:0; right:64px; z-index:45; background:rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:opacity .35s ease; }
+.overlay { position:fixed; top:0; bottom:0; left:0; right:64px; z-index:45; background:var(--scrim); opacity:0; pointer-events:none; transition:opacity .35s ease; }
 [dir="ltr"] .overlay { left:64px; right:0; }
 .overlay.open { opacity:1; pointer-events:auto; }
 .drawer {
@@ -183,9 +238,8 @@ main { position:relative; z-index:1; margin-right:64px; }
   padding:22px 18px; overflow-y:auto;
   transform:translateX(110%); visibility:hidden;
   transition:transform .42s cubic-bezier(.22,1,.36,1), background .5s ease, visibility 0s .42s;
-  box-shadow:-8px 0 40px var(--shadow);
 }
-[dir="ltr"] .drawer { right:auto; left:64px; border-left:none; border-right:1px solid var(--card-border); border-radius:0 var(--radius) var(--radius) 0; transform:translateX(-110%); box-shadow:8px 0 40px var(--shadow); }
+[dir="ltr"] .drawer { right:auto; left:64px; border-left:none; border-right:1px solid var(--card-border); border-radius:0 var(--radius) var(--radius) 0; transform:translateX(-110%); }
 .drawer.open { transform:translateX(0); visibility:visible; transition:transform .42s cubic-bezier(.22,1,.36,1), background .5s ease, visibility 0s 0s; }
 .drawer-title { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:22px; letter-spacing:1px; color:var(--gold); margin-bottom:16px; }
 .drawer-item { display:flex; align-items:center; gap:10px; padding:13px 16px; margin-bottom:7px; border-radius:14px; background:var(--card); border:1px solid var(--card-border); color:var(--t1); font-size:14px; font-weight:600; cursor:pointer; position:relative; overflow:hidden; transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .25s, border-color .25s; }
@@ -223,8 +277,10 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mc { border-radius:var(--radius); padding:13px 15px; position:relative; overflow:hidden; border:1px solid var(--card-border); transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s, border-color .3s, box-shadow .3s; }
 .mc.past { background:var(--card); opacity:.62; }
 .mc.past:hover { opacity:.9; }
-.mc.future { background:var(--card-future); box-shadow:0 3px 16px var(--shadow); }
-.mc.live { background:var(--card-future); border-color:var(--live); box-shadow:0 0 0 1px var(--live); }
+/* elevation for every .mc state lives in the DEPTH block above — these rules carry
+   colour only, so they cannot silently outrank it from further down the cascade */
+.mc.future { background:var(--card-future); }
+.mc.live { background:var(--card-future); border-color:var(--live); }
 .mc.star { border-color:var(--hi-border); }
 .mc.star.future, .mc.star.live { background:var(--hi); }
 .mc:hover { transform:translateY(-3px); }
@@ -253,7 +309,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 #goalPops { position:fixed; inset-block-end:18px; inset-inline-start:18px; z-index:120;
             display:flex; flex-direction:column; gap:10px; pointer-events:none; max-width:min(340px,calc(100vw - 36px)); }
 .goal-pop { background:var(--drawer); border:1px solid var(--gold); border-radius:14px;
-            padding:11px 14px; box-shadow:0 10px 34px var(--shadow);
+            padding:11px 14px; box-shadow:var(--elev-4);
             opacity:0; transform:translateY(14px) scale(.94);
             transition:opacity .32s ease, transform .32s cubic-bezier(.34,1.4,.64,1); }
 .goal-pop.in { opacity:1; transform:none; }
@@ -303,7 +359,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 .rec-wrap { max-width:1080px; margin:16px auto 0; padding:0 20px 60px; }
 .stand-wrap { max-width:1080px; margin:16px auto 0; padding:0 20px 60px; }
 .gs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:16px; }
-.gs-card { border-radius:var(--radius); overflow:hidden; background:var(--card-future); border:1px solid var(--card-border); box-shadow:0 2px 12px var(--shadow); }
+.gs-card { border-radius:var(--radius); overflow:hidden; background:var(--card-future); border:1px solid var(--card-border); }
 .gs-title { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:16px; color:var(--gold); padding:10px 15px 8px; letter-spacing:1px; border-bottom:1px solid var(--card-border); }
 .gs-tbl { width:100%; border-collapse:collapse; font-size:12px; }
 .gs-tbl th { text-align:start; padding:6px 9px; color:var(--t3); font-weight:700; font-size:10px; letter-spacing:.5px; background:var(--card); }
@@ -330,7 +386,7 @@ main { position:relative; z-index:1; margin-right:64px; }
 /* Native dropdown list — set solid option colours so team names stay legible
    (translucent --card would render unreadable in the OS popup). */
 .search-selects select option { background:#102c20; color:#eef3ee; }
-[data-theme="light"] .search-selects select option { background:#ffffff; color:#132b1f; }
+[data-theme="light"] .search-selects select option { background:#f3eee0; color:#0a1f16; }
 .search-vs { font-size:11px; font-weight:700; color:var(--t3); white-space:nowrap; }
 .search-result { margin-top:10px; border-radius:12px; padding:12px 14px; background:var(--card); border:1px solid var(--card-border); display:none; }
 .search-result.show { display:block; }
@@ -341,7 +397,9 @@ main { position:relative; z-index:1; margin-right:64px; }
 .sr-live { color:var(--live); }
 .sr-none { font-size:13px; color:var(--t3); font-style:italic; }
 .stage-info { max-width:1080px; margin:6px auto 0; padding:0 20px; }
-.info-box { border-radius:var(--radius-sm); padding:12px 16px; font-size:12px; background:rgba(100,200,255,.07); border:1px solid rgba(100,200,255,.22); color:var(--t2); line-height:1.75; margin-bottom:4px; }
+/* was a hardcoded cyan tint — the one panel on the page that was not emerald/champagne,
+   and on the muted light surface it read as a bug report. */
+.info-box { border-radius:var(--radius-sm); padding:12px 16px; font-size:12px; background:var(--card); border:1px solid var(--card-border); color:var(--t2); line-height:1.75; margin-bottom:4px; box-shadow:var(--elev-1); }
 .info-box + .info-box { margin-top:6px; }
 .info-box strong { color:var(--t1); font-weight:700; }
 .ib-chip { display:inline-block; background:var(--card); border:1px solid var(--card-border); border-radius:7px; padding:2px 8px; font-size:11px; font-weight:700; color:var(--gold); white-space:nowrap; margin:0 2px; }
@@ -365,15 +423,15 @@ main { position:relative; z-index:1; margin-right:64px; }
   [dir="ltr"] .drawer { left:54px; right:auto; }
   .mgrid > .mc { flex-basis:100%; max-width:none; }
 }
-#chatFloatBtn { position:fixed; bottom:24px; left:20px; z-index:200; width:52px; height:52px; border-radius:50%; background:var(--acc,#1a73e8); color:#fff; border:none; font-size:22px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.35); transition:transform .2s, box-shadow .2s; display:flex; align-items:center; justify-content:center; }
-#chatFloatBtn:hover { transform:scale(1.08); box-shadow:0 6px 20px rgba(0,0,0,.4); }
+#chatFloatBtn { position:fixed; bottom:24px; left:20px; z-index:200; width:52px; height:52px; border-radius:50%; background:var(--acc,#1a73e8); color:#fff; border:none; font-size:22px; cursor:pointer; box-shadow:var(--elev-3); transition:transform .2s, box-shadow .2s; display:flex; align-items:center; justify-content:center; }
+#chatFloatBtn:hover { transform:scale(1.08); box-shadow:var(--elev-4); }
 #chatFloatBtn.active { background:#c62828; }
 /* Chat follows the app palette via theme vars (emerald + champagne),
    the same in both themes — no inversion, no hardcoded green/blue. */
 /* Height caps to whatever fits above the floating button (100px + a margin),
    using dvh so mobile browser bars don't clip it. Prevents a long answer's
    last lines from hiding behind the input row. */
-#chatPanel { position:fixed; bottom:86px; left:16px; z-index:199; width:340px; max-width:calc(100vw - 32px); background:var(--drawer); border:1px solid var(--card-border); border-radius:16px; box-shadow:0 8px 32px var(--shadow); display:flex; flex-direction:column; overflow:hidden; opacity:0; transform:translateY(12px) scale(.97); pointer-events:none; transition:opacity .22s, transform .22s; max-height:min(72vh, calc(100vh - 120px)); max-height:min(72dvh, calc(100dvh - 120px)); }
+#chatPanel { position:fixed; bottom:86px; left:16px; z-index:199; width:340px; max-width:calc(100vw - 32px); background:var(--drawer); border:1px solid var(--card-border); border-radius:16px; display:flex; flex-direction:column; overflow:hidden; opacity:0; transform:translateY(12px) scale(.97); pointer-events:none; transition:opacity .22s, transform .22s; max-height:min(72vh, calc(100vh - 120px)); max-height:min(72dvh, calc(100dvh - 120px)); }
 #chatPanel.open { opacity:1; transform:none; pointer-events:auto; }
 #chatHeader { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--bg2); font-weight:700; font-size:14px; color:var(--gold); flex-shrink:0; border-bottom:1px solid var(--card-border); }
 /* Was 19x14 — the smallest control on the page and one of the most tapped. */
@@ -382,8 +440,8 @@ main { position:relative; z-index:1; margin-right:64px; }
 #chatClose:hover { color:var(--t1); }
 #chatMessages { flex:1; overflow-y:auto; padding:12px 12px 14px; display:flex; flex-direction:column; gap:8px; min-height:100px; background:var(--bg); overscroll-behavior:contain; scroll-padding-bottom:14px; }
 .chat-bubble { max-width:82%; padding:8px 12px; border-radius:12px; font-size:13.5px; line-height:1.5; word-break:break-word; }
-.chat-user { align-self:flex-end; background:var(--gold); color:#1a1405; font-weight:600; border-bottom-right-radius:4px; }
-.chat-assistant { align-self:flex-start; background:var(--card-future); color:var(--t1); border:1px solid var(--card-border); border-bottom-left-radius:4px; }
+.chat-user { align-self:flex-end; background:var(--gold); color:var(--on-gold); font-weight:600; border-bottom-right-radius:4px; box-shadow:var(--elev-1); }
+.chat-assistant { align-self:flex-start; background:var(--card-future); color:var(--t1); border:1px solid var(--card-border); border-bottom-left-radius:4px; box-shadow:var(--elev-1); }
 .chat-retry { margin-inline-start:6px; padding:3px 10px; border-radius:7px; border:1px solid var(--gold); background:transparent; color:var(--gold); font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
 .chat-retry:hover { background:var(--hi); }
 #chatSendBtn:disabled, #chatInputField:disabled { opacity:.5; cursor:not-allowed; }
@@ -391,11 +449,31 @@ main { position:relative; z-index:1; margin-right:64px; }
 .chat-typing span:nth-child(2){ animation-delay:.2s; }
 .chat-typing span:nth-child(3){ animation-delay:.4s; }
 @keyframes chatDot { 0%,80%,100%{ transform:scale(.7); opacity:.5; } 40%{ transform:scale(1); opacity:1; } }
-#chatInputRow { display:flex; gap:6px; padding:10px 12px; border-top:1px solid var(--card-border); flex-shrink:0; background:var(--bg2); }
-#chatInputField { flex:1; padding:8px 10px; border-radius:8px; font-size:13px; background:var(--card-future); border:1px solid var(--card-border); color:var(--t1); outline:none; }
+/* align-items:flex-end — the field grows upward as it wraps; the send button stays
+   pinned to the bottom edge beside the last line instead of stretching with it. */
+#chatInputRow { display:flex; align-items:flex-end; gap:6px; padding:10px 12px; border-top:1px solid var(--card-border); flex-shrink:0; background:var(--bg2); box-shadow:inset 0 1px 0 0 var(--sheen); }
+/* ── the chat field is a <textarea>, not an <input> ──
+   An <input type=text> cannot wrap: a long question scrolled sideways and the user
+   could not see what they were typing. A textarea wraps by definition. It starts at
+   one row, auto-grows to five (see the auto-grow script at the end of <body>), then
+   scrolls. min-height 44px keeps the touch target legal at one row.
+     resize:none         — no drag handle poking out of a 340px panel
+     overflow-wrap:anywhere — a pasted URL breaks instead of forcing a sideways scroll
+     max-height 5 rows   — computed in em, so the 16px iOS bump below rescales it */
+#chatInputField {
+  flex:1; min-width:0; box-sizing:border-box;
+  padding:10px 12px; border-radius:var(--r-sm);
+  font-family:inherit; font-size:13px; line-height:1.45;
+  background:var(--card-future); border:1px solid var(--card-border); color:var(--t1);
+  outline:none; resize:none;
+  white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word;
+  min-height:44px; max-height:calc(5 * 1.45em + 22px); overflow-y:hidden;
+  box-shadow:inset 0 1px 3px -1px var(--shadow);
+  transition:border-color var(--t-fast), box-shadow var(--t-fast);
+}
 #chatInputField::placeholder { color:var(--t3); }
-#chatInputField:focus { border-color:var(--gold); }
-#chatSendBtn { min-height:44px; box-sizing:border-box; padding:10px 16px; border-radius:var(--r-sm); font-size:13px; font-weight:700; background:var(--gold); color:#1a1405; border:none; cursor:pointer; transition:opacity var(--t-fast), transform var(--t-fast); }
+#chatInputField:focus { border-color:var(--gold); box-shadow:inset 0 1px 3px -1px var(--shadow), 0 0 0 1px var(--hi-border); }
+#chatSendBtn { min-height:44px; box-sizing:border-box; padding:10px 16px; border-radius:var(--r-sm); font-size:13px; font-weight:700; background:var(--gold); color:var(--on-gold); border:none; cursor:pointer; box-shadow:var(--elev-1); transition:opacity var(--t-fast), transform var(--t-fast); }
 #chatSendBtn:active:not(:disabled) { transform:scale(.95); }
 #chatSendBtn:hover { opacity:.85; }
 @media(max-width:520px){ #chatPanel { left:8px; right:8px; width:auto; max-width:100%; bottom:80px; } }
@@ -725,7 +803,11 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
   </div>
   <div id="chatMessages"></div>
   <div id="chatInputRow">
-    <input type="text" id="chatInputField" data-ph-he="שאל שאלה..." data-ph-en="Ask a question..." placeholder="שאל שאלה...">
+    <!-- textarea, not input: an <input> cannot wrap. Same id, same .value semantics,
+         so sendChat() in main.js (getElementById → .value → .value = '') is unchanged.
+         Enter sends / Shift+Enter newlines — main.js's existing keydown handler already
+         does exactly that, and a textarea gives the newline for free. -->
+    <textarea id="chatInputField" rows="1" data-ph-he="שאל שאלה..." data-ph-en="Ask a question..." placeholder="שאל שאלה..."></textarea>
     <button id="chatSendBtn" onclick="sendChat()" data-he="שלח" data-en="Send">שלח</button>
   </div>
 </div>
@@ -737,7 +819,48 @@ main { padding-bottom:104px; padding-bottom:calc(104px + env(safe-area-inset-bot
 <!-- Motion 12.42.2, bundled locally (MIT). Offline-safe, no CDN. Exposes window.Motion -->
 <script src="motion.min.js"></script>
 <script src="visual_upgrade.js"></script>
+<!-- Scroll-driven reveal + parallax depth. Must come AFTER main.js/bracket.js so the
+     cards it observes already exist. Self-starts on DOMContentLoaded. -->
+<script src="scroll-reveal.js"></script>
+<!-- Chat field auto-grow.
+     sendChat() clears the field with `inp.value = ''`, which fires no `input` event —
+     a plain input listener would leave a 5-row-tall empty box behind after every send.
+     So the instance's `value` property is wrapped: the native setter still runs (so
+     `.value` semantics, including the retry button's `inp.value = text`, are untouched)
+     and the box re-fits itself afterwards. main.js is not modified. -->
+<script>
+(function () {
+  var ta = document.getElementById('chatInputField');
+  if (!ta || ta.tagName !== 'TEXTAREA') return;
+
+  function fit() {
+    var max = parseFloat(window.getComputedStyle(ta).maxHeight) || 120;
+    ta.style.height = 'auto';                       // shrink first, or it only ever grows
+    var h = Math.min(ta.scrollHeight, max);
+    ta.style.height = h + 'px';
+    ta.style.overflowY = ta.scrollHeight > max ? 'auto' : 'hidden';
+  }
+
+  ta.addEventListener('input', fit);
+
+  var desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+  if (desc && desc.get && desc.set) {
+    Object.defineProperty(ta, 'value', {
+      configurable: true,
+      enumerable: true,
+      get: function () { return desc.get.call(ta); },
+      set: function (v) { desc.set.call(ta, v); fit(); }
+    });
+  }
+
+  fit();
+})();
+</script>
 <!-- WebGL intro; falls back to a flat splash where WebGL/motion is unavailable -->
 <script type="module" src="splash3d.js"></script>
+<!-- Defines window.mountTrophy3D. bracket.js calls it if it is there and the device can
+     run WebGL; the SVG trophy stays as the fallback either way, so a load failure here
+     costs the page nothing. -->
+<script type="module" src="trophy3d.js"></script>
 </body>
 </html>
