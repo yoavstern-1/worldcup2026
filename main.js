@@ -61,6 +61,10 @@ function setLang(lang){
   var html = document.documentElement;
   html.setAttribute('lang', lang);
   html.setAttribute('dir', lang==='he' ? 'rtl' : 'ltr');
+  // Cross-fade the content so the RTL<->LTR reflow dissolves instead of snapping.
+  // Animating <main> (the container) survives its children being re-rendered.
+  var _m = document.querySelector('main');
+  if (_m) { _m.classList.remove('lang-fade'); void _m.offsetWidth; _m.classList.add('lang-fade'); }
   document.querySelectorAll('[data-he]').forEach(function(el){
     var val = el.getAttribute('data-'+lang);
     if(val !== null) el.textContent = val;
@@ -75,8 +79,16 @@ function setLang(lang){
 }
 
 // ── THEME ──
+var _themeAnimTimer = null;
 function setTheme(theme){
-  document.documentElement.setAttribute('data-theme', theme);
+  // Blanket-transition every surface for the half-second of the swap only, so
+  // borders and glows dissolve with the colours instead of snapping — then drop
+  // it, so it never adds lag to hover/press interactions.
+  var root = document.documentElement;
+  root.classList.add('theme-anim');
+  clearTimeout(_themeAnimTimer);
+  _themeAnimTimer = setTimeout(function(){ root.classList.remove('theme-anim'); }, 560);
+  root.setAttribute('data-theme', theme);
   document.getElementById('themeDark').classList.toggle('active', theme==='dark');
   document.getElementById('themeLight').classList.toggle('active', theme==='light');
   // Point the button's <use> at the other symbol. This used to assign an emoji to

@@ -48,7 +48,7 @@
   --vignette:rgba(62,50,20,.10);
   --line:rgba(18,44,31,.07);
   --usa-red:#9d1032; --gold:#6c5011;
-  --t1:#0a1f16; --t2:#2b4b3c; --t3:#3f5a49;
+  --t1:#0a1f16; --t2:#2b4b3c; --t3:#33493b;
   --card:rgba(250,246,235,.5); --card-future:rgba(243,238,225,.9);
   --card-border:rgba(18,44,31,.14);
   --hi:rgba(108,80,17,.10); --hi-border:rgba(108,80,17,.34);
@@ -152,8 +152,23 @@ body::after {
   --elev-4:inset 0 1px 0 0 var(--sheen), 0 10px 24px -12px var(--shadow), 0 40px 80px -32px var(--shadow);
   /* the hairline that separates one layer from the one behind it */
   --ring:0 0 0 1px var(--card-border);
+  /* ── Ambient bloom ("night lighting") ─────────────────────────────
+     A wide, soft, colour-tinted halo around the few hero objects (title,
+     today banner, the live/current markers). Reads as luminous on the dark
+     emerald ground. Used sparingly — a glow on every card is noise, a glow on
+     the one thing that matters is luxury. */
+  --bloom-gold:0 0 34px -6px rgba(217,184,102,.42), 0 0 12px -4px rgba(217,184,102,.35);
+  --bloom-live:0 0 26px -4px rgba(250,204,21,.5);
+  --glow-text:0 0 22px rgba(217,184,102,.45), 0 2px 18px var(--shadow);
 }
-[data-theme="light"] { --glow-gold:0 0 0 1px var(--hi-border), 0 10px 30px -10px rgba(108,80,17,.30); }
+[data-theme="light"] {
+  --glow-gold:0 0 0 1px var(--hi-border), 0 10px 30px -10px rgba(108,80,17,.30);
+  /* Bloom on ivory is barely-there by nature — keep it faint and warm so it
+     reads as soft daylight, not a smudge. */
+  --bloom-gold:0 0 26px -8px rgba(108,80,17,.24);
+  --bloom-live:0 0 20px -6px rgba(127,74,5,.28);
+  --glow-text:0 2px 14px var(--shadow);
+}
 
 .ic { width:var(--icon-md); height:var(--icon-md); flex:0 0 auto; display:block; color:inherit; }
 .ic-sm { width:var(--icon-sm); height:var(--icon-sm); }
@@ -191,7 +206,7 @@ body::after {
 .mc.future { box-shadow:var(--elev-2); }           /* still to come: lifted */
 .mc.star   { box-shadow:var(--glow-gold), var(--elev-2); }
 /* live last: a live star match must keep its amber ring, not the gold one */
-.mc.live   { box-shadow:0 0 0 1px var(--live), var(--elev-2); }
+.mc.live   { box-shadow:var(--bloom-live), 0 0 0 1px var(--live), var(--elev-2); }
 @media (hover:hover) {
   .mc:hover { --sr-lift:-2px; box-shadow:var(--glow), var(--elev-3); }
   .mc.live:hover { box-shadow:var(--glow-gold), var(--elev-3); }
@@ -199,8 +214,11 @@ body::after {
   .ds:hover, .bk-match:hover { --sr-lift:-1px; box-shadow:var(--glow), var(--elev-2); }
   .lb-row:hover { background:var(--hi); }
 }
-/* Floating surfaces */
-.tb        { box-shadow:var(--glow-gold), var(--elev-3); }
+/* Floating surfaces — the today banner is the page's hero object, so it gets
+   the ambient bloom on top of its elevation. */
+.tb        { box-shadow:var(--bloom-gold), var(--glow-gold), var(--elev-3); transition:box-shadow var(--t-slow) ease; }
+.tb.live   { box-shadow:var(--bloom-live), var(--glow-gold), var(--elev-3); }
+.hero-badge{ box-shadow:var(--bloom-gold); transition:box-shadow var(--t-slow) ease, background var(--t-mid), border-color var(--t-mid); }
 .drawer, .side-panel { box-shadow:var(--elev-3); }
 #chatPanel { box-shadow:var(--elev-4); }
 /* Tiles, rows, bracket cards */
@@ -221,6 +239,9 @@ body::after {
   .mc:hover, .ds:hover, .bk-match:hover, .mc:active { --sr-lift:0px; --sr-press:1; transform:none; }
   .side-btn:hover { transform:none; }
   .sync-dot { animation:none !important; }
+  /* no content dip on language switch, no eased theme dissolve — swap instantly */
+  main.lang-fade { animation:none; }
+  html.theme-anim * { transition:none !important; }
 }
 
 .panel-title { font-size:11px; font-weight:700; color:var(--t3); letter-spacing:.6px; text-transform:uppercase; padding:4px 10px 8px; border-bottom:1px solid var(--card-border); margin-bottom:4px; }
@@ -251,15 +272,17 @@ main { position:relative; z-index:1; margin-right:64px; }
 .drawer-item { display:flex; align-items:center; gap:10px; padding:13px 16px; margin-bottom:7px; border-radius:14px; background:var(--card); border:1px solid var(--card-border); color:var(--t1); font-size:14px; font-weight:600; cursor:pointer; position:relative; overflow:hidden; transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .25s, border-color .25s; }
 .drawer-item:hover { background:var(--hi); border-color:var(--hi-border); }
 .drawer-item:active { transform:scale(.96); }
-.drawer-item.active { background:var(--usa-red); color:#fff; border-color:var(--usa-red); }
+/* the current section lights up in the menu */
+.drawer-item.active { background:var(--usa-red); color:#fff; border-color:var(--usa-red); box-shadow:0 0 22px -4px var(--usa-red); }
 .sync-bar { max-width:1080px; margin:-8px auto 12px; padding:0 20px; display:flex; align-items:center; justify-content:flex-end; gap:6px; font-size:11px; color:var(--t3); font-weight:600; min-height:22px; }
 @keyframes spin { to { transform:rotate(360deg); } }
 .ripple-ink { position:absolute; border-radius:50%; transform:scale(0); background:rgba(255,255,255,.35); pointer-events:none; animation:ripple .6s ease-out; }
 [data-theme="light"] .ripple-ink { background:rgba(0,0,0,.12); }
 @keyframes ripple { to { transform:scale(2.6); opacity:0; } }
 .hero { text-align:center; padding:46px 20px 26px; }
-.hero-title { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:clamp(48px,11vw,96px); line-height:.88; letter-spacing:2px; text-shadow:0 2px 18px var(--shadow); }
-.hero-title span { color:var(--gold); display:block; }
+.hero-title { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:clamp(48px,11vw,96px); line-height:.88; letter-spacing:2px; text-shadow:0 2px 18px var(--shadow); transition:text-shadow var(--t-slow) ease; }
+/* the gold line glows like lit signage */
+.hero-title span { color:var(--gold); display:block; text-shadow:var(--glow-text); transition:text-shadow var(--t-slow) ease; }
 .hero-sub { margin-top:12px; font-size:14px; color:var(--t2); font-weight:500; }
 .hero-badge { display:inline-flex; align-items:center; gap:7px; margin-top:18px; background:var(--hi); border:1px solid var(--hi-border); border-radius:999px; padding:7px 18px; font-size:12px; color:var(--gold); font-weight:700; }
 .legend { display:flex; justify-content:center; gap:14px; flex-wrap:wrap; padding:0 20px 26px; }
@@ -268,6 +291,13 @@ main { position:relative; z-index:1; margin-right:64px; }
 .stage { display:none; animation:fadein .5s ease; }
 .stage.active { display:block; }
 @keyframes fadein { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+/* Language cross-fade: content dips and returns while the RTL/LTR reflow happens
+   under cover, so the switch feels like a dissolve rather than a jump. */
+main.lang-fade { animation:langFade .38s ease; }
+@keyframes langFade { 0%{opacity:1} 38%{opacity:.2} 100%{opacity:1} }
+/* Theme swap: only while .theme-anim is on (the 560ms of the switch) does every
+   surface ease its colour/border/glow. Removed afterwards so hover stays snappy. */
+html.theme-anim * { transition:background-color .5s ease, border-color .5s ease, box-shadow .5s ease, color .5s ease, fill .5s ease !important; }
 .sec-head { max-width:1080px; margin:24px auto 0; padding:0 20px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
 .sec-label { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:26px; letter-spacing:1px; color:var(--t1); }
 .sec-sub { font-size:12px; color:var(--t2); font-weight:600; }
