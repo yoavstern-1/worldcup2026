@@ -28,10 +28,14 @@ var CSS = ''
 + '.bk-team{display:flex;align-items:center;gap:4px;padding:4px 7px;font-size:11px;font-weight:600;color:var(--t2);min-height:22px;}'
 // color-mix() needs Safari 16.2+. The rgba() line before each one is the
 // fallback older iOS actually paints; without it the tint drops to transparent.
-+ '.bk-team.w{background:rgba(74,222,128,.18);background:color-mix(in srgb,var(--safe) 18%,transparent);color:var(--safe);}'
+// Winner language matches the match card: a gold rail on the start edge, not a green fill.
+// Green was doing double duty -- "convenient kickoff hour" in the legend AND "won" here --
+// and gold ink/green fill meant the same "won" state was two different colours on two tabs.
++ '.bk-team.w{background:var(--hi);color:var(--t1);box-shadow:inset 3px 0 0 0 var(--gold);}'
++ '[dir="rtl"] .bk-team.w{box-shadow:inset -3px 0 0 0 var(--gold);}'
 + '.bk-team .bf{font-size:13px;flex-shrink:0;}'
 + '.bk-team .bn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
-+ '.bk-team .bs{font-size:12px;font-weight:800;margin-inline-start:auto;padding-inline-start:4px;color:var(--t1);}'
++ '.bk-team .bs{font-size:15px;font-weight:800;margin-inline-start:auto;padding-inline-start:4px;color:var(--t1);direction:ltr;unicode-bidi:isolate;}'
 + '.bk-team .bp{font-size:11px;font-weight:700;color:var(--gold);padding-inline-start:3px;}'
 + '.bk-div{height:1px;background:var(--card-border);}'
 + '.bk-ph .bk-team{opacity:.55;}'

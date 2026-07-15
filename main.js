@@ -79,8 +79,15 @@ function setTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   document.getElementById('themeDark').classList.toggle('active', theme==='dark');
   document.getElementById('themeLight').classList.toggle('active', theme==='light');
-  var btn = document.getElementById('btnTheme');
-  if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
+  // Point the button's <use> at the other symbol. This used to assign an emoji to
+  // btn.textContent, which wiped out the SVG the button is made of — the same bug
+  // setSyncBar() had. Swap the symbol reference, never the element's contents.
+  var use = document.querySelector('#btnTheme .ic use');
+  if (use) {
+    var href = theme === 'dark' ? '#i-moon' : '#i-sun';
+    use.setAttribute('href', href);
+    use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', href);  // old Safari
+  }
 }
 
 // ── SIDE PANEL ──
@@ -735,11 +742,30 @@ function renderDataTab() {
   var he = isHe();
   var s = WC.tournamentStats(t);
 
+  // "Still in it" used to skip every placeholder competitor — and ESPN keeps calling the
+  // finalists "Winner Semifinal 1/2" long after the semi-finals are played. So the team
+  // that had just won its way into the FINAL was the one team excluded from the list of
+  // teams still alive, and the tile said 2 while the bracket on the next tab showed 4.
+  // Resolve a placeholder the way bracket.js does: through team.ref, to the feeder match,
+  // to whoever actually won it.
+  function resolve(team, depth) {
+    if (!team) return null;
+    if (!team.placeholder) return team;
+    if ((depth || 0) > 4) return null;                 // ref cycles cannot hang the render
+    var feeder = WC.refMatch(t, team);
+    if (!feeder || !feeder.winner) return null;        // not played yet: genuinely unknown
+    var side = team.ref.winner === false
+      ? (feeder.winner === 'home' ? 'away' : 'home')   // 3rd-place play-off takes the LOSER
+      : feeder.winner;
+    return resolve(feeder[side], (depth || 0) + 1);
+  }
+
   var alive = {};
   t.all.forEach(function(m) {
     if (m.status === 'past') return;
-    if (!m.home.placeholder) alive[m.home.abbr] = m.home;
-    if (!m.away.placeholder) alive[m.away.abbr] = m.away;
+    [resolve(m.home), resolve(m.away)].forEach(function(team) {
+      if (team) alive[team.abbr] = team;
+    });
   });
   var aliveList = Object.keys(alive).map(function(k) { return alive[k]; });
   var left = WC.upcoming(t);

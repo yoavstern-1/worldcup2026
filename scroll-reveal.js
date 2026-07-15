@@ -22,7 +22,10 @@
   var SEL = '.mc, .ds, .lb-row, .fx-i, .bk-match, .wt-h';
 
   var MAX_SHIFT = 8;              // px of parallax travel, hard cap
-  var MAX_SCALE = 0.02;           // scale delta, hard cap
+  // Was 0.02. A non-integer scale renders the SCORE digits at a subpixel size, so the
+  // numbers were softly blurred the entire time you scrolled — on a results site, the one
+  // thing that must stay crisp. The translate parallax (integer px) does not blur; keep it.
+  var MAX_SCALE = 0;              // scale delta, hard cap (0 = translate-only parallax)
   var GLOW_MS = 900;              // how long the ring lingers before easing away
 
   var revealObs = null;           // fires the reveal

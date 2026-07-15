@@ -281,8 +281,15 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mgrid { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; padding-bottom:6px; }
 .mgrid > .mc { flex:1 1 300px; max-width:340px; }
 .mc { border-radius:var(--radius); padding:13px 15px; position:relative; overflow:hidden; border:1px solid var(--card-border); transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s, border-color .3s, box-shadow .3s; }
-.mc.past { background:var(--card); opacity:.62; }
-.mc.past:hover { opacity:.9; }
+/* A results site must not dim its results. .mc.past used to be opacity:.62, which drove
+   the WINNER's score — mid-tone gold on a gold-tinted row, then dimmed 38% — to 1.45:1 in
+   the light theme: the least readable thing on the card was the one line it exists to show.
+   "Played, flush with the page" is already carried by --elev-0 in the depth block. Dim the
+   CHROME (venue, group, status), never the score. */
+.mc.past { background:var(--card); }
+/* Group label and status glyph are chrome; the venue is CONTENT (where the match was) and
+   a .72 dim drops --t2 below AA in the light theme, so it stays at full strength. */
+.mc.past .mc-grp, .mc.past .mc-fin { opacity:.72; }
 /* elevation for every .mc state lives in the DEPTH block above — these rules carry
    colour only, so they cannot silently outrank it from further down the cascade */
 .mc.future { background:var(--card-future); }
@@ -294,7 +301,11 @@ main { position:relative; z-index:1; margin-right:64px; }
    replaced the composed transform, throwing scroll-reveal's parallax away. The press is a
    variable for the same reason: it has to MULTIPLY the parallax scale, not overwrite it. */
 .mc:active { --sr-press:.98; }
+/* The strip encodes kickoff-hour convenience — meaningful only for a match you might still
+   watch. On a finished match it was the most saturated pixel on the card, shouting about
+   the bedtime of a game that ended weeks ago while the score whispered. Gone once played. */
 .strip { position:absolute; inset-inline-end:0; top:0; bottom:0; width:5px; }
+.mc.past .strip { display:none; }
 .strip.safe { background:var(--safe); }
 .strip.warn { background:var(--warn); }
 .strip.danger { background:var(--danger); }
@@ -360,11 +371,17 @@ main { position:relative; z-index:1; margin-right:64px; }
 .mc-rows { display:flex; flex-direction:column; gap:3px; }
 .mc-row { display:flex; align-items:center; gap:7px; padding:4px 7px; border-radius:9px; background:var(--card); min-height:28px; }
 .mc-row .mc-fl { flex-shrink:0; font-size:15px; line-height:1; }
-.mc-row .mc-nm { flex:1; min-width:0; font-size:13.5px; font-weight:700; color:var(--t1); line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.mc-row .mc-sc { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:19px; line-height:1; color:var(--t1); flex-shrink:0; min-width:16px; text-align:center; direction:ltr; unicode-bidi:isolate; }
+.mc-row .mc-nm { flex:1; min-width:0; font-size:15px; font-weight:700; color:var(--t1); line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* The score is the product. It was 19px — smaller than the kickoff time above it. */
+.mc-row .mc-sc { font-family:'Sora','Assistant',sans-serif; font-weight:800; font-size:26px; line-height:1; color:var(--t1); flex-shrink:0; min-width:24px; text-align:center; direction:ltr; unicode-bidi:isolate; }
 .mc-row .mc-pen { font-size:11px; font-weight:800; color:var(--gold); flex-shrink:0; direction:ltr; unicode-bidi:isolate; }
-.mc-row.w { background:var(--hi); }
-.mc-row.w .mc-nm, .mc-row.w .mc-sc { color:var(--gold); }
+/* Winner = a gold RAIL on the inline-start edge, not gold INK. --gold is the dimmest text
+   on the page (5-6:1) and it was sitting on --hi, a gold-tinted ground — the one pairing
+   guaranteed to lose. The emphasis was inverting itself: the loser read louder than the
+   winner. The rail marks the winner at full saturation; the text keeps --t1's contrast. */
+.mc-row.w { background:var(--hi); box-shadow:inset 3px 0 0 0 var(--gold); }
+[dir="rtl"] .mc-row.w { box-shadow:inset -3px 0 0 0 var(--gold); }   /* rail on the start edge */
+.mc-row.w .mc-nm, .mc-row.w .mc-sc { color:var(--t1); font-weight:800; }
 .mc-row.ph .mc-nm { color:var(--t3); font-weight:600; }
 .mc.live .mc-row .mc-sc { color:var(--live); }
 .mc-venue { margin-top:8px; font-size:12px; color:var(--t2); font-weight:600; line-height:1.45; }
@@ -448,8 +465,13 @@ main { position:relative; z-index:1; margin-right:64px; }
    so a hardcoded `left` put the chat on top of the rail in English. inline-end resolves
    to left under RTL and right under LTR — i.e. always the side the rail is not on. The
    FAB in visual_upgrade.js is anchored the same way, so the two stay together. */
-#chatPanel { position:fixed; bottom:86px; inset-inline-end:16px; z-index:199; width:340px; max-width:calc(100vw - 32px); background:var(--drawer); border:1px solid var(--card-border); border-radius:16px; display:flex; flex-direction:column; overflow:hidden; opacity:0; transform:translateY(12px) scale(.97); pointer-events:none; transition:opacity .22s, transform .22s; max-height:min(72vh, calc(100vh - 120px)); max-height:min(72dvh, calc(100dvh - 120px)); }
-#chatPanel.open { opacity:1; transform:none; pointer-events:auto; }
+/* Closed = visibility:hidden, not opacity alone. With only opacity:0 + pointer-events:none
+   the send button stayed in the tab order: a keyboard user could focus it while the panel
+   was invisible and fire a Gemini request (real money, ~20/day). visibility:hidden pulls
+   the whole subtree out of the tab order; it is delayed so it does not clip the close
+   transition, and .open restores it instantly. */
+#chatPanel { position:fixed; bottom:86px; inset-inline-end:16px; z-index:199; width:340px; max-width:calc(100vw - 32px); background:var(--drawer); border:1px solid var(--card-border); border-radius:16px; display:flex; flex-direction:column; overflow:hidden; opacity:0; transform:translateY(12px) scale(.97); pointer-events:none; visibility:hidden; transition:opacity .22s, transform .22s, visibility 0s linear .22s; max-height:min(72vh, calc(100vh - 120px)); max-height:min(72dvh, calc(100dvh - 120px)); }
+#chatPanel.open { opacity:1; transform:none; pointer-events:auto; visibility:visible; transition:opacity .22s, transform .22s; }
 #chatHeader { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--bg2); font-weight:700; font-size:14px; color:var(--gold); flex-shrink:0; border-bottom:1px solid var(--card-border); }
 /* Was 19x14 — the smallest control on the page and one of the most tapped. */
 #chatClose { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; min-width:44px; min-height:44px; box-sizing:border-box; background:none; border:none; border-radius:var(--r-sm); color:var(--t3); cursor:pointer; padding:0; line-height:1; transition:color var(--t-mid), background var(--t-mid); }
@@ -585,7 +607,19 @@ select:disabled { opacity:.45; cursor:not-allowed; }
 .gcol { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; min-width:0; }
 .gcol .gv { font-size:12px; font-weight:800; color:var(--gold); direction:ltr; unicode-bidi:isolate; }
 .gcol .gb { width:100%; max-width:38px; border-radius:4px 4px 0 0; background:var(--hi-border); min-height:4px; }
-.gcol .gl { font-size:11px; color:var(--t3); font-weight:600; text-align:center; line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+/* The VALUE was isolated and the LABEL was not, so under RTL "90+'" rendered as "'+90" —
+   the plus jumped to the left of the number and changed what it says. Any string that is
+   digits-and-punctuation needs the isolation, label or not. It also no longer truncates:
+   ellipsis on an LTR run inside an RTL box clips the LEADING digits, so "46-60'" came out
+   as "…60-" on mobile — the half that carries the meaning is the half that was thrown away. */
+.gcol .gl { font-size:11px; color:var(--t3); font-weight:600; text-align:center; line-height:1.25; white-space:nowrap; direction:ltr; unicode-bidi:isolate; }
+
+/* Seven columns in 375px leaves ~37px per label and "46-60'" wants 39. These are Latin
+   digits, not Hebrew, so the 11px floor does not bind — step them down rather than clip. */
+@media (max-width:600px) {
+  .gstrip { gap:3px; padding:12px 6px 9px; }
+  .gcol .gl { font-size:10px; letter-spacing:-.2px; }
+}
 
 /* two-up mini facts */
 .fx { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }

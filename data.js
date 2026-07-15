@@ -757,8 +757,26 @@ function comeback(m) {
 
 // 15-minute block a goal fell in. Anything past 90 is its own bucket rather than being
 // folded into 76-90: stoppage-time goals are the story, not a rounding error.
-function bucketOf(sec) {
-  var min = Math.floor((sec || 0) / 60) + 1;
+//
+// Read the DISPLAY clock ("45'+5'"), not e.sec. ESPN caps sec at 2700 for every first-half
+// stoppage-time goal, so `sec` alone said minute 46 and filed ten 45'+X goals — Havertz,
+// David and eight others — into the SECOND half. The buckets still summed to the headline,
+// which is exactly why a sum check never caught it: the goals were not lost, they were
+// filed under the wrong quarter of an hour. A goal in 45'+5' is a first-half goal.
+function bucketOf(e) {
+  var disp = (e && e.min) || '';
+  var mm = disp.match(/^(\d+)/);
+  if (mm) {
+    var base = parseInt(mm[1], 10);
+    var stoppage = disp.indexOf('+') !== -1;
+    if (base > 90) return 6;                    // extra time
+    if (base === 90 && stoppage) return 6;      // 90'+X
+    if (base === 45 && stoppage) return 2;      // 45'+X is the FIRST half
+    return Math.min(5, Math.floor((Math.max(1, base) - 1) / 15));
+  }
+  // No display clock: fall back to the capped seconds. Wrong for 45'+X, but it is the only
+  // thing left, and a bucket is better than dropping the goal out of the chart entirely.
+  var min = Math.floor((e && e.sec || 0) / 60) + 1;
   if (min > 90) return 6;
   return Math.min(5, Math.floor((min - 1) / 15));
 }
@@ -880,7 +898,7 @@ function tournamentStats(t) {
       // to credit, but it is still a goal that hit the net in a particular minute, and
       // leaving it out made the "when goals are scored" chart sum to 278 while the
       // headline above it said 292.
-      minuteBuckets[bucketOf(e.sec)]++;
+      minuteBuckets[bucketOf(e)]++;
       if (e.sec >= 79 * 60) s.lateGoals++;
 
       if (e.kind === 'pk') s.penaltyGoals++;
