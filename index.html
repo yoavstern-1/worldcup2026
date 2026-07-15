@@ -72,7 +72,11 @@
   --vignette:rgba(62,50,20,.13);
   --line:rgba(18,44,31,.12);
   --usa-red:#9d1032; --gold:#6c5011;
-  --t1:#0a1f16; --t2:#24402f; --t3:#33493b;
+  /* Ink is emerald, not near-black: the third pass set --t1 to the dark theme's
+     background (#0a1f16), which is technically green but reads as black. Lifted to a
+     deep forest green so the text visibly carries the brand green in daylight too,
+     while staying past AA on both the ivory cards (~9:1) and the sand ground (~5.5:1). */
+  --t1:#0e4a2d; --t2:#1d5638; --t3:#356b4c;
   --card:rgba(253,251,246,.95); --card-future:rgba(255,255,252,.98);
   --card-border:rgba(18,44,31,.16);
   --hi:rgba(108,80,17,.12); --hi-border:rgba(108,80,17,.40);
@@ -186,12 +190,16 @@ body::after {
   --glow-text:0 0 22px rgba(217,184,102,.45), 0 2px 18px var(--shadow);
 }
 [data-theme="light"] {
-  --glow-gold:0 0 0 1px var(--hi-border), 0 10px 30px -10px rgba(108,80,17,.30);
-  /* Bloom on ivory is barely-there by nature — keep it faint and warm so it
-     reads as soft daylight, not a smudge. */
-  --bloom-gold:0 0 26px -8px rgba(108,80,17,.24);
-  --bloom-live:0 0 20px -6px rgba(127,74,5,.28);
-  --glow-text:0 2px 14px var(--shadow);
+  /* Glow, light mode. Earlier passes killed the bloom because gold-on-ivory is
+     invisible — but an EMERALD halo reads fine on the warm ground, and it matches the
+     now-green ink. So the light glow is emerald-led with a gold core: cards glow green
+     on hover/press, the hero objects (title, today banner, live/star cards) carry a
+     soft green-gold bloom instead of nothing. */
+  --glow:0 0 0 1px var(--hi-border), 0 8px 26px -8px rgba(14,74,45,.40);
+  --glow-gold:0 0 0 1px var(--hi-border), 0 10px 30px -8px rgba(14,74,45,.34), 0 0 16px -4px rgba(108,80,17,.34);
+  --bloom-gold:0 0 32px -6px rgba(14,90,55,.34), 0 0 14px -4px rgba(108,80,17,.36);
+  --bloom-live:0 0 26px -5px rgba(127,74,5,.42);
+  --glow-text:0 0 18px rgba(14,90,55,.28), 0 2px 12px var(--shadow);
 }
 
 .ic { width:var(--icon-md); height:var(--icon-md); flex:0 0 auto; display:block; color:inherit; }
