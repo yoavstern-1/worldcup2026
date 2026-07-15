@@ -1060,8 +1060,42 @@ function buildSystemPrompt() {
     return x.name + ' ' + x.n + ' vs ' + x.m.home.en + '-' + x.m.away.en;
   }).join('; ');
 
+  // Group tables, computed inline from the group matches. The prompt carried every
+  // result but no standings, so "who tops Group A" / "how many points has X" had no
+  // ground truth to read and the model guessed. Points, then goal difference, then
+  // goals for — the same order the page's tables use.
+  var groupTables = '';
+  (function() {
+    var byGroup = {};
+    t.stages.group.forEach(function(m) {
+      if (!m.group || m.home.placeholder || m.away.placeholder || !m.score) return;
+      if (m.status !== 'past' && m.status !== 'live') return;
+      var g = byGroup[m.group] || (byGroup[m.group] = {});
+      function row(tm) { return g[tm.abbr] || (g[tm.abbr] = { en: tm.en, p:0, w:0, d:0, l:0, gf:0, ga:0, pts:0 }); }
+      var h = row(m.home), a = row(m.away);
+      h.p++; a.p++; h.gf += m.score.h; h.ga += m.score.a; a.gf += m.score.a; a.ga += m.score.h;
+      if (m.score.h > m.score.a)      { h.w++; a.l++; h.pts += 3; }
+      else if (m.score.h < m.score.a) { a.w++; h.l++; a.pts += 3; }
+      else                            { h.d++; a.d++; h.pts++; a.pts++; }
+    });
+    groupTables = Object.keys(byGroup).sort().map(function(L) {
+      var rows = Object.keys(byGroup[L]).map(function(k) { return byGroup[L][k]; });
+      rows.sort(function(x, y) {
+        return (y.pts - x.pts) || ((y.gf - y.ga) - (x.gf - x.ga)) || (y.gf - x.gf) || x.en.localeCompare(y.en);
+      });
+      return 'Group ' + L + ': ' + rows.map(function(r, i) {
+        var gd = r.gf - r.ga;
+        return (i + 1) + '. ' + r.en + ' ' + r.pts + 'pts (P' + r.p + ' W' + r.w + ' D' + r.d +
+          ' L' + r.l + ' GD' + (gd >= 0 ? '+' : '') + gd + ')';
+      }).join(', ');
+    }).join('\n');
+  })();
+
   return 'You are a helpful assistant for a FIFA World Cup 2026 live schedule page.\n' +
-    'Answer concisely. Reply in the language the user writes (Hebrew or English).\n' +
+    'Give complete, well-organized answers — as much detail as the question needs, not a\n' +
+    'one-liner. Use short paragraphs or bullet lists for anything with several parts, and\n' +
+    'lead with the direct answer before the supporting detail. Reply in the language the\n' +
+    'user writes (Hebrew or English).\n' +
     'Right now it is ' + nowIl.time + ' Israel time on ' + nowIl.dayLabelEn + ' (' + nowIl.dayKey + ').\n' +
     'All times below are Israel time (UTC+3).\n\n' +
     'TODAY\'S MATCHES:\n' + (todays.length ? todays.map(line).join('\n') : '  None') + '\n\n' +
@@ -1072,6 +1106,7 @@ function buildSystemPrompt() {
     'TOURNAMENT TOTALS: ' + st.played + ' of ' + st.total + ' matches played, ' + st.goals + ' goals (' +
       st.avg.toFixed(2) + '/match), ' + st.shootouts + ' shootouts, ' + st.yellow + ' yellow cards, ' +
       st.red + ' red cards.\n' +
+    (groupTables ? 'GROUP STANDINGS (computed from results; sorted by points, then goal difference):\n' + groupTables + '\n\n' : '') +
     'EVERY SCORER IN THIS TOURNAMENT (name, team, goals): ' + (scorers || 'none yet') + '\n' +
     (braces ? 'TWO OR MORE IN ONE MATCH: ' + braces + '\n' : '') +
     'MORE TOTALS: ' + st.comebacks + ' comebacks (team trailed, then won), ' +
@@ -1197,7 +1232,7 @@ function chatRequest(contents) {
       // live worker, a long question spent 977 tokens thinking, hit MAX_TOKENS,
       // and came back with a 43-character stub of an answer.
       generationConfig: {
-        maxOutputTokens: 2048,
+        maxOutputTokens: 4096,
         temperature: 0.4,
         thinkingConfig: { thinkingBudget: 0 }
       }
