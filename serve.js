@@ -9,7 +9,10 @@ var PORT = parseInt(process.env.PORT, 10) || 8099;
 var TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css' };
 
 http.createServer(function(req, res) {
-  var rel = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+  // Strip the query first: `/?theme=light` must still map to index.html, not to the
+  // directory (readFile on a dir 404s), which a bare `req.url === '/'` check missed.
+  var rel = req.url.split('?')[0];
+  if (rel === '/') rel = '/index.html';
   var file = path.join(__dirname, path.normalize(rel).replace(/^(\.\.[\/\\])+/, ''));
   fs.readFile(file, function(err, data) {
     if (err) { res.writeHead(404); res.end('Not found'); return; }

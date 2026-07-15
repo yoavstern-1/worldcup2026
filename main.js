@@ -89,6 +89,8 @@ function setTheme(theme){
   clearTimeout(_themeAnimTimer);
   _themeAnimTimer = setTimeout(function(){ root.classList.remove('theme-anim'); }, 560);
   root.setAttribute('data-theme', theme);
+  // Survive a refresh: the head script reads this back before the first paint.
+  try { window.localStorage.setItem('wc26-theme', theme); } catch (e) {}
   document.getElementById('themeDark').classList.toggle('active', theme==='dark');
   document.getElementById('themeLight').classList.toggle('active', theme==='light');
   // Point the button's <use> at the other symbol. This used to assign an emoji to
@@ -1317,6 +1319,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // stageWasChosen: the first render jumps to whatever stage is in play today.
 // Once the user picks a tab themselves, refreshes must not yank them back.
 var stageWasChosen = false;
+
+// The head script already set <html data-theme>, but the theme pills and the toolbar
+// icon are hardcoded to dark in the HTML. Re-run setTheme with the resolved value to
+// bring them in line with a restored light choice (no-op cost when it was dark).
+setTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
 
 showSkeletons();
 loadTournament(false);

@@ -2,6 +2,26 @@
 <html lang="he" dir="rtl" data-theme="dark">
 <head>
 <meta charset="UTF-8">
+<!-- Resolve the theme before the first paint so a light-mode user never sees a dark
+     flash on load. The <html> tag ships data-theme="dark"; this overrides it in-place,
+     before any CSS is fetched, from (1) the saved choice, (2) the OS preference, else
+     the dark default. `?theme=` is a QA override. setTheme() persists the choice; this
+     is the only place that reads it back. Kept inline and dependency-free on purpose —
+     an external script would race the paint it exists to beat. -->
+<script>
+(function(){
+  try {
+    var q = (location.search.match(/[?&]theme=(light|dark)/) || [])[1];
+    var saved = q || window.localStorage.getItem('wc26-theme');
+    var theme = saved;
+    if (theme !== 'light' && theme !== 'dark') {
+      theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+        ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) { /* private-mode localStorage throws; keep the dark default */ }
+})();
+</script>
 <!-- viewport-fit=cover is required for env(safe-area-inset-*) to report non-zero on notched iPhones -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>מונדיאל 2026 — לוח שידורים</title>
