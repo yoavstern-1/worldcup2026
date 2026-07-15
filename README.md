@@ -24,15 +24,55 @@ There's also a hand-picked **⭐ Top Picks** list — the matches most worth sta
 
 ## Features
 
+- **🤖 AI chatbot** — ask anything about the tournament in Hebrew or English. It answers from the live feed: standings, results, top scorers, who advanced, tournament totals — grounded in real data, not guesses.
+- **🔴 Live match tracking** — scores, the running minute, and the match phase update on their own while a game is on, straight from the ESPN feed.
 - **Full schedule** — all 104 matches: group stage, round of 32, knockouts, and the final
+- **Knockout bracket** — the full tree with a 3D trophy, wired from the real results
 - **Israel time** — every kickoff converted to UTC+3
 - **Color-coded sleep guide** — instantly see if a match is worth watching live
 - **Group standings** — live table for all 12 groups
-- **⭐ Recommended matches** — curated picks with short match context
+- **Head-to-head search** — pick any two teams that met and see the result
+- **Stats tab** — goals, average per match, top scorers, shootouts, cards, and more
 - **Hebrew & English** — toggle language at any time, full RTL/LTR support
 - **Dark & Light theme** — smooth animated switch
-- **Works offline** — no server, no install, open the file and go
 - **Mobile friendly** — fully responsive on any screen size
+
+---
+
+## 📸 Screenshots
+
+> Real ESPN data drives the site. In the two shots below the chat reply is a representative example and a live match is shown for illustration — everything else is the live feed.
+
+### 🤖 AI chatbot + 🔴 live tracking
+The assistant reads the group table and answers with real numbers, while two matches run live at the top — the site's two headline features in one view.
+
+![Chatbot answering about the group standings, with live matches above](docs/screenshots/07-chatbot.png)
+
+### Home — hero, live match, and the knockout bracket
+![Home page: gold WORLD CUP 2026 hero, a live semi-final card, and the full knockout bracket with a 3D trophy](docs/screenshots/01-home.png)
+
+### Live match banner
+![Today's live match card with score and running minute](docs/screenshots/02-live.png)
+
+### Group stage
+![Group stage match cards, color-coded by kickoff hour](docs/screenshots/03-groups.png)
+
+### Knockout bracket
+![Knockout bracket tree with results and the 3D trophy](docs/screenshots/04-knockout-bracket.png)
+
+### Stats tab
+![Tournament stats: goals, average per match, and the top-scorer board](docs/screenshots/05-stats.png)
+
+### Head-to-head search
+![The match-result lookup: pick two teams and see how they met](docs/screenshots/06-search.png)
+
+### Light theme + English
+![The same site in light theme and English, showing full RTL/LTR support](docs/screenshots/08-light-english.png)
+
+### Mobile
+| Home | Chat |
+|---|---|
+| ![Mobile home](docs/screenshots/09-mobile-home.png) | ![Mobile chat](docs/screenshots/10-mobile-chat.png) |
 
 ---
 
