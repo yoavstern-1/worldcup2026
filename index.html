@@ -60,23 +60,27 @@
      the text did NOT go up. The ink is now literally the dark theme's background
      emerald (#0a1f16), so the two themes read as one palette inverted rather than as
      two designs; body text lands at 10.8:1 on --bg (AA/AAA, well past the 4.5 floor).
-     Borders, dividers and the gold accent were all pulled back to match: a muted
-     surface with the old .18-alpha borders and near-white cards looked wrong — every
-     hairline shouted. */
-  --bg:#d6ccb4; --bg2:#c9bfa5;
-  --stripe-tint:rgba(62,50,20,.028);
-  --vignette:rgba(62,50,20,.10);
-  --line:rgba(18,44,31,.07);
+     Fourth pass. The muted-sand surface was legible in the contrast checker but read
+     as washed-out and flat in the eye: half-opaque cards (.5) let the sand bleed
+     through, so nothing looked raised, and the .16 shadow vanished on a light ground.
+     The fix keeps the warm-sand PAGE but lifts the CARDS off it — near-opaque ivory
+     slabs (.94) separated by a firmer ambient shadow, NOT by louder hairlines (the
+     mistake the third pass was avoiding). Elevation now comes from the shadow scale,
+     so borders stay quiet while every card reads as a distinct object. */
+  --bg:#cfc4a8; --bg2:#c2b79b;
+  --stripe-tint:rgba(62,50,20,.032);
+  --vignette:rgba(62,50,20,.13);
+  --line:rgba(18,44,31,.12);
   --usa-red:#9d1032; --gold:#6c5011;
-  --t1:#0a1f16; --t2:#2b4b3c; --t3:#33493b;
-  --card:rgba(250,246,235,.5); --card-future:rgba(243,238,225,.9);
-  --card-border:rgba(18,44,31,.14);
-  --hi:rgba(108,80,17,.10); --hi-border:rgba(108,80,17,.34);
-  --sidebar:rgba(203,193,170,.94); --drawer:rgba(222,213,193,.985);
+  --t1:#0a1f16; --t2:#24402f; --t3:#33493b;
+  --card:rgba(253,251,246,.95); --card-future:rgba(255,255,252,.98);
+  --card-border:rgba(18,44,31,.16);
+  --hi:rgba(108,80,17,.12); --hi-border:rgba(108,80,17,.40);
+  --sidebar:rgba(203,193,170,.96); --drawer:rgba(224,216,197,.99);
   --safe:#0c5f2c; --warn:#7f4a05; --danger:#9e1c22;
   --live:#7f4a05; --live-soft:rgba(127,74,5,.14);
-  --shadow:rgba(52,42,18,.16);
-  --sheen:rgba(255,255,255,.62);
+  --shadow:rgba(46,36,14,.30);
+  --sheen:rgba(255,255,255,.7);
   --scrim:rgba(38,30,12,.34);
   --on-gold:#f6f1e2;
 }
@@ -234,6 +238,17 @@ body::after {
   .ds:hover, .bk-match:hover { --sr-lift:-1px; box-shadow:var(--glow), var(--elev-2); }
   .lb-row:hover { background:var(--hi); }
 }
+/* ── Press feedback ─────────────────────────────────────────────────
+   Every clickable surface acknowledges the tap — the site had hover lifts but no
+   pressed state, so a click on a phone felt like nothing happened. Liftable cards
+   dip through --sr-press, which scroll-reveal multiplies into their transform, so
+   the press composes with the hover-lift and the scroll parallax instead of
+   overwriting either. Plain buttons and menu rows scale directly. No :hover needed,
+   so it works on touch. */
+.mc:active, .ds:active, .bk-match:active, .lb-row:active, .wt-h:active { --sr-press:.965; }
+.drawer-item:active, .panel-opt:active, .ds-more:active, .load-retry:active,
+.search-reset:active, .chat-retry:active, #chatSendBtn:active, #chatClose:active,
+.search-selects select:active { transform:scale(.94); }
 /* Floating surfaces — the today banner is the page's hero object, so it gets
    the ambient bloom on top of its elevation. */
 .tb        { box-shadow:var(--bloom-gold), var(--glow-gold), var(--elev-3); transition:box-shadow var(--t-slow) ease; }

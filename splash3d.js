@@ -8,6 +8,10 @@ import * as THREE from './three.module.min.js';
   var host = document.getElementById('splashScreen');
   if (!host) return;
 
+  // QA hatch: ?nosplash=1 tears the intro down immediately so an automated run can
+  // screenshot the actual page instead of the 3-second globe. No effect in normal use.
+  if (/[?&]nosplash=1/.test(location.search)) { host.style.display = 'none'; return; }
+
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function finish(delay) {
