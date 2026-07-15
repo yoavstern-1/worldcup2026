@@ -21,12 +21,13 @@
   var MARK = 'srDone';            // dataset key -> data-sr-done
   var SEL = '.mc, .ds, .lb-row, .fx-i, .bk-match, .wt-h';
 
-  var MAX_SHIFT = 8;              // px of parallax travel, hard cap
+  var MAX_SHIFT = 14;             // px of parallax travel, hard cap — raised from 8 so the
+                                 // depth movement on scroll is clearly visible, not a hint
   // Was 0.02. A non-integer scale renders the SCORE digits at a subpixel size, so the
   // numbers were softly blurred the entire time you scrolled — on a results site, the one
   // thing that must stay crisp. The translate parallax (integer px) does not blur; keep it.
   var MAX_SCALE = 0;              // scale delta, hard cap (0 = translate-only parallax)
-  var GLOW_MS = 900;              // how long the ring lingers before easing away
+  var GLOW_MS = 1100;            // how long the reveal ring lingers before easing away
 
   var revealObs = null;           // fires the reveal
   var depthObs = null;            // tracks who is on screen for the parallax
@@ -81,7 +82,9 @@
 
   function hide(el) {
     el.style.opacity = '0';
-    el.style.setProperty('--sr-in-y', '14px');
+    // Raised from 14px: a card rises further as it enters, so the reveal reads as a
+    // deliberate motion effect rather than a barely-there settle.
+    el.style.setProperty('--sr-in-y', '26px');
   }
 
   function reveal(el, delay) {

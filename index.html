@@ -13,11 +13,10 @@
   try {
     var q = (location.search.match(/[?&]theme=(light|dark)/) || [])[1];
     var saved = q || window.localStorage.getItem('wc26-theme');
-    var theme = saved;
-    if (theme !== 'light' && theme !== 'dark') {
-      theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
-        ? 'light' : 'dark';
-    }
+    // Dark is the default identity of the site: a first-time visitor always lands in
+    // dark regardless of their OS setting. Only an explicit saved choice (or ?theme=)
+    // switches to light. (Earlier this followed prefers-color-scheme — dropped.)
+    var theme = (saved === 'light' || saved === 'dark') ? saved : 'dark';
     document.documentElement.setAttribute('data-theme', theme);
   } catch (e) { /* private-mode localStorage throws; keep the dark default */ }
 })();
@@ -55,38 +54,29 @@
   --radius:18px; --radius-sm:12px;
 }
 [data-theme="light"] {
-  /* Third pass. The two earlier surfaces (#f4f0e6, then #e2dac6) were still lit like
-     paper and glared. This one is a warm, muted sand — the surface came down again,
-     the text did NOT go up. The ink is now literally the dark theme's background
-     emerald (#0a1f16), so the two themes read as one palette inverted rather than as
-     two designs; body text lands at 10.8:1 on --bg (AA/AAA, well past the 4.5 floor).
-     Fourth pass. The muted-sand surface was legible in the contrast checker but read
-     as washed-out and flat in the eye: half-opaque cards (.5) let the sand bleed
-     through, so nothing looked raised, and the .16 shadow vanished on a light ground.
-     The fix keeps the warm-sand PAGE but lifts the CARDS off it — near-opaque ivory
-     slabs (.94) separated by a firmer ambient shadow, NOT by louder hairlines (the
-     mistake the third pass was avoiding). Elevation now comes from the shadow scale,
-     so borders stay quiet while every card reads as a distinct object. */
-  --bg:#cfc4a8; --bg2:#c2b79b;
-  --stripe-tint:rgba(62,50,20,.032);
-  --vignette:rgba(62,50,20,.13);
-  --line:rgba(18,44,31,.12);
-  --usa-red:#9d1032; --gold:#6c5011;
-  /* Ink is emerald, not near-black: the third pass set --t1 to the dark theme's
-     background (#0a1f16), which is technically green but reads as black. Lifted to a
-     deep forest green so the text visibly carries the brand green in daylight too,
-     while staying past AA on both the ivory cards (~9:1) and the sand ground (~5.5:1). */
-  --t1:#0e4a2d; --t2:#1d5638; --t3:#356b4c;
-  --card:rgba(253,251,246,.95); --card-future:rgba(255,255,252,.98);
-  --card-border:rgba(18,44,31,.16);
-  --hi:rgba(108,80,17,.12); --hi-border:rgba(108,80,17,.40);
-  --sidebar:rgba(203,193,170,.96); --drawer:rgba(224,216,197,.99);
-  --safe:#0c5f2c; --warn:#7f4a05; --danger:#9e1c22;
-  --live:#7f4a05; --live-soft:rgba(127,74,5,.14);
-  --shadow:rgba(46,36,14,.30);
-  --sheen:rgba(255,255,255,.7);
-  --scrim:rgba(38,30,12,.34);
-  --on-gold:#f6f1e2;
+  /* Light = the DARK theme inverted — the same emerald+champagne identity flipped top
+     to bottom, NOT an all-green repaint. The champagne-gold accent is kept exactly as
+     in dark (only deepened enough to read on a light ground), the near-white dark-mode
+     ink becomes a near-dark emerald, and the deep-emerald page becomes a pale
+     emerald-tinted cream. Cards are white slabs lifted by an ambient shadow, mirroring
+     dark's faint-white cards floating on the emerald. Every token below is the tonal
+     mirror of its dark counterpart, hue preserved. */
+  --bg:#e9efe8; --bg2:#dde6dd;
+  --stripe-tint:rgba(13,42,28,.022);
+  --vignette:rgba(13,42,28,.10);
+  --line:rgba(13,42,28,.09);
+  --usa-red:#9d1032; --gold:#b0862f;
+  --t1:#0d2a1c; --t2:#2f4e3f; --t3:#4a6353;
+  --card:rgba(255,255,255,.96); --card-future:rgba(252,255,253,.99);
+  --card-border:rgba(13,42,28,.14);
+  --hi:rgba(176,134,47,.12); --hi-border:rgba(176,134,47,.5);
+  --sidebar:rgba(224,233,224,.95); --drawer:rgba(233,240,232,.99);
+  --safe:#0c7a3a; --warn:#a8730a; --danger:#b3202a;
+  --live:#a8730a; --live-soft:rgba(168,115,10,.16);
+  --shadow:rgba(16,38,26,.22);
+  --sheen:rgba(255,255,255,.75);
+  --scrim:rgba(16,38,26,.34);
+  --on-gold:#1a1405;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
@@ -125,7 +115,9 @@ body::after {
 .side-btn {
   width:46px; height:46px; border-radius:14px;
   border:1px solid var(--card-border); background:var(--card);
-  color:var(--t2); font-size:20px; cursor:pointer;
+  /* Sidebar icons ride the primary ink, not the muted --t2: white in dark, green in
+     light — the rail should read as crisp white on the emerald ground, never gold. */
+  color:var(--t1); font-size:20px; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
   position:relative; overflow:hidden;
   transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s, border-color .3s, color .3s;
@@ -190,16 +182,15 @@ body::after {
   --glow-text:0 0 22px rgba(217,184,102,.45), 0 2px 18px var(--shadow);
 }
 [data-theme="light"] {
-  /* Glow, light mode. Earlier passes killed the bloom because gold-on-ivory is
-     invisible — but an EMERALD halo reads fine on the warm ground, and it matches the
-     now-green ink. So the light glow is emerald-led with a gold core: cards glow green
-     on hover/press, the hero objects (title, today banner, live/star cards) carry a
-     soft green-gold bloom instead of nothing. */
-  --glow:0 0 0 1px var(--hi-border), 0 8px 26px -8px rgba(14,74,45,.40);
-  --glow-gold:0 0 0 1px var(--hi-border), 0 10px 30px -8px rgba(14,74,45,.34), 0 0 16px -4px rgba(108,80,17,.34);
-  --bloom-gold:0 0 32px -6px rgba(14,90,55,.34), 0 0 14px -4px rgba(108,80,17,.36);
-  --bloom-live:0 0 26px -5px rgba(127,74,5,.42);
-  --glow-text:0 0 18px rgba(14,90,55,.28), 0 2px 12px var(--shadow);
+  /* Glow, light mode — the mirror of dark's champagne bloom, deepened so a gold halo
+     still reads on the pale emerald-cream ground. Same hue and role as dark: a warm
+     gold aura on the hero objects (title, today banner, live/star cards) and a gold
+     ring on hover/press. */
+  --glow:0 0 0 1px var(--hi-border), 0 8px 26px -8px var(--shadow);
+  --glow-gold:0 0 0 1px var(--hi-border), 0 10px 30px -8px rgba(176,134,47,.34);
+  --bloom-gold:0 0 30px -6px rgba(176,134,47,.34), 0 0 12px -4px rgba(176,134,47,.30);
+  --bloom-live:0 0 24px -5px rgba(168,115,10,.4);
+  --glow-text:0 0 16px rgba(176,134,47,.30), 0 2px 12px var(--shadow);
 }
 
 .ic { width:var(--icon-md); height:var(--icon-md); flex:0 0 auto; display:block; color:inherit; }
@@ -257,6 +248,16 @@ body::after {
 .drawer-item:active, .panel-opt:active, .ds-more:active, .load-retry:active,
 .search-reset:active, .chat-retry:active, #chatSendBtn:active, #chatClose:active,
 .search-selects select:active { transform:scale(.94); }
+/* ── Dark: a glowing frame around every rectangle ────────────────────
+   A bright champagne edge on each card so it reads as a lit slab, not a flat panel.
+   Added as a border (not a box-shadow swap) so every card keeps its own elevation
+   and its live/star ring underneath. Where motion is allowed, the scroll-reveal
+   ::after layer sits a soft champagne halo inside the frame on top of it. */
+[data-theme="dark"] :is(.mc,.ds,.bk-match,.lb,.gs-card,.fx-i,.wt,.gstrip,.tb,.ds-lede,.gp-nm){
+  border:1px solid rgba(217,184,102,.42);
+}
+[data-theme="dark"] .mc.live { border-color:var(--live); }
+[data-theme="dark"] .sr-el::after { opacity:.3; }
 /* Floating surfaces — the today banner is the page's hero object, so it gets
    the ambient bloom on top of its elevation. */
 .tb        { box-shadow:var(--bloom-gold), var(--glow-gold), var(--elev-3); transition:box-shadow var(--t-slow) ease; }
@@ -489,7 +490,7 @@ html.theme-anim * { transition:background-color .5s ease, border-color .5s ease,
 /* Native dropdown list — set solid option colours so team names stay legible
    (translucent --card would render unreadable in the OS popup). */
 .search-selects select option { background:#102c20; color:#eef3ee; }
-[data-theme="light"] .search-selects select option { background:#f3eee0; color:#0e4a2d; }
+[data-theme="light"] .search-selects select option { background:#eef2ec; color:#0d2a1c; }
 .search-vs { font-size:11px; font-weight:700; color:var(--t3); white-space:nowrap; }
 .search-result { margin-top:10px; border-radius:12px; padding:12px 14px; background:var(--card); border:1px solid var(--card-border); display:none; }
 .search-result.show { display:block; }
